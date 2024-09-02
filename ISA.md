@@ -11,17 +11,18 @@ Foram escolhidos 6 registradores de propósito geral, nomeados de W0 até W5, ca
 
 ### Registradores especiais
 Os registradores especiais têm propósitos específicos e existem para lidar com funções essenciais para a operação da máquina.
-Para o caso específico da VM, foram escolhidos 5 registrados essenciais e que existem principalmente para auxiliar na manipulação de memória.
+Para o caso específico da VM, foram escolhidos 6 registrados essenciais e que existem principalmente para auxiliar na manipulação de memória.
 
 - **Program Counter (PC)**: Armazena o endereço da próxima instrução a ser executada.
 - **Instruction Register (IR)**: Contém a instrução atual que está sendo decodificada e executada.
 - **Memory Data Register (MDR)**: Mantém os dados sendo transferidos para ou a partir da memória.
 - **Stack Pointer (SP)**: Aponta para o topo da pilha, utilizado para gerenciar chamadas de função e armazenamento de variáveis locais.
 - **Memory Address Register (MAR)**: Armazena o endereço da memória onde a operação de leitura ou escrita será realizada.
+- **Status Register (SR)**: Armazena flags que indicam o resultado de operações realizadas.
 
 ## Definição das instruções
 
-### Operações aritméticas
+### Operações aritméticas e lógicas
 **ADD**: 
 - **Descrição**: Soma os valores de dois registradores e salva em um terceiro.
 - **Sintaxe**: ADD \<Reg. de destino>, \<Reg. de entrada> , \<Reg. de entrada>
@@ -31,6 +32,11 @@ Para o caso específico da VM, foram escolhidos 5 registrados essenciais e que e
 - **Descrição**: Subtrai o valor de um registrador do valor de outro e armazena em um terceiro.
 - **Sintaxe**: SUB \<Reg. de destino>, \<Reg. de entrada> , \<Reg. de entrada>
 - **Exemplo**: SUB W0, W1, W0
+
+**CMP**:
+- **Descrição**: Compara os valores de dois registradores e armazena a flag no registrador Status Register
+- **Sintaxe**: CMP \<Reg. de entrada> , \<Reg. de entrada>
+- **Exemplo**: CMP W0, W1
 
 ### Operações para Load e Store com endereços
 **LOAD**:
