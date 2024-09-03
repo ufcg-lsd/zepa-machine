@@ -13,12 +13,12 @@ Foram escolhidos 6 registradores de propósito geral, nomeados de W0 até W5, ca
 Os registradores especiais têm propósitos específicos e existem para lidar com funções essenciais para a operação da máquina.
 Para o caso específico da VM, foram escolhidos 6 registrados essenciais e que existem principalmente para auxiliar na manipulação de memória, todos armazenando valores de até 8bits.
 
-- **Program Counter (PC) [7:0]** : Armazena o endereço da próxima instrução a ser executada.
+- **Program Counter (PC) [7:0]** : Armazena o endereço da próxima instrução a ser executada. É automaticamente incrementado após cada ciclo de instrução, a menos que seja modificado por uma instrução de salto.
 - **Instruction Register (IR) [7:0]**: Contém a instrução atual que está sendo decodificada e executada.
 - **Memory Data Register (MDR) [7:0]**: Mantém os dados sendo transferidos para ou a partir da memória.
 - **Stack Pointer (SP) [7:0]**: Aponta para o topo da pilha, utilizado para gerenciar chamadas de função e armazenamento de variáveis locais.
 - **Memory Address Register (MAR) [7:0]**: Armazena o endereço da memória onde a operação de leitura ou escrita será realizada.
-- **Status Register (SR) [7:0]**: Armazena flags que indicam o resultado de operações realizadas. Os primeiros bits são reservados para as flags NZ, os ultimos são flexíveis.
+- **Status Register (SR) [7:0]**: Armazena flags que indicam o resultado de operações realizadas. Os primeiros bits são reservados para as flags N e Z, os ultimos são flexíveis.
 
 ## Definição das instruções
 
@@ -74,4 +74,11 @@ Essas flags são utilizadas por outras instruções para tomar decisões.
 **FETCH**
 - **Descrição**: Recupera a próxima instrução da memória usando o endereço armazenado no Program Counter (PC) e carrega essa instrução no Instruction Register (IR).
 - **Sintaxe e exemplo**: FETCH
+
+## Referências
+https://bit-by-bit.gitbook.io/embedded-systems/processadores-cortex-m0+/arquitetura-do-conjunto-de-instrucoes-isa
+https://developer.arm.com/documentation/102374/0101
+https://riscv.org/technical/specifications/
+https://go.dev/ref/spec
+https://www.geeksforgeeks.org/essential-registers-for-instruction-execution/
 ### 
