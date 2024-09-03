@@ -76,9 +76,10 @@ Essas flags são utilizadas por outras instruções para tomar decisões.
 - **Sintaxe e exemplo**: FETCH
 
 ## Referências
-https://bit-by-bit.gitbook.io/embedded-systems/processadores-cortex-m0+/arquitetura-do-conjunto-de-instrucoes-isa
-https://developer.arm.com/documentation/102374/0101
-https://riscv.org/technical/specifications/
-https://go.dev/ref/spec
-https://www.geeksforgeeks.org/essential-registers-for-instruction-execution/
+- [Bit by Bit: Processadores Cortex-M0+ - Arquitetura do Conjunto de Instruções (ISA)](https://bit-by-bit.gitbook.io/embedded-systems/processadores-cortex-m0+/arquitetura-do-conjunto-de-instrucoes-isa)
+- [ARM Developer: ARMv8-M Architecture Reference Manual](https://developer.arm.com/documentation/102374/0101)
+- [RISC-V International: RISC-V Specifications](https://riscv.org/technical/specifications/)
+- [Go Programming Language Specification](https://go.dev/ref/spec)
+- [GeeksforGeeks: Essential Registers for Instruction Execution](https://www.geeksforgeeks.org/essential-registers-for-instruction-execution/)
+
 ### 
