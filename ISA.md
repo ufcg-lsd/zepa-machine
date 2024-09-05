@@ -1,24 +1,24 @@
 # ISA
 ## Introduction
-The objective of this Instruction Set Architecture (ISA) is to define the registers and assembly instructions for the VM, for now mainly working with memory manipulation. For creating this document, the ISAs of ARM64 and RISC-V were used as reference.
+The objective of this Instruction Set Architecture (ISA) is to define the registers and assembly instructions for the machine, for now mainly working with memory manipulation. For creating this document, the ISAs of ARM64 and RISC-V were used as reference.
 ## Definition of Registers
 ### General Purpose Registers
 The general-purpose registers are flexible and can be used in different situations, as temporarily storing values, used to assist in operations, and storing memory addresses.
 
-Initially, this VM has 6 registers, which are named W0 to W5, each of them capable of performing 8 bit
+Initially, this machine has 6 registers, which are named W0 to W5, each of them capable of storing 8 bits.
 
 - **W0, W1, W2, W3, W4, and W5 [7:0]**
 
 ### Special Registers
 The special registers have specific purposes and exist to handle essential functions for the machine's operation.
-For the specific case of this VM, six registers were defined, mainly to assist in memory manipulation, all storing values up to 8 bits.
+For the specific case of this machine, six registers were defined, mainly to assist in memory manipulation, all storing values up to 8 bits.
 
 - **Program Counter (PC) [7:0]**: Stores the address of the next instruction to be executed. Is automaticaly incremented after every instruction cycle, unless modified by a JUMP instruction.
 - **Instruction Register (IR) [7:0]**: Contains the current instruction being decoded and executed.
 - **Memory Data Register (MDR) [7:0]**: Holds the data being transferred from or to memory.
 - **Stack Pointer (SP) [7:0]**: Points to the top of the stack, used to manage function calls and local variable storage.
 - **Memory Address Register (MAR) [7:0]**: Stores the memory address where reading or writing operations will be executed.
-- **Status Register (SR) [7:0]**: Stores flags that indicate the result of test operations executed. The first bits are reserved for the N and Z flags, and the last ones are flexible.
+- **Status Register (SR) [7:0]**: Stores flags that indicate the result of test operations executed. The first bits are reserved for the G, L and Z flags, and the last ones are flexible.
 
 ## Definition of Instructions
 
@@ -45,11 +45,12 @@ For the specific case of this VM, six registers were defined, mainly to assist i
 - **Syntax**: CMP \<Input Reg.>, \<Input Reg.>
 - **Example**: CMP W0, W1
 
-#### N and Z Test Flags
+#### G, L and Z Test Flags
 When a test instruction, such as CMP, is executed, the SR register is updated, and its value can be used by other instructions to change the program's flow. Each flag is represented by a bit, and the flag being set indicates that the bit value is 1.
 Considering the SR register [7:0], the following flags can be set in their respective bits:
-- **N**, bit [7] - Set if the result of the last test was negative, meaning different.
-- **Z**, bit [6] - Set if the result of the last test was 0, meaning equal.
+- **G**, bit [7] - Set if the result of the last comparison indicates that the first operand is greater than the second.
+- **L**, bit [6] - Set if the result of the last comparison indicates that the first operand is less than the second.
+- **Z**, bit [5] - Set if the result of the last comparison is 0, meaning the operands are equal.
 
 These flags can be used by instructions to make decisions that can change the program flow.
 
