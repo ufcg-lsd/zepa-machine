@@ -22,29 +22,6 @@ Where the **opcode** is the operation code (instruction), and the **operands** a
     ADD W0, W2, #5
     ```
 
-## Register Definitions
-
-### General-Purpose
-The Zepa architecture has 6 general-purpose registers, named W0 to W5, each capable of storing up to 8 bits of data:
-
-- W0, W1, W2, W3, W4, W5 [7:0]
-
-### Special Registers
-
-- Program Counter (PC) [7:0]: Stores the address of the next instruction to be executed. Automatically increments after each instruction cycle unless modified by a jump instruction.
-
-- Instruction Register (IR) [7:0]: Holds the instruction currently being executed.
-
-- Memory Data Register (MDR) [7:0]: Stores the data being transferred to or from memory.
-
-- Memory Address Register (MAR) [7:0]: Holds the memory address for read or write operations.
-
-- Status Register (SR) [7:0]: Holds flags that indicate the result of test (comparison) operations. The first three bits are reserved for the G, L, and Z flags:
-
-    - G (Greater): Bit [7] - Set if the first operand is greater than the second.
-    - L (Less): Bit [6] - Set if the first operand is less than the second.
-    - Z (Zero): Bit [5] - Set if the two operands are equal.
-
 ### MV (Move)
 Moves an immediate value or the contents of one register to another register.
 
