@@ -100,7 +100,9 @@ MUL W0, W1, W2    ; W0 = 4 * 3
 Compares the values of two registers and updates the flags in the status register (SR).
 
 **Syntax:**
+```
 CMP <Op1>, <Op2>
+```
 
 **Example:**
 ```
