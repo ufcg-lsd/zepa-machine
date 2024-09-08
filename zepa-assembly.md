@@ -94,6 +94,21 @@ MV W2, #3
 MUL W0, W1, W2    ; W0 = 4 * 3
 ```
 
+### MOD (Módulo)
+Calculates the remainder of the division between two values and stores the result in a register.
+
+**Syntax:**
+```
+MOD <Dest Reg.>, <Op1>, <Op2>
+```
+
+**Example:**
+```
+MV W1, #10
+MV W2, #3
+MOD W0, W1, W2    ; W0 = 10 % 3 (result: 1)
+```
+
 ## Control Flow Operations
 
 ## CMP (Compare)
