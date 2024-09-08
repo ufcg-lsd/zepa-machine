@@ -1,24 +1,33 @@
 package machine
 
-type GeneralRegisters struct {
-	w0, w1, w2, w3, w4, w5 byte
-}
+type Register byte
 
-type SpecialRegisters struct {
-	pc  byte
-	sp  byte
-	ir  byte
-	sr  byte
-	mdr byte
-	mar byte
-}
+const (
+	w0 Register = iota
+	w1
+	w2
+	w3
+	w4
+	w5
+	pc
+	sp
+	ir
+	sr
+	mdr
+	mar
 
-type Memory struct {
-	data [1024]byte
-}
+	numberOfRegisters
+)
 
 type Machine struct {
-	genRegs  GeneralRegisters
-	specRegs SpecialRegisters
-	memory   Memory
+	memory    []byte
+	registers [numberOfRegisters]Register
+}
+
+func NewMachine(memoryBytes int) *Machine {
+	machine := &Machine{
+		memory: make([]byte, memoryBytes),
+	}
+
+	return machine
 }
