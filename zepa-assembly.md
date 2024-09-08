@@ -15,21 +15,33 @@ The general syntax follows the structure:
 
 Where the **opcode** is the operation code (instruction), and the **operands** are registers or constant values that participate in the operation.
 
-#### Examples:
+#### Example:
 - **Adding 3 different values and storing the result in the W0 register:**
     ```
     ADD W2, #3, #4
     ADD W0, W2, #5
     ```
+## Literals (Immediate Values)
+In zepa-assembly, literals are constant values prefixed with # and can be used directly in instructions. These immediate values can be moved to registers or used in arithmetic operations.
+
+**Syntax:**
+```
+#<Value>
+```
+
+**Example:**
+```
+MV W1, #3    ; Move the literal value 3 into register W1
+```
 
 ### MV (Move)
 Moves an immediate value or the contents of one register to another register.
 
-**Sintaxe:**
+**Syntax:**
 ```
 MV <Dest Reg.>, #<Value> or <Source Reg.>
 ```
-**Exemplo:**
+**Example:**
 ```
 MV W1, #5    ; Move the value 5 into register W1
 MV W2, W1    ; Move the value from W1 into W2
@@ -183,31 +195,3 @@ _END:
     ; End of program
 ```
 
-## Memory Operations
-
-### STORE (Store to Memory)
-Stores the value of a register at a specific memory address.
-
-**Syntax:**
-```
-STORE <Source Reg.>, [<Address>]
-```
-
-**Example:**
-```
-MV W1, #42
-STORE W1, [0x00FF]    ; Store the value of W1 at memory address 0x00FF
-```
-
-## LOAD (Load from Memory)
-Loads the value stored at a memory address into a register.
-
-**Syntax:**
-```
-LOAD <Dest Reg.>, [<Address>]
-```
-
-**Example:**
-```
-LOAD W1, [0x00FF]    ; Load the value at memory address 0x00FF into W1
-```
