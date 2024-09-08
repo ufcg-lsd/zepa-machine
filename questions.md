@@ -39,14 +39,24 @@ _start:
     MV W2, #98      ; Segundo número
 
 _gcd_loop:
-    CMP W2, #0      ; Se W2 == 0, fim
+    CMP W2, #0      ; Se W2 == 0, o GCD é W1
     JZ _end         ; Salta para o final
 
-    MOD W0, W1, W2  ; W0 = W1 % W2
+    CMP W1, W2      ; Compara W1 e W2
+    JL _swap        ; Se W1 < W2, troca W1 e W2
+
+    ; Caso W1 >= W2
+    SUB W1, W1, W2  ; W1 = W1 - W2
+    JUMP _gcd_loop  ; Repete o loop
+
+_swap:
+    ; Caso W1 < W2, troca W1 e W2
+    MV W0, W1       ; W0 = W1
     MV W1, W2       ; W1 = W2
     MV W2, W0       ; W2 = W0
-    JUMP _gcd_loop  ; Repete
+    JUMP _gcd_loop  ; Repete o loop
 
 _end:
     ; GCD armazenado em W1
+    ; Fim do programa
 ```
