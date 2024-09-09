@@ -121,7 +121,7 @@ JUMP <Label/Address>
 
 **Example:**
 ```
-JUMP _LOOP    ; Jump to the _LOOP label
+JUMP _loop    ; Jump to the _loop label
 ```
 
 ## JZ (Jump if Zero)
@@ -137,7 +137,7 @@ JZ <Label/Address>
 MV W1, #2
 MV W2, #2
 CMP W1, W2    ; Sets the Z flag (W1 == W2)
-JZ _LESS      ; Jumps to _END if Z == 1
+JZ _equal      ; Jumps to _equal if Z == 1
 ```
 
 ## JG (Jump if Greater)
@@ -153,7 +153,7 @@ JG <Label/Address>
 MV W1, #5
 MV W2, #3
 CMP W1, W2    ; Sets the G flag (W1 > W2)
-JG _GREATER  ; Jumps to _CONTINUE if G == 1
+JG _greater   ; Jumps to _greater if G == 1
 ```
 
 ## JL (Jump if Less)
@@ -169,7 +169,7 @@ JL <Label/Address>
 MV W1, #1
 MV W2, #3
 CMP W1, W2    ; Sets the L flag (W1 < W2)
-JL _EQUAL     ; Jumps to _RETRY if L == 1
+JL _less      ; Jumps to _less if L == 1
 ```
 
 **Example of JUMP and Control Flow:**
@@ -179,21 +179,21 @@ _start:
     MV W1, #20         ; W1 = 20
     CMP W0, W1         ; Compare W0 with W1
 
-    JG _GREATER        ; Jump to _GREATER if W0 > W1 (G flag set)
-    JL _LESS           ; Jump to _LESS if W0 < W1 (L flag set)
+    JG _greater        ; Jump to _greater if W0 > W1 (G flag set)
+    JL _less           ; Jump to _less if W0 < W1 (L flag set)
 
-_EQUAL:
+_equal:
     MV W2, #0          ; If W0 == W1, W2 = 0
-    JUMP _END          ; Jump to _END
+    JUMP _end          ; Jump to _end
 
-_GREATER:
+_greater:
     MV W2, #1          ; If W0 > W1, W2 = 1
-    JUMP _END          ; Jump to _END
+    JUMP _end          ; Jump to _end
 
-_LESS:
+_less:
     MV W2, #2          ; If W0 < W1, W2 = 2
 
-_END:
+_end:
     ; End of program
 ```
 
