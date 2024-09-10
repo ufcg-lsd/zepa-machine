@@ -15,18 +15,18 @@ const (
 	sr
 	mdr
 	mar
-
-	numberOfRegisters
 )
 
 type Machine struct {
 	memory    []byte
-	registers [numberOfRegisters]Register
+	registers map[Register]byte
 }
 
 func NewMachine(memoryBytes int) *Machine {
+
 	machine := &Machine{
-		memory: make([]byte, memoryBytes),
+		memory:    make([]byte, memoryBytes),
+		registers: make(map[Register]byte),
 	}
 
 	return machine
