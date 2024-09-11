@@ -22,24 +22,8 @@ type Machine struct {
 	registers map[Register]byte
 }
 
-func (m *Machine) fetch() {
-	m.registers[ir] = m.memory[m.registers[pc]]
-	m.registers[pc] += 1
-}
-
-func (m *Machine) decode() {}
-
-func (m *Machine) execute() {}
-
-func (m *Machine) boot() {
-	for {
-		m.fetch()
-		m.decode()
-		m.execute()
-	}
-}
-
 func NewMachine(memoryBytes int) *Machine {
+
 	machine := &Machine{
 		memory:    make([]byte, memoryBytes),
 		registers: make(map[Register]byte),
