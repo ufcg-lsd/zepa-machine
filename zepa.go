@@ -1,10 +1,5 @@
 package machine
 
-import (
-	"fmt"
-	"time"
-)
-
 type Register byte
 
 const (
@@ -32,25 +27,19 @@ func (m *Machine) fetch() {
 	m.registers[pc] += 1
 }
 
-func (m *Machine) decode() {
-	fmt.Printf("Decoding: 0x%02X\n", m.registers[ir])
-}
+func (m *Machine) decode() {}
 
-func (m *Machine) execute() {
-	fmt.Println("Executing...")
-}
+func (m *Machine) execute() {}
 
 func (m *Machine) boot() {
 	for {
 		m.fetch()
 		m.decode()
 		m.execute()
-		time.Sleep(time.Second)
 	}
 }
 
 func NewMachine(memoryBytes int) *Machine {
-
 	machine := &Machine{
 		memory:    make([]byte, memoryBytes),
 		registers: make(map[Register]byte),
