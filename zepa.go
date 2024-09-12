@@ -23,7 +23,11 @@ type Machine struct {
 }
 
 func (m *Machine) fetch() {
-	m.registers[ir] = m.memory[m.registers[pc]]
+	currentInstructionAddress := m.registers[pc]
+	currentInstruction := m.memory[currentInstructionAddress]
+	// Update Instruction Register with current instruction
+	m.registers[ir] = currentInstruction
+	// Increment Program Counter
 	m.registers[pc] += 1
 }
 
