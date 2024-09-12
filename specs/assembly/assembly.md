@@ -15,7 +15,7 @@ The general syntax follows the structure:
 
 Where the **opcode** is the operation code (instruction), and the **operands** are registers or constant values that participate in the operation.
 
-#### Example:
+**Example:**
 - **Adding 3 different values and storing the result in the W0 register:**
     ```
     ADD W2, #3, #4
@@ -96,7 +96,7 @@ MUL W0, W1, W2    ; W0 = 4 * 3
 
 ## Control Flow Operations
 
-## CMP (Compare)
+### CMP (Compare)
 Compares the values of two registers and updates the flags in the status register (SR).
 
 **Syntax:**
@@ -111,6 +111,7 @@ MV W2, #2
 CMP W1, W2    ; Sets the G flag (W1 > W2)
 ```
 
+
 ### JUMP (Unconditional Jump)
 Unconditionally jumps to a specific address or label, modifying the Program Counter (PC).
 
@@ -124,7 +125,7 @@ JUMP <Label/Address>
 JUMP _loop    ; Jump to the _loop label
 ```
 
-## JZ (Jump if Zero)
+### JZ (Jump if Zero)
 Jumps to a specific address if the Z flag is set (if two operands are equal).
 
 **Syntax:**
@@ -140,7 +141,7 @@ CMP W1, W2    ; Sets the Z flag (W1 == W2)
 JZ _equal      ; Jumps to _equal if Z == 1
 ```
 
-## JG (Jump if Greater)
+### JG (Jump if Greater)
 Jumps if the G flag is set (if the first operand is greater than the second).
 
 **Syntax:**
@@ -156,7 +157,7 @@ CMP W1, W2    ; Sets the G flag (W1 > W2)
 JG _greater   ; Jumps to _greater if G == 1
 ```
 
-## JL (Jump if Less)
+### JL (Jump if Less)
 Jumps if the L flag is set (if the first operand is less than the second).
 
 **Syntax:**
@@ -195,6 +196,34 @@ _less:
 
 _end:
     ; End of program
+```
+
+## Memory Operations
+
+### LOAD (Load from Memory)
+Loads a value from a memory address into a register.
+
+**Syntax:**
+```
+LOAD <Dest Reg.>, [<Memory Address>]
+```
+
+**Example:**
+```
+LOAD W1, [0x100]    ; Load the value stored at memory address 0x100 into register W1
+```
+
+### STORE (Store to Memory)
+Stores the value from a register into a memory address.
+
+**Syntax:**
+```
+STORE <Source Reg.>, [<Memory Address>]
+```
+
+**Example:**
+```
+STORE W1, [0x200]   ; Store the value from register W1 into memory address 0x200
 ```
 
 ## References
