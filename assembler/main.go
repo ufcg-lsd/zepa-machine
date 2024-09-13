@@ -50,12 +50,17 @@ func processFile(filename string) error {
 }
 
 func processLine(line string) string {
+	// Remove leading and trailing spaces
 	line = strings.TrimSpace(line)
+
+	// comments
 	if idx := strings.Index(line, ";"); idx != -1 {
 		line = strings.TrimSpace(line[:idx])
 	}
-	if line == "" || strings.HasSuffix(line, ":") {
+
+	if line == "" {
 		return ""
 	}
+
 	return line
 }
