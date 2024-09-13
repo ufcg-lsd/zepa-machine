@@ -23,7 +23,7 @@ func main() {
 	}
 
 	fmt.Println(instructions)
-
+	fmt.Print(instructions[2][2])
 }
 
 func processFile(filename string) error {
@@ -31,7 +31,6 @@ func processFile(filename string) error {
 	if err != nil {
 		return fmt.Errorf("error opening the file '%s': %v", filename, err)
 	}
-
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
@@ -39,9 +38,11 @@ func processFile(filename string) error {
 	for scanner.Scan() {
 		line := processLine(scanner.Text())
 		if line != "" {
-			parts := strings.Fields(line)
-			instructions[linePos] = parts
-			linePos++
+			parts := parseInstruction(line)
+			if len(parts) > 0 {
+				instructions[linePos] = parts
+				linePos++
+			}
 		}
 	}
 
@@ -59,9 +60,13 @@ func processLine(line string) string {
 		line = strings.TrimSpace(line[:idx])
 	}
 
-	if line == "" {
-		return ""
-	}
+	line = strings.ReplaceAll(line, ":", "")
+	line = strings.ReplaceAll(line, ",", "")
 
 	return line
+}
+
+func parseInstruction(line string) []string {
+	parts := strings.Split(line, " ")
+	return parts
 }
