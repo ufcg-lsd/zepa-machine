@@ -23,7 +23,6 @@ func main() {
 	}
 
 	fmt.Println(instructions)
-	fmt.Print(instructions[2][2])
 }
 
 func processFile(filename string) error {
@@ -67,6 +66,6 @@ func processLine(line string) string {
 }
 
 func parseInstruction(line string) []string {
-	parts := strings.Split(line, " ")
+	parts := strings.Fields(line)
 	return parts
 }
