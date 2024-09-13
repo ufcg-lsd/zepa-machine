@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var instructions []string
+var instructions = make(map[int][]string)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -22,9 +22,8 @@ func main() {
 		return
 	}
 
-	for _, inst := range instructions {
-		fmt.Println(inst)
-	}
+	fmt.Println(instructions)
+
 }
 
 func processFile(filename string) error {
@@ -32,13 +31,17 @@ func processFile(filename string) error {
 	if err != nil {
 		return fmt.Errorf("error opening the file '%s': %v", filename, err)
 	}
+
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+	linePos := 1
 	for scanner.Scan() {
 		line := processLine(scanner.Text())
 		if line != "" {
-			instructions = append(instructions, line)
+			parts := strings.Fields(line)
+			instructions[linePos] = parts
+			linePos++
 		}
 	}
 
@@ -50,10 +53,8 @@ func processFile(filename string) error {
 }
 
 func processLine(line string) string {
-	// Remove leading and trailing spaces
 	line = strings.TrimSpace(line)
 
-	// comments
 	if idx := strings.Index(line, ";"); idx != -1 {
 		line = strings.TrimSpace(line[:idx])
 	}
