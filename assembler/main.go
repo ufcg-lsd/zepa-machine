@@ -37,7 +37,7 @@ func processFile(filename string) error {
 	for scanner.Scan() {
 		line := processLine(scanner.Text())
 		if line != "" {
-			parts := parseInstruction(line)
+			parts := strings.Fields(line)
 			if len(parts) > 0 {
 				instructions[linePos] = parts
 				linePos++
@@ -59,13 +59,11 @@ func processLine(line string) string {
 		line = strings.TrimSpace(line[:idx])
 	}
 
-	line = strings.ReplaceAll(line, ":", "")
+	if strings.HasSuffix(line, ":") {
+		return ""
+	}
+
 	line = strings.ReplaceAll(line, ",", "")
 
 	return line
-}
-
-func parseInstruction(line string) []string {
-	parts := strings.Fields(line)
-	return parts
 }

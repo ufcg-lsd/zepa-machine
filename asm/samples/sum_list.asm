@@ -7,7 +7,6 @@ _start:
     ADD W0, W0, W1  ; Add W1
     ADD W0, W0, W2  ; Add W2
     ADD W0, W0, W3  ; Add W3
-    JUMP _end       ; Jump to end
 
 _end:
     ; End of program
