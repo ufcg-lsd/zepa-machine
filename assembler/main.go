@@ -16,7 +16,7 @@ func main() {
 	}
 
 	sourceFile := os.Args[1]
-	err := processFile(sourceFile)
+	err := RunAssembler(sourceFile)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -25,13 +25,24 @@ func main() {
 	fmt.Println(instructions)
 }
 
-func processFile(filename string) error {
+func RunAssembler(filePath string) error {
+	instrs, err := LoadAssemblyFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	instructions = instrs
+	return nil
+}
+
+func processFile(filename string) (map[int][]string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return fmt.Errorf("error opening the file '%s': %v", filename, err)
+		return nil, fmt.Errorf("error opening the file '%s': %v", filename, err)
 	}
 	defer file.Close()
 
+	instructions := make(map[int][]string)
 	scanner := bufio.NewScanner(file)
 	linePos := 1
 	for scanner.Scan() {
@@ -46,10 +57,10 @@ func processFile(filename string) error {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading the file '%s': %v", filename, err)
+		return nil, fmt.Errorf("error reading the file '%s': %v", filename, err)
 	}
 
-	return nil
+	return instructions, nil
 }
 
 func processLine(line string) string {
@@ -66,4 +77,8 @@ func processLine(line string) string {
 	line = strings.ReplaceAll(line, ",", "")
 
 	return line
+}
+
+func LoadAssemblyFile(filePath string) (map[int][]string, error) {
+	return processFile(filePath)
 }
