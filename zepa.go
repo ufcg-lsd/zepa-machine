@@ -17,6 +17,20 @@ const (
 	mar
 )
 
+const (
+	opcodeLength = 6
+)
+
+type Instruction struct {
+	opcode    byte     // 6 bits
+	rd        Register // 5 bits
+	rs1       Register // 5 bits
+	rs2       Register // 5 bits
+	funct3    byte     // 5 bits
+	funct7    byte     // 6 bits
+	addrConst uint16   // 16 bits
+}
+
 type Machine struct {
 	memory    []byte
 	registers map[Register]byte
@@ -31,7 +45,17 @@ func (m *Machine) fetch() {
 	m.registers[pc] += 1
 }
 
-func (m *Machine) decode() {}
+func (m *Machine) decodeRTypeInst() Instruction {
+
+}
+
+func (m *Machine) decodeITypeInst() Instruction {
+
+}
+
+func (m *Machine) decode() Instruction {
+
+}
 
 func (m *Machine) execute() {}
 
