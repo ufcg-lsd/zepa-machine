@@ -11,7 +11,7 @@ Initially, this machine has 6 registers, which are named W0 to W5, each of them 
 
 ### Special Registers
 The special registers have specific purposes and exist to handle essential functions for the machine's operation.
-For the specific case of this machine, six registers were defined, mainly to assist in memory manipulation, all storing values up to 8 bits.
+For the specific case of this machine, six registers were defined, mainly to assist in memory manipulation, all storing values up to 32 bits.
 
 - **Program Counter (PC) [31:0]**: Stores the address of the next instruction to be executed. Is automaticaly incremented after every instruction cycle, unless modified by a JUMP instruction.
 - **Instruction Register (IR) [31:0]**: Contains the current instruction being decoded and executed.
@@ -122,6 +122,25 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Syntax and Example**: FETCH
 - **Format**: I-Type
 - **Opcode (decimal)**: 19
+
+### Zepa Machine Instruction Encoding Table
+
+| **Instruction** | **Format** | **opcode** | **rd** | **rs1** | **rs2** | **funct3** | **funct7** |
+|-----------------|------------|------------|---------|---------|------------|--------|------------|
+| **ADD**         | R-Type         | 01101    | reg     | reg     | reg        | 00000    | 000000    |
+| **SUB**         | R-Type          | 01110    | reg     | reg     | reg        | 00000    | 000000    |
+| **CMP**         | R-Type          | 01111    | 00000     | reg     | reg        | 00000    | 000000    |
+
+
+
+| **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate** | **funct3** |
+|-----------------|------------|---------------|---------|------------|--------|
+| **MV**          | I-Type          | 01100      | reg     | 16bit constant         | 00000    |
+| **JUMP**        | I-Type          | 10000      | 00000     | 16bit address        | 00000    |
+| **LOAD**        | I-Type          | 10001       | reg     | 16bit address        | 00000    |
+| **STORE**        | I-Type          | 10010       | reg     | 16bit address        | 00000    |
+| **FETCH**        | I-Type          | 10011       | 00000     | 0000000000000000        | 00000    |
+
 
 ## References
 - [Bit by Bit: Processadores Cortex-M0+ - Arquitetura do Conjunto de Instruções (ISA)](https://bit-by-bit.gitbook.io/embedded-systems/processadores-cortex-m0+/arquitetura-do-conjunto-de-instrucoes-isa)
