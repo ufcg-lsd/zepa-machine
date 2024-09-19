@@ -42,7 +42,7 @@ For this machine, the word size, instruction size, and register size were define
 
 | opcode  | rs1/rd  | constant/address  | funct3  
 |-----------------|-------------|--------------|--------------|
-| 6 bits          | 5 bits      | 16 bits       | 3 bits       |
+| 6 bits          | 5 bits      | 16 bits       | 5 bits       |
 
 - **Description**: Used for instructions that also involve a constant or address.
 - **Fields**:
