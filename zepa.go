@@ -63,17 +63,39 @@ type Machine struct {
 	registers map[Register]uint32
 }
 
-func (m *Machine) add(inst Instruction) {}
+func (m *Machine) mv(inst Instruction) {
+	m.registers[inst.rd] = uint32(inst.addrConst)
+}
 
-func (m *Machine) sub(inst Instruction) {}
+func (m *Machine) add(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] + m.registers[inst.rs2]
+}
 
-func (m *Machine) cmp(inst Instruction) {}
+func (m *Machine) sub(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] - m.registers[inst.rs2]
+}
 
-func (m *Machine) jump(inst Instruction) {}
+func (m *Machine) cmp(inst Instruction) {
+	if m.registers[inst.rs1] == m.registers[inst.rs2] {
+		m.registers[sr] = 0
+	} else if m.registers[inst.rs1] > m.registers[inst.rs2] {
+		m.registers[sr] = 1
+	} else {
+		m.registers[sr] = 2
+	}
+}
 
-func (m *Machine) load(inst Instruction) {}
+func (m *Machine) jump(inst Instruction) {
+	m.registers[pc] = uint32(inst.addrConst)
+}
 
-func (m *Machine) store(inst Instruction) {}
+func (m *Machine) load(inst Instruction) {
+	m.registers[inst.rs1] = uint32(inst.addrConst)
+}
+
+func (m *Machine) store(inst Instruction) {
+	m.memory[inst.addrConst] = byte(m.registers[inst.rs1])
+}
 
 func (m *Machine) fetch() {
 	var completeInstruction uint32 = 0
@@ -158,14 +180,15 @@ func (m *Machine) decode() Instruction {
 	return m.decodeITypeInst(instruction)
 }
 
-func (m *Machine) execute(inst Instruction) {}
+func (m *Machine) execute(inst Instruction) {
+	inst.opcode(m, inst)
+}
 
 func (m *Machine) boot() {
 	for {
 		m.fetch()
 		decodedInstruction := m.decode()
 		m.execute(decodedInstruction)
-		break
 	}
 }
 
