@@ -127,19 +127,19 @@ These flags can be used by instructions to make decisions that can change the pr
 
 | **Instruction** | **Format** | **opcode** | **rd** | **rs1** | **rs2** | **funct3** | **funct7** |
 |-----------------|------------|------------|---------|---------|------------|--------|------------|
-| **ADD**         | R-Type         | 01101    | reg     | reg     | reg        | 00000    | 000000    |
-| **SUB**         | R-Type          | 01110    | reg     | reg     | reg        | 00000    | 000000    |
-| **CMP**         | R-Type          | 01111    | 00000     | reg     | reg        | 00000    | 000000    |
+| **ADD**         | R-Type         | 001101    | reg     | reg     | reg        | 00000    | 000000    |
+| **SUB**         | R-Type          | 001110    | reg     | reg     | reg        | 00000    | 000000    |
+| **CMP**         | R-Type          | 001111    | 00000     | reg     | reg        | 00000    | 000000    |
 
 
 
 | **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate** | **funct3** |
 |-----------------|------------|---------------|---------|------------|--------|
-| **MV**          | I-Type          | 01100      | reg     | 16bit constant         | 00000    |
-| **JUMP**        | I-Type          | 10000      | 00000     | 16bit address        | 00000    |
-| **LOAD**        | I-Type          | 10001       | reg     | 16bit address        | 00000    |
-| **STORE**        | I-Type          | 10010       | reg     | 16bit address        | 00000    |
-| **FETCH**        | I-Type          | 10011       | 00000     | 0000000000000000        | 00000    |
+| **MV**          | I-Type          | 001100      | reg     | 16bit constant         | 00000    |
+| **JUMP**        | I-Type          | 010000      | 00000     | 16bit address        | 00000    |
+| **LOAD**        | I-Type          | 010001       | reg     | 16bit address        | 00000    |
+| **STORE**        | I-Type          | 010010       | reg     | 16bit address        | 00000    |
+| **FETCH**        | I-Type          | 010011       | 00000     | 0000000000000000        | 00000    |
 
 
 ## References
