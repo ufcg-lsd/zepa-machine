@@ -1,4 +1,4 @@
-package main
+package machine
 
 type Register uint32
 type Opcode byte
@@ -90,10 +90,12 @@ func (m *Machine) jump(inst Instruction) {
 }
 
 func (m *Machine) load(inst Instruction) {
-
+	m.registers[inst.rs1] = uint32(inst.addrConst)
 }
 
-func (m *Machine) store(inst Instruction) {}
+func (m *Machine) store(inst Instruction) {
+	m.memory[inst.addrConst] = byte(m.registers[inst.rs1])
+}
 
 func (m *Machine) fetch() {
 	var completeInstruction uint32 = 0
@@ -187,7 +189,6 @@ func (m *Machine) boot() {
 		m.fetch()
 		decodedInstruction := m.decode()
 		m.execute(decodedInstruction)
-		break
 	}
 }
 
@@ -198,16 +199,4 @@ func NewMachine(memoryBytes int) *Machine {
 	}
 
 	return machine
-}
-
-func main() {
-	machine := NewMachine(2048)
-	machine.memory[0] = 0b00110100
-	machine.memory[1] = 0b01000011
-	machine.memory[2] = 0b00001000
-	machine.memory[3] = 0b00000000
-
-	machine.registers[w3] = 3
-	machine.registers[w1] = 2
-	machine.boot()
 }
