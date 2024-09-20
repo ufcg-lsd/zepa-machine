@@ -6,7 +6,6 @@ import (
 	"testing"
 )
 
-// Example programs
 var addTwoNumbersAssembly = `
 MV W1, #5       ; Load the number 5 into W1
 MV W2, #3       ; Load the number 3 into W2
@@ -60,7 +59,6 @@ func assembleCode(t *testing.T, assemblyCode string) []string {
 	return output
 }
 
-// Test for the add_two_numbers program
 func TestAddTwoNumbers(t *testing.T) {
 	expectedOutput := []string{
 		"00011000001000000000000010100000", // MV W1, #5
@@ -81,7 +79,6 @@ func TestAddTwoNumbers(t *testing.T) {
 	}
 }
 
-// Test for the sum_list program
 func TestSumList(t *testing.T) {
 	expectedOutput := []string{
 		"00011000000000000000000000000000", // MV W0, #0
@@ -106,7 +103,6 @@ func TestSumList(t *testing.T) {
 	}
 }
 
-// Test for the multiply program
 func TestMultiply(t *testing.T) {
 	expectedOutput := []string{
 		"00011000001000000000000010000000", // MV W1, #4
