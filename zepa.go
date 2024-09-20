@@ -1,4 +1,4 @@
-package machine
+package main
 
 type Register uint32
 type Opcode byte
@@ -63,15 +63,35 @@ type Machine struct {
 	registers map[Register]uint32
 }
 
-func (m *Machine) add(inst Instruction) {}
+func (m *Machine) mv(inst Instruction) {
+	m.registers[inst.rd] = uint32(inst.addrConst)
+}
 
-func (m *Machine) sub(inst Instruction) {}
+func (m *Machine) add(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] + m.registers[inst.rs2]
+}
 
-func (m *Machine) cmp(inst Instruction) {}
+func (m *Machine) sub(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] - m.registers[inst.rs2]
+}
 
-func (m *Machine) jump(inst Instruction) {}
+func (m *Machine) cmp(inst Instruction) {
+	if m.registers[inst.rs1] == m.registers[inst.rs2] {
+		m.registers[sr] = 0
+	} else if m.registers[inst.rs1] > m.registers[inst.rs2] {
+		m.registers[sr] = 1
+	} else {
+		m.registers[sr] = 2
+	}
+}
 
-func (m *Machine) load(inst Instruction) {}
+func (m *Machine) jump(inst Instruction) {
+	m.registers[pc] = uint32(inst.addrConst)
+}
+
+func (m *Machine) load(inst Instruction) {
+
+}
 
 func (m *Machine) store(inst Instruction) {}
 
@@ -158,7 +178,9 @@ func (m *Machine) decode() Instruction {
 	return m.decodeITypeInst(instruction)
 }
 
-func (m *Machine) execute(inst Instruction) {}
+func (m *Machine) execute(inst Instruction) {
+	inst.opcode(m, inst)
+}
 
 func (m *Machine) boot() {
 	for {
@@ -176,4 +198,16 @@ func NewMachine(memoryBytes int) *Machine {
 	}
 
 	return machine
+}
+
+func main() {
+	machine := NewMachine(2048)
+	machine.memory[0] = 0b00110100
+	machine.memory[1] = 0b01000011
+	machine.memory[2] = 0b00001000
+	machine.memory[3] = 0b00000000
+
+	machine.registers[w3] = 3
+	machine.registers[w1] = 2
+	machine.boot()
 }
