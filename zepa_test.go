@@ -50,5 +50,4 @@ func TestDecode(t *testing.T) {
 	if decodedInstruction.funct7 != 0 {
 		t.Errorf("Expected funct7 to be 0, but got %d", decodedInstruction.funct7)
 	}
-
 }

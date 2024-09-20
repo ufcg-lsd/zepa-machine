@@ -113,12 +113,49 @@ func (m *Machine) decodeRTypeInst(instruction uint32) Instruction {
 	}
 }
 
-func (m *Machine) decodeITypeInst() {
+func (m *Machine) decodeITypeInst(instruction uint32) Instruction {
+	offsetOpcode := word - opcodeLength
+	offSetRdRs1 := offsetOpcode - rdLength
+	offSetImmediate := offSetRdRs1 - addrConstLen
+	offSetFunct3 := offSetImmediate - funct3Length
 
+	opcode := instruction >> (uint32(offsetOpcode))
+	rdRs1 := (instruction >> uint32(offSetRdRs1)) & 0b11111
+	immediate := (instruction >> (uint32(offSetImmediate))) & 0b111
+	funct3 := (instruction >> (uint32(offSetFunct3))) & 0b1111111
+
+	operation := operations[byte(opcode)]
+
+	return Instruction{
+		opcode:    operation,
+		rd:        Register(rdRs1),
+		addrConst: uint16(immediate),
+		funct3:    byte(funct3),
+	}
+}
+
+func (m *Machine) checkRType(instruction uint32) bool {
+	offsetOpcode := word - opcodeLength
+	opcode := instruction >> (uint32(offsetOpcode))
+
+	rTypeInsts := []Opcode{ADD, SUB, CMP}
+
+	for _, operation := range rTypeInsts {
+		if opcode == uint32(operation) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (m *Machine) decode() Instruction {
-	return m.decodeRTypeInst(uint32(m.registers[ir]))
+	instruction := m.registers[ir]
+
+	if m.checkRType(instruction) {
+		return m.decodeRTypeInst(instruction)
+	}
+	return m.decodeITypeInst(instruction)
 }
 
 func (m *Machine) execute(inst Instruction) {}
@@ -128,6 +165,7 @@ func (m *Machine) boot() {
 		m.fetch()
 		decodedInstruction := m.decode()
 		m.execute(decodedInstruction)
+		break
 	}
 }
 
