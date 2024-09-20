@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-type Register byte
+type Register uint32
 type Opcode byte
 
 const (
@@ -19,6 +19,12 @@ const (
 	W3
 	W4
 	W5
+	_
+	_
+	_
+	_
+	_
+	_
 
 	MV Opcode = iota
 	ADD
@@ -73,8 +79,11 @@ func main() {
 
 	for i, instruction := range instructionMemory {
 		instructionBits := fmt.Sprintf("%032b", instruction)
+		fmt.Println(instructionBits)
+
 		fmt.Printf("Instruction %d: %s\n", i, instructionBits)
 	}
+
 }
 
 func RunAssembler(filePath string) ([]uint32, error) {
