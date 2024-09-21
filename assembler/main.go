@@ -129,14 +129,6 @@ func main() {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
-
-	firstValue := memory[0]
-	fmt.Printf("O primeiro valor em bits é: 0b%08b\n", firstValue)
-
-	// para testes
-	// for i, byteVal := range memory {
-	// 	fmt.Printf("memory[%d] = 0b%08b\n", i, byteVal)
-	// }
 }
 
 func RunAssembler(filePath string) error {
@@ -153,7 +145,7 @@ func ConvertInstructionsToBinary(instructions [][]string) error {
 		if err != nil {
 			return fmt.Errorf("Error converting instruction '%v': %v", instr, err)
 		}
-		// blocos de 8 bits
+		// blocs of 8 bits
 		memory = append(memory, bytes...)
 	}
 	return nil
@@ -227,7 +219,7 @@ func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 		return nil, fmt.Errorf("Error encoding instruction: %v", err)
 	}
 
-	// quebra em 4 bytes de 8 bits
+	// breaks into 4 bytes of 8 bits
 	bytes := make([]byte, 4)
 	bytes[0] = byte((binaryInstruction >> 24) & 0xFF)
 	bytes[1] = byte((binaryInstruction >> 16) & 0xFF)

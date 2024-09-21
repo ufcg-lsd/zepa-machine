@@ -2,19 +2,23 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"testing"
 )
 
 func TestRunAssemblerAndMemory(t *testing.T) {
-	assemblyCode := `
-		ADD W1, W2, W3
-		MV W1, #5
-	`
-	file := bytes.NewBufferString(assemblyCode)
+	assemblyFilePath := "../asm/samples/add_and_mv.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
 
 	memory = []byte{}
 
-	err := RunAssemblerFromReader(file)
+	err = RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -36,15 +40,18 @@ func TestRunAssemblerAndMemory(t *testing.T) {
 }
 
 func TestSUBAndCMP(t *testing.T) {
-	assemblyCode := `
-		SUB W4, W5, W3
-		CMP W0, W1
-	`
-	file := bytes.NewBufferString(assemblyCode)
+	assemblyFilePath := "../asm/samples/sub_and_cmp.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
 
 	memory = []byte{}
 
-	err := RunAssemblerFromReader(file)
+	err = RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -66,15 +73,18 @@ func TestSUBAndCMP(t *testing.T) {
 }
 
 func TestJUMPAndLOAD(t *testing.T) {
-	assemblyCode := `
-		JUMP 0x0010
-		LOAD W2, 0x0020
-	`
-	file := bytes.NewBufferString(assemblyCode)
+	assemblyFilePath := "../asm/samples/jump_and_load.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
 
 	memory = []byte{}
 
-	err := RunAssemblerFromReader(file)
+	err = RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -96,14 +106,18 @@ func TestJUMPAndLOAD(t *testing.T) {
 }
 
 func TestSTORE(t *testing.T) {
-	assemblyCode := `
-		STORE W3, 0x0040
-	`
-	file := bytes.NewBufferString(assemblyCode)
+	assemblyFilePath := "../asm/samples/store.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
 
 	memory = []byte{}
 
-	err := RunAssemblerFromReader(file)
+	err = RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -124,16 +138,18 @@ func TestSTORE(t *testing.T) {
 }
 
 func TestAddTwo(t *testing.T) {
-	assemblyCode := `
-		MV W1, #5
-		MV W2, #3
-		ADD W0, W1, W2
-	`
-	file := bytes.NewBufferString(assemblyCode)
+	assemblyFilePath := "../asm/samples/add_two_number.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
 
 	memory = []byte{}
 
-	err := RunAssemblerFromReader(file)
+	err = RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -156,22 +172,18 @@ func TestAddTwo(t *testing.T) {
 }
 
 func TestMultiply(t *testing.T) {
-	assemblyCode := `
-		MV W1, #4
-		MV W2, #6
-		MV W0, #0
-		ADD W0, W0, W1
-		ADD W0, W0, W1
-		ADD W0, W0, W1
-		ADD W0, W0, W1
-		ADD W0, W0, W1
-		ADD W0, W0, W1
-	`
-	file := bytes.NewBufferString(assemblyCode)
+	assemblyFilePath := "../asm/samples/multiply_two_numbers.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
 
 	memory = []byte{}
 
-	err := RunAssemblerFromReader(file)
+	err = RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -200,20 +212,18 @@ func TestMultiply(t *testing.T) {
 }
 
 func TestSumList(t *testing.T) {
-	assemblyCode := `
-		MV W0, #0
-		MV W1, #1
-		MV W2, #2
-		MV W3, #3
-		ADD W0, W0, W1
-		ADD W0, W0, W2
-		ADD W0, W0, W3
-	`
-	file := bytes.NewBufferString(assemblyCode)
+	assemblyFilePath := "../asm/samples/sum_list.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
 
 	memory = []byte{}
 
-	err := RunAssemblerFromReader(file)
+	err = RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -240,19 +250,18 @@ func TestSumList(t *testing.T) {
 }
 
 func TestInstructions(t *testing.T) {
-	assemblyCode := `
-		LOAD W1, 0x1000
-		STORE W2, 0x2000
-		ADD W3, W4, W5
-		SUB W5, W1, W2
-		CMP W3, W4
-		JUMP 0x3000
-	`
-	file := bytes.NewBufferString(assemblyCode)
+	assemblyFilePath := "../asm/samples/all_instructions.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
 
 	memory = []byte{}
 
-	err := RunAssemblerFromReader(file)
+	err = RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -277,7 +286,7 @@ func TestInstructions(t *testing.T) {
 	}
 }
 
-// Função auxiliar para rodar o assembler usando um leitor ao invés de um arquivo real
+// auxiliary function for running the assembler using a reader
 func RunAssemblerFromReader(reader *bytes.Buffer) error {
 	instrs, err := LoadAssemblyFromReader(reader)
 	if err != nil {
