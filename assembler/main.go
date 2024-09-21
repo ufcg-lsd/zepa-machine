@@ -246,7 +246,7 @@ func encodeRType(spec InstructionSpec, instruction []string) (uint32, error) {
 		if len(instruction) != 3 {
 			return 0, fmt.Errorf("CMP instruction expects 2 operands, got %d: %v", len(instruction)-1, instruction)
 		}
-		// Para CMP, rd é fixo em 00000
+
 		rs1 := RegisterToBinary(instruction[1])
 		rs2 := RegisterToBinary(instruction[2])
 
@@ -276,7 +276,7 @@ func encodeRType(spec InstructionSpec, instruction []string) (uint32, error) {
 	binaryInstruction |= uint32(rd&0x1F) << 21
 	binaryInstruction |= uint32(rs1&0x1F) << 16
 	binaryInstruction |= uint32(rs2&0x1F) << 11
-	binaryInstruction |= uint32(spec.Funct3&0x1F) << 6 // Shift correctly to bits 6-10
+	binaryInstruction |= uint32(spec.Funct3&0x1F) << 6
 	binaryInstruction |= uint32(spec.Funct7 & 0x3F)
 
 	return binaryInstruction, nil
@@ -290,12 +290,11 @@ func encodeIType(spec InstructionSpec, instruction []string) (uint32, error) {
 		if len(instruction) != 2 {
 			return 0, fmt.Errorf("%s instruction expects 1 operand, got %d: %v", instruction[0], len(instruction)-1, instruction)
 		}
-		// Para JUMP e FETCH, rs1/rd é fixo em 00000
 		rd_rs1 = 0
 		if spec.Opcode == JUMP_OPCODE {
 			immediate = ImmediateToBinary(instruction[1])
 		} else if spec.Opcode == FETCH_OPCODE {
-			immediate = 0 // 0000000000000000
+			immediate = 0
 		}
 		fmt.Printf("Encoding %s: rd_rs1=00000, immediate=%d\n", instruction[0], immediate)
 	} else {
@@ -310,7 +309,7 @@ func encodeIType(spec InstructionSpec, instruction []string) (uint32, error) {
 	binaryInstruction := uint32(spec.Opcode&0x3F) << 26
 	binaryInstruction |= uint32(rd_rs1&0x1F) << 21
 	binaryInstruction |= uint32(immediate&0xFFFF) << 5
-	binaryInstruction |= uint32(spec.Funct3&0x1F) << 6 // Shift correctly to bits 6-10
+	binaryInstruction |= uint32(spec.Funct3&0x1F) << 6
 
 	return binaryInstruction, nil
 }
@@ -324,10 +323,14 @@ func RegisterToBinary(register string) byte {
 }
 
 func ImmediateToBinary(immediate string) uint16 {
+	// Remove o prefixo '#' se presente
+	if strings.HasPrefix(immediate, "#") {
+		immediate = strings.TrimPrefix(immediate, "#")
+	}
+
 	var uintValue uint64
 	var err error
 
-	// Verifica se o imediato está em formato hexadecimal
 	if strings.HasPrefix(immediate, "0x") || strings.HasPrefix(immediate, "0X") {
 		uintValue, err = strconv.ParseUint(immediate, 0, 16)
 	} else {
