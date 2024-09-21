@@ -19,12 +19,6 @@ const (
 	W3
 	W4
 	W5
-	// Reservado para futuros registradores
-	_
-	_
-	_
-	_
-	_
 )
 
 const (
