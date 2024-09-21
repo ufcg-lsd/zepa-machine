@@ -32,7 +32,6 @@ const (
 	JUMP_OPCODE  Opcode = 0b010000
 	LOAD_OPCODE  Opcode = 0b010001
 	STORE_OPCODE Opcode = 0b010010
-	FETCH_OPCODE Opcode = 0b010011
 )
 
 var registerMap = map[string]Register{
@@ -52,7 +51,6 @@ var opcodeMap = map[string]Opcode{
 	"JUMP":  JUMP_OPCODE,
 	"LOAD":  LOAD_OPCODE,
 	"STORE": STORE_OPCODE,
-	"FETCH": FETCH_OPCODE,
 }
 
 type InstructionSpec struct {
@@ -85,7 +83,7 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 		Format: "I-Type",
 		Opcode: MV_OPCODE,
 		Funct3: 0b00000,
-		Funct7: 0b000000, // Não usado em I-Type, mas mantido para consistência
+		Funct7: 0b000000,
 	},
 	JUMP_OPCODE: {
 		Format: "I-Type",
@@ -105,12 +103,6 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 		Funct3: 0b00000,
 		Funct7: 0b000000,
 	},
-	FETCH_OPCODE: {
-		Format: "I-Type",
-		Opcode: FETCH_OPCODE,
-		Funct3: 0b00000,
-		Funct7: 0b000000,
-	},
 }
 
 var encoderMap = map[Opcode]func(InstructionSpec, []string) (uint32, error){
@@ -121,8 +113,9 @@ var encoderMap = map[Opcode]func(InstructionSpec, []string) (uint32, error){
 	LOAD_OPCODE:  encodeIType,
 	STORE_OPCODE: encodeIType,
 	JUMP_OPCODE:  encodeIType,
-	FETCH_OPCODE: encodeIType,
 }
+
+var memory []byte
 
 func main() {
 	if len(os.Args) < 2 {
@@ -131,37 +124,39 @@ func main() {
 	}
 
 	sourceFile := os.Args[1]
-	instructionMemory, err := RunAssembler(sourceFile)
+	err := RunAssembler(sourceFile)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
-	for i, instruction := range instructionMemory {
-		instructionBits := fmt.Sprintf("%032b", instruction)
-		fmt.Printf("Instruction %d: %s\n", i, instructionBits)
-	}
+	firstValue := memory[0]
+	fmt.Printf("O primeiro valor em bits é: 0b%08b\n", firstValue)
+
+	// para testes
+	// for i, byteVal := range memory {
+	// 	fmt.Printf("memory[%d] = 0b%08b\n", i, byteVal)
+	// }
 }
 
-func RunAssembler(filePath string) ([]uint32, error) {
+func RunAssembler(filePath string) error {
 	instrs, err := LoadAssemblyFile(filePath)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return ConvertInstructionsToBinary(instrs)
 }
 
-func ConvertInstructionsToBinary(instructions [][]string) ([]uint32, error) {
-	var instructionMemory []uint32
+func ConvertInstructionsToBinary(instructions [][]string) error {
 	for _, instr := range instructions {
 		bytes, err := ConvertInstructionToBinary(instr)
 		if err != nil {
-			return nil, fmt.Errorf("Error converting instruction '%v': %v", instr, err)
+			return fmt.Errorf("Error converting instruction '%v': %v", instr, err)
 		}
-		instruction := uint32(bytes[0])<<24 | uint32(bytes[1])<<16 | uint32(bytes[2])<<8 | uint32(bytes[3])
-		instructionMemory = append(instructionMemory, instruction)
+		// blocos de 8 bits
+		memory = append(memory, bytes...)
 	}
-	return instructionMemory, nil
+	return nil
 }
 
 func LoadAssemblyFile(filePath string) ([][]string, error) {
@@ -232,6 +227,7 @@ func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 		return nil, fmt.Errorf("Error encoding instruction: %v", err)
 	}
 
+	// quebra em 4 bytes de 8 bits
 	bytes := make([]byte, 4)
 	bytes[0] = byte((binaryInstruction >> 24) & 0xFF)
 	bytes[1] = byte((binaryInstruction >> 16) & 0xFF)
@@ -249,8 +245,6 @@ func encodeRType(spec InstructionSpec, instruction []string) (uint32, error) {
 
 		rs1 := RegisterToBinary(instruction[1])
 		rs2 := RegisterToBinary(instruction[2])
-
-		fmt.Printf("Encoding CMP: rs1=%s(%d), rs2=%s(%d)\n", instruction[1], rs1, instruction[2], rs2)
 
 		binaryInstruction := uint32(spec.Opcode&0x3F) << 26
 		binaryInstruction |= uint32(0&0x1F) << 21 // rd = 00000
@@ -270,8 +264,6 @@ func encodeRType(spec InstructionSpec, instruction []string) (uint32, error) {
 	rs1 := RegisterToBinary(instruction[2])
 	rs2 := RegisterToBinary(instruction[3])
 
-	fmt.Printf("Encoding R-Type: rd=%s(%d), rs1=%s(%d), rs2=%s(%d)\n", instruction[1], rd, instruction[2], rs1, instruction[3], rs2)
-
 	binaryInstruction := uint32(spec.Opcode&0x3F) << 26
 	binaryInstruction |= uint32(rd&0x1F) << 21
 	binaryInstruction |= uint32(rs1&0x1F) << 16
@@ -286,24 +278,20 @@ func encodeIType(spec InstructionSpec, instruction []string) (uint32, error) {
 	var rd_rs1 byte
 	var immediate uint16
 
-	if spec.Opcode == JUMP_OPCODE || spec.Opcode == FETCH_OPCODE {
+	if spec.Opcode == JUMP_OPCODE {
 		if len(instruction) != 2 {
 			return 0, fmt.Errorf("%s instruction expects 1 operand, got %d: %v", instruction[0], len(instruction)-1, instruction)
 		}
 		rd_rs1 = 0
 		if spec.Opcode == JUMP_OPCODE {
 			immediate = ImmediateToBinary(instruction[1])
-		} else if spec.Opcode == FETCH_OPCODE {
-			immediate = 0
 		}
-		fmt.Printf("Encoding %s: rd_rs1=00000, immediate=%d\n", instruction[0], immediate)
 	} else {
 		if len(instruction) != 3 {
 			return 0, fmt.Errorf("I-type instruction expects 2 operands, got %d: %v", len(instruction)-1, instruction)
 		}
 		rd_rs1 = RegisterToBinary(instruction[1])
 		immediate = ImmediateToBinary(instruction[2])
-		fmt.Printf("Encoding I-Type: rd_rs1=%s(%d), immediate=%d\n", instruction[1], rd_rs1, immediate)
 	}
 
 	binaryInstruction := uint32(spec.Opcode&0x3F) << 26
@@ -323,7 +311,6 @@ func RegisterToBinary(register string) byte {
 }
 
 func ImmediateToBinary(immediate string) uint16 {
-	// Remove o prefixo '#' se presente
 	if strings.HasPrefix(immediate, "#") {
 		immediate = strings.TrimPrefix(immediate, "#")
 	}

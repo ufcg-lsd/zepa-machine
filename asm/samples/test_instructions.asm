@@ -1,4 +1,3 @@
-; Teste de LOAD e STORE
 LOAD W1, 0x1000
 STORE W2, 0x2000
 ADD W3, W4, W5
