@@ -81,9 +81,13 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 }
 
 const (
+	// Common Instruction Fields
 	OPCODE_SHIFT = 26
 	OPCODE_MASK  = 0x3F
+)
 
+const (
+	// R-Type Instructions
 	RD_SHIFT       = 21
 	RD_MASK        = 0x1F
 	RS1_SHIFT      = 16
@@ -94,7 +98,10 @@ const (
 	FUNCT3_MASK_R  = 0x1F
 	FUNCT7_SHIFT   = 0
 	FUNCT7_MASK    = 0x3F
+)
 
+const (
+	// R-Type Instructions
 	RD_RS1_SHIFT_I = 21
 	RD_RS1_MASK_I  = 0x1F
 	FUNCT3_SHIFT_I = 6
@@ -114,7 +121,6 @@ func main() {
 	if err := RunAssembler(sourceFile); err != nil {
 		return
 	}
-
 }
 
 func RunAssembler(filePath string) error {
