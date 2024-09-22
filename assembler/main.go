@@ -19,19 +19,20 @@ const (
 	W3
 	W4
 	W5
-)
+	_
+	_
+	_
+	_
+	_
+	_
 
-const (
-	// R-Type Opcodes
-	ADD_OPCODE Opcode = 0b001101
-	SUB_OPCODE Opcode = 0b001110
-	CMP_OPCODE Opcode = 0b001111
-
-	// I-Type Opcodes
-	MV_OPCODE    Opcode = 0b001100
-	JUMP_OPCODE  Opcode = 0b010000
-	LOAD_OPCODE  Opcode = 0b010001
-	STORE_OPCODE Opcode = 0b010010
+	MV_OPCODE Opcode = iota
+	ADD_OPCODE
+	SUB_OPCODE
+	CMP_OPCODE
+	JUMP_OPCODE
+	LOAD_OPCODE
+	STORE_OPCODE
 )
 
 var registerMap = map[string]Register{
