@@ -80,18 +80,41 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 	STORE_OPCODE: newInstructionSpec("I-Type", STORE_OPCODE),
 }
 
+const (
+	OPCODE_SHIFT = 26
+	OPCODE_MASK  = 0x3F
+
+	RD_SHIFT       = 21
+	RD_MASK        = 0x1F
+	RS1_SHIFT      = 16
+	RS1_MASK       = 0x1F
+	RS2_SHIFT      = 11
+	RS2_MASK       = 0x1F
+	FUNCT3_SHIFT_R = 6
+	FUNCT3_MASK_R  = 0x1F
+	FUNCT7_SHIFT   = 0
+	FUNCT7_MASK    = 0x3F
+
+	RD_RS1_SHIFT_I = 21
+	RD_RS1_MASK_I  = 0x1F
+	FUNCT3_SHIFT_I = 6
+	FUNCT3_MASK_I  = 0x1F
+	IMM_SHIFT_I    = 5
+	IMM_MASK_I     = 0xFFFF
+)
+
 var memory []byte
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: assembler <input_file.asm>")
 		return
 	}
 
 	sourceFile := os.Args[1]
 	if err := RunAssembler(sourceFile); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		return
 	}
+
 }
 
 func RunAssembler(filePath string) error {
@@ -99,6 +122,7 @@ func RunAssembler(filePath string) error {
 	if err != nil {
 		return err
 	}
+
 	return ConvertInstructionsToBinary(instrs)
 }
 
@@ -154,7 +178,6 @@ func processLine(line string) string {
 	return strings.ReplaceAll(line, ",", "")
 }
 
-// Função para converter uma instrução em binário
 func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 	if len(instruction) == 0 {
 		return nil, fmt.Errorf("Empty instruction")
@@ -187,7 +210,6 @@ func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 		return nil, fmt.Errorf("Error encoding instruction '%v': %v", instruction, err)
 	}
 
-	//  breaks into 4 bytes of 8 bits
 	bytes := []byte{
 		byte((binaryInstruction >> 24) & 0xFF),
 		byte((binaryInstruction >> 16) & 0xFF),
@@ -217,7 +239,6 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 			return 0, err
 		}
 	case 2:
-		// type CMP
 		rd = 0
 		rs1, err = parseRegister(operands[0])
 		if err != nil {
@@ -231,12 +252,12 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 		return 0, fmt.Errorf("R-Type instruction expects 2 or 3 operands, got %d", len(operands))
 	}
 
-	binaryInstruction := uint32(spec.Opcode&0x3F) << 26
-	binaryInstruction |= uint32(rd&0x1F) << 21
-	binaryInstruction |= uint32(rs1&0x1F) << 16
-	binaryInstruction |= uint32(rs2&0x1F) << 11
-	binaryInstruction |= uint32(spec.Funct3&0x1F) << 6
-	binaryInstruction |= uint32(spec.Funct7 & 0x3F)
+	binaryInstruction := uint32(spec.Opcode&OPCODE_MASK) << OPCODE_SHIFT
+	binaryInstruction |= uint32(rd&RD_MASK) << RD_SHIFT
+	binaryInstruction |= uint32(rs1&RS1_MASK) << RS1_SHIFT
+	binaryInstruction |= uint32(rs2&RS2_MASK) << RS2_SHIFT
+	binaryInstruction |= uint32(spec.Funct3&FUNCT3_MASK_R) << FUNCT3_SHIFT_R
+	binaryInstruction |= uint32(spec.Funct7&FUNCT7_MASK) << FUNCT7_SHIFT
 
 	return binaryInstruction, nil
 }
@@ -257,7 +278,6 @@ func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 			return 0, err
 		}
 	case 1:
-		// type JUMP
 		rd_rs1 = 0
 		immediate, err = parseImmediate(operands[0])
 		if err != nil {
@@ -267,10 +287,10 @@ func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 		return 0, fmt.Errorf("I-Type instruction expects 1 or 2 operands, got %d", len(operands))
 	}
 
-	binaryInstruction := uint32(spec.Opcode&0x3F) << 26
-	binaryInstruction |= uint32(rd_rs1&0x1F) << 21
-	binaryInstruction |= uint32(immediate&0xFFFF) << 5
-	binaryInstruction |= uint32(spec.Funct3&0x1F) << 6
+	binaryInstruction := uint32(spec.Opcode&OPCODE_MASK) << OPCODE_SHIFT
+	binaryInstruction |= uint32(rd_rs1&RD_RS1_MASK_I) << RD_RS1_SHIFT_I
+	binaryInstruction |= uint32(spec.Funct3&FUNCT3_MASK_I) << FUNCT3_SHIFT_I
+	binaryInstruction |= uint32(immediate&IMM_MASK_I) << IMM_SHIFT_I
 
 	return binaryInstruction, nil
 }
