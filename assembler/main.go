@@ -9,11 +9,9 @@ import (
 	"strings"
 )
 
-// Definições de tipos
 type Register uint8
 type Opcode uint8
 
-// Constantes de registros e opcodes
 const (
 	W0 Register = iota
 	W1
@@ -21,12 +19,13 @@ const (
 	W3
 	W4
 	W5
-	_ // Reservado
 	_
 	_
 	_
 	_
 	_
+	_
+
 	MV_OPCODE Opcode = iota
 	ADD_OPCODE
 	SUB_OPCODE
@@ -36,7 +35,6 @@ const (
 	STORE_OPCODE
 )
 
-// Mapas de mapeamento para registros e opcodes
 var registerMap = map[string]Register{
 	"W0": W0,
 	"W1": W1,
@@ -56,7 +54,6 @@ var opcodeMap = map[string]Opcode{
 	"STORE": STORE_OPCODE,
 }
 
-// Estrutura que define uma especificação de instrução
 type InstructionSpec struct {
 	Format string
 	Opcode Opcode
@@ -64,17 +61,15 @@ type InstructionSpec struct {
 	Funct7 byte
 }
 
-// Função auxiliar para criar instruções R-Type e I-Type
 func newInstructionSpec(format string, opcode Opcode) InstructionSpec {
 	return InstructionSpec{
 		Format: format,
 		Opcode: opcode,
-		Funct3: 0b00000,  // Valor padrão, pode ser ajustado conforme necessário
-		Funct7: 0b000000, // Valor padrão, pode ser ajustado conforme necessário
+		Funct3: 0b00000,
+		Funct7: 0b000000,
 	}
 }
 
-// Mapeamento de instruções refatorado
 var instructionSpecs = map[Opcode]InstructionSpec{
 	ADD_OPCODE:   newInstructionSpec("R-Type", ADD_OPCODE),
 	SUB_OPCODE:   newInstructionSpec("R-Type", SUB_OPCODE),
@@ -85,10 +80,8 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 	STORE_OPCODE: newInstructionSpec("I-Type", STORE_OPCODE),
 }
 
-// Slice para armazenar a memória
 var memory []byte
 
-// Função principal
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: assembler <input_file.asm>")
@@ -101,7 +94,6 @@ func main() {
 	}
 }
 
-// Função para executar o assembler
 func RunAssembler(filePath string) error {
 	instrs, err := LoadAssemblyFile(filePath)
 	if err != nil {
@@ -110,20 +102,17 @@ func RunAssembler(filePath string) error {
 	return ConvertInstructionsToBinary(instrs)
 }
 
-// Função para converter instruções em binário
 func ConvertInstructionsToBinary(instructions [][]string) error {
 	for _, instr := range instructions {
 		bytes, err := ConvertInstructionToBinary(instr)
 		if err != nil {
 			return fmt.Errorf("Error converting instruction '%v': %v", instr, err)
 		}
-		// Armazena blocos de 8 bits
 		memory = append(memory, bytes...)
 	}
 	return nil
 }
 
-// Função para carregar o arquivo de assembly
 func LoadAssemblyFile(filePath string) ([][]string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -134,7 +123,6 @@ func LoadAssemblyFile(filePath string) ([][]string, error) {
 	return LoadAssemblyFromReader(file)
 }
 
-// Função para carregar assembly a partir de um reader
 func LoadAssemblyFromReader(reader io.Reader) ([][]string, error) {
 	var instructions [][]string
 	scanner := bufio.NewScanner(reader)
@@ -155,7 +143,6 @@ func LoadAssemblyFromReader(reader io.Reader) ([][]string, error) {
 	return instructions, nil
 }
 
-// Função para processar uma linha do assembly
 func processLine(line string) string {
 	line = strings.TrimSpace(line)
 	if idx := strings.Index(line, ";"); idx != -1 {
@@ -200,7 +187,7 @@ func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 		return nil, fmt.Errorf("Error encoding instruction '%v': %v", instruction, err)
 	}
 
-	// Quebra em 4 bytes de 8 bits (Big Endian)
+	//  breaks into 4 bytes of 8 bits
 	bytes := []byte{
 		byte((binaryInstruction >> 24) & 0xFF),
 		byte((binaryInstruction >> 16) & 0xFF),
@@ -211,9 +198,7 @@ func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 	return bytes, nil
 }
 
-// Função genérica para codificar instruções R-Type
 func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
-	// Define rd, rs1, rs2 com valores padrão
 	var rd, rs1, rs2 byte
 	var err error
 
@@ -232,7 +217,7 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 			return 0, err
 		}
 	case 2:
-		// Para instruções como CMP que não usam rd
+		// type CMP
 		rd = 0
 		rs1, err = parseRegister(operands[0])
 		if err != nil {
@@ -256,9 +241,7 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 	return binaryInstruction, nil
 }
 
-// Função genérica para codificar instruções I-Type
 func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
-	// Define rd_rs1 e immediate com valores padrão
 	var rd_rs1 byte
 	var immediate uint16
 	var err error
@@ -274,7 +257,7 @@ func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 			return 0, err
 		}
 	case 1:
-		// Para instruções como JUMP que não usam rd_rs1
+		// type JUMP
 		rd_rs1 = 0
 		immediate, err = parseImmediate(operands[0])
 		if err != nil {
@@ -292,7 +275,6 @@ func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 	return binaryInstruction, nil
 }
 
-// Função auxiliar para converter um registro para binário
 func parseRegister(register string) (byte, error) {
 	reg, ok := registerMap[strings.ToUpper(register)]
 	if !ok {
@@ -301,9 +283,7 @@ func parseRegister(register string) (byte, error) {
 	return byte(reg), nil
 }
 
-// Função auxiliar para converter um imediato para binário
 func parseImmediate(immediate string) (uint16, error) {
-	// Remove prefixo '#' se existir
 	immediate = strings.TrimPrefix(immediate, "#")
 
 	var uintValue uint64
