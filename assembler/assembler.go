@@ -151,7 +151,7 @@ func ConvertInstructionsToBinary(instructions [][]string) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Error converting instruction '%v': %v", instr, err)
 		}
-		// Append the resulting binary to the memory slice
+
 		memory = append(memory, bytes...)
 	}
 	return memory, nil
@@ -210,7 +210,6 @@ func processLine(line string) string {
 
 // Takes a single parsed instruction and converts it to binary
 func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
-	// Ensure that the instruction is not empty
 	if len(instruction) == 0 {
 		return nil, fmt.Errorf("Empty instruction")
 	}
@@ -256,7 +255,6 @@ func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 	return bytes, nil
 }
 
-// encodes R-Type instructions
 func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 	var rd, rs1, rs2 byte
 	var err error
@@ -301,7 +299,6 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 	return binaryInstruction, nil
 }
 
-// encodeIType encodes I-Type instructions
 func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 	var rd_rs1 byte
 	var immediate uint16
