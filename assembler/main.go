@@ -25,7 +25,6 @@ const (
 	_
 	_
 	_
-
 	MV_OPCODE Opcode = iota
 	ADD_OPCODE
 	SUB_OPCODE
@@ -61,49 +60,24 @@ type InstructionSpec struct {
 	Funct7 byte
 }
 
+func newInstructionSpec(format string, opcode Opcode) InstructionSpec {
+	return InstructionSpec{
+		Format: format,
+		Opcode: opcode,
+		Funct3: 0b00000,
+		Funct7: 0b000000,
+	}
+}
+
+// Mapeamento de instruções refatorado
 var instructionSpecs = map[Opcode]InstructionSpec{
-	ADD_OPCODE: {
-		Format: "R-Type",
-		Opcode: ADD_OPCODE,
-		Funct3: 0b00000,
-		Funct7: 0b000000,
-	},
-	SUB_OPCODE: {
-		Format: "R-Type",
-		Opcode: SUB_OPCODE,
-		Funct3: 0b00000,
-		Funct7: 0b000000,
-	},
-	CMP_OPCODE: {
-		Format: "R-Type",
-		Opcode: CMP_OPCODE,
-		Funct3: 0b00000,
-		Funct7: 0b000000,
-	},
-	MV_OPCODE: {
-		Format: "I-Type",
-		Opcode: MV_OPCODE,
-		Funct3: 0b00000,
-		Funct7: 0b000000,
-	},
-	JUMP_OPCODE: {
-		Format: "I-Type",
-		Opcode: JUMP_OPCODE,
-		Funct3: 0b00000,
-		Funct7: 0b000000,
-	},
-	LOAD_OPCODE: {
-		Format: "I-Type",
-		Opcode: LOAD_OPCODE,
-		Funct3: 0b00000,
-		Funct7: 0b000000,
-	},
-	STORE_OPCODE: {
-		Format: "I-Type",
-		Opcode: STORE_OPCODE,
-		Funct3: 0b00000,
-		Funct7: 0b000000,
-	},
+	ADD_OPCODE:   newInstructionSpec("R-Type", ADD_OPCODE),
+	SUB_OPCODE:   newInstructionSpec("R-Type", SUB_OPCODE),
+	CMP_OPCODE:   newInstructionSpec("R-Type", CMP_OPCODE),
+	MV_OPCODE:    newInstructionSpec("I-Type", MV_OPCODE),
+	JUMP_OPCODE:  newInstructionSpec("I-Type", JUMP_OPCODE),
+	LOAD_OPCODE:  newInstructionSpec("I-Type", LOAD_OPCODE),
+	STORE_OPCODE: newInstructionSpec("I-Type", STORE_OPCODE),
 }
 
 var encoderMap = map[Opcode]func(InstructionSpec, []string) (uint32, error){
@@ -146,7 +120,7 @@ func ConvertInstructionsToBinary(instructions [][]string) error {
 		if err != nil {
 			return fmt.Errorf("Error converting instruction '%v': %v", instr, err)
 		}
-		// blocs of 8 bits
+		// Armazena blocos de 8 bits
 		memory = append(memory, bytes...)
 	}
 	return nil
@@ -220,7 +194,7 @@ func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 		return nil, fmt.Errorf("Error encoding instruction: %v", err)
 	}
 
-	// breaks into 4 bytes of 8 bits
+	// Quebra em 4 bytes de 8 bits
 	bytes := make([]byte, 4)
 	bytes[0] = byte((binaryInstruction >> 24) & 0xFF)
 	bytes[1] = byte((binaryInstruction >> 16) & 0xFF)
