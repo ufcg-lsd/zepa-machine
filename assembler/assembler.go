@@ -120,7 +120,7 @@ func RunAssembler(filePath string) ([]byte, error) {
 }
 
 func ConvertInstructionsToBinary(instructions [][]string) ([]byte, error) {
-	var memory []byte // Memória local para armazenar as instruções convertidas
+	var memory []byte
 
 	for _, instr := range instructions {
 		bytes, err := ConvertInstructionToBinary(instr)
