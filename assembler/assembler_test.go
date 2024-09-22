@@ -1,4 +1,4 @@
-package main
+package assembler
 
 import (
 	"bytes"
@@ -16,9 +16,7 @@ func TestRunAssemblerAndMemory(t *testing.T) {
 
 	file := bytes.NewBuffer(assemblyCode)
 
-	memory = []byte{}
-
-	err = RunAssemblerFromReader(file)
+	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -49,9 +47,7 @@ func TestSUBAndCMP(t *testing.T) {
 
 	file := bytes.NewBuffer(assemblyCode)
 
-	memory = []byte{}
-
-	err = RunAssemblerFromReader(file)
+	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -82,9 +78,7 @@ func TestJUMPAndLOAD(t *testing.T) {
 
 	file := bytes.NewBuffer(assemblyCode)
 
-	memory = []byte{}
-
-	err = RunAssemblerFromReader(file)
+	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -115,9 +109,7 @@ func TestSTORE(t *testing.T) {
 
 	file := bytes.NewBuffer(assemblyCode)
 
-	memory = []byte{}
-
-	err = RunAssemblerFromReader(file)
+	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -147,9 +139,7 @@ func TestAddTwo(t *testing.T) {
 
 	file := bytes.NewBuffer(assemblyCode)
 
-	memory = []byte{}
-
-	err = RunAssemblerFromReader(file)
+	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -181,9 +171,7 @@ func TestMultiply(t *testing.T) {
 
 	file := bytes.NewBuffer(assemblyCode)
 
-	memory = []byte{}
-
-	err = RunAssemblerFromReader(file)
+	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -221,9 +209,7 @@ func TestSumList(t *testing.T) {
 
 	file := bytes.NewBuffer(assemblyCode)
 
-	memory = []byte{}
-
-	err = RunAssemblerFromReader(file)
+	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -259,9 +245,7 @@ func TestInstructions(t *testing.T) {
 
 	file := bytes.NewBuffer(assemblyCode)
 
-	memory = []byte{}
-
-	err = RunAssemblerFromReader(file)
+	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
 		t.Fatalf("Erro ao rodar o assembler: %v", err)
 	}
@@ -287,10 +271,10 @@ func TestInstructions(t *testing.T) {
 }
 
 // auxiliary function for running the assembler using a reader
-func RunAssemblerFromReader(reader *bytes.Buffer) error {
+func RunAssemblerFromReader(reader *bytes.Buffer) ([]byte, error) {
 	instrs, err := LoadAssemblyFromReader(reader)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return ConvertInstructionsToBinary(instrs)
 }

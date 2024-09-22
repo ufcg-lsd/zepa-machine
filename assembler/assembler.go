@@ -1,4 +1,4 @@
-package main
+package assembler
 
 import (
 	"bufio"
@@ -101,7 +101,7 @@ const (
 )
 
 const (
-	// R-Type Instructions
+	// I-Type Instructions
 	RD_RS1_SHIFT_I = 21
 	RD_RS1_MASK_I  = 0x1F
 	FUNCT3_SHIFT_I = 6
@@ -110,37 +110,26 @@ const (
 	IMM_MASK_I     = 0xFFFF
 )
 
-var memory []byte
-
-func main() {
-	if len(os.Args) < 2 {
-		return
-	}
-
-	sourceFile := os.Args[1]
-	if err := RunAssembler(sourceFile); err != nil {
-		return
-	}
-}
-
-func RunAssembler(filePath string) error {
+func RunAssembler(filePath string) ([]byte, error) {
 	instrs, err := LoadAssemblyFile(filePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	return ConvertInstructionsToBinary(instrs)
 }
 
-func ConvertInstructionsToBinary(instructions [][]string) error {
+func ConvertInstructionsToBinary(instructions [][]string) ([]byte, error) {
+	var memory []byte // Memória local para armazenar as instruções convertidas
+
 	for _, instr := range instructions {
 		bytes, err := ConvertInstructionToBinary(instr)
 		if err != nil {
-			return fmt.Errorf("Error converting instruction '%v': %v", instr, err)
+			return nil, fmt.Errorf("Error converting instruction '%v': %v", instr, err)
 		}
 		memory = append(memory, bytes...)
 	}
-	return nil
+	return memory, nil
 }
 
 func LoadAssemblyFile(filePath string) ([][]string, error) {
