@@ -33,13 +33,22 @@ const (
 	rdLength     = 5
 	rs1Length    = 5
 	rs2Length    = 5
-	funct3Length = 3
-	funct7Length = 7
-	addrConstLen = 16
+	funct5Length = 5
+	funct6Length = 6
+	immediateLen = 16
 	word         = 32
 )
 
+const (
+	opcodeBitMask    = 0b111111
+	registerBitMask  = 0b11111
+	immediateBitMask = 0b1111111111111111
+	funct5BitMask    = 0b11111
+	funct6BitMask    = 0b111111
+)
+
 var operations = map[byte]Operation{
+	byte(MV):    (*Machine).mv,
 	byte(ADD):   (*Machine).add,
 	byte(SUB):   (*Machine).sub,
 	byte(CMP):   (*Machine).cmp,
@@ -53,15 +62,17 @@ type Instruction struct {
 	rd        Register
 	rs1       Register
 	rs2       Register
-	funct3    byte
-	funct7    byte
-	addrConst uint16
+	funct5    byte
+	funct6    byte
+	immediate uint16
 }
 
 type Machine struct {
 	memory    []byte
 	registers map[Register]uint32
 }
+
+func (m *Machine) mv(inst Instruction) {}
 
 func (m *Machine) add(inst Instruction) {}
 
@@ -91,15 +102,15 @@ func (m *Machine) decodeRTypeInst(instruction uint32) Instruction {
 	offSetRd := offsetOpcode - rdLength
 	offSetRs1 := offSetRd - rs1Length
 	offSetRs2 := offSetRs1 - rs2Length
-	offSetFunct3 := offSetRs2 - funct3Length
-	offSetFunct7 := offSetFunct3 - funct7Length
+	offSetFunct5 := offSetRs2 - funct5Length
+	offSetFunct6 := offSetFunct5 - funct6Length
 
-	opcode := instruction >> (uint32(offsetOpcode))
-	rd := (instruction >> uint32(offSetRd)) & 0b11111
-	rs1 := (instruction >> (uint32(offSetRs1))) & 0b11111
-	rs2 := (instruction >> (uint32(offSetRs2))) & 0b11111
-	funct3 := (instruction >> (uint32(offSetFunct3))) & 0b111
-	funct7 := (instruction >> (uint32(offSetFunct7))) & 0b1111111
+	opcode := instruction >> (uint32(offsetOpcode)) & 0b111111
+	rd := (instruction >> uint32(offSetRd)) & registerBitMask
+	rs1 := (instruction >> (uint32(offSetRs1))) & registerBitMask
+	rs2 := (instruction >> (uint32(offSetRs2))) & registerBitMask
+	funct5 := (instruction >> (uint32(offSetFunct5))) & funct5BitMask
+	funct6 := (instruction >> (uint32(offSetFunct6))) & funct6BitMask
 
 	operation := operations[byte(opcode)]
 
@@ -108,54 +119,51 @@ func (m *Machine) decodeRTypeInst(instruction uint32) Instruction {
 		rd:     Register(rd),
 		rs1:    Register(rs1),
 		rs2:    Register(rs2),
-		funct3: byte(funct3),
-		funct7: byte(funct7),
+		funct5: byte(funct5),
+		funct6: byte(funct6),
 	}
 }
 
 func (m *Machine) decodeITypeInst(instruction uint32) Instruction {
 	offsetOpcode := word - opcodeLength
 	offSetRdRs1 := offsetOpcode - rdLength
-	offSetImmediate := offSetRdRs1 - addrConstLen
-	offSetFunct3 := offSetImmediate - funct3Length
+	offSetImmediate := offSetRdRs1 - immediateLen
+	offSetFunct5 := offSetImmediate - funct5Length
 
-	opcode := instruction >> (uint32(offsetOpcode))
-	rdRs1 := (instruction >> uint32(offSetRdRs1)) & 0b11111
-	immediate := (instruction >> (uint32(offSetImmediate))) & 0b111
-	funct3 := (instruction >> (uint32(offSetFunct3))) & 0b1111111
+	opcode := instruction >> (uint32(offsetOpcode)) & opcodeBitMask
+	rdRs1 := (instruction >> uint32(offSetRdRs1)) & registerBitMask
+	immediate := (instruction >> (uint32(offSetImmediate))) & immediateBitMask
+	funct5 := (instruction >> (uint32(offSetFunct5))) & funct5BitMask
 
 	operation := operations[byte(opcode)]
 
 	return Instruction{
 		opcode:    operation,
 		rd:        Register(rdRs1),
-		addrConst: uint16(immediate),
-		funct3:    byte(funct3),
+		immediate: uint16(immediate),
+		funct5:    byte(funct5),
 	}
 }
 
-func (m *Machine) checkRType(instruction uint32) bool {
+func (m *Machine) getOpcode(instruction uint32) Opcode {
 	offsetOpcode := word - opcodeLength
 	opcode := instruction >> (uint32(offsetOpcode))
 
-	rTypeInsts := []Opcode{ADD, SUB, CMP}
-
-	for _, operation := range rTypeInsts {
-		if opcode == uint32(operation) {
-			return true
-		}
-	}
-
-	return false
+	return Opcode(opcode)
 }
 
 func (m *Machine) decode() Instruction {
 	instruction := m.registers[ir]
+	opcode := m.getOpcode(instruction)
 
-	if m.checkRType(instruction) {
+	switch opcode {
+	case ADD, SUB, CMP:
 		return m.decodeRTypeInst(instruction)
+	case MV, JUMP, LOAD, STORE:
+		fallthrough
+	default:
+		return m.decodeITypeInst(instruction)
 	}
-	return m.decodeITypeInst(instruction)
 }
 
 func (m *Machine) execute(inst Instruction) {}
