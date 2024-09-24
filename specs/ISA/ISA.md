@@ -24,7 +24,7 @@ For the specific case of this machine, six registers were defined, mainly to ass
 For this machine, the word size, instruction size, and register size were defined to be 32 bits.
 ### R-Type (Register type) format
 
-| opcode  | rd  | rs1  | rs2  | funct3  | funct7  |
+| opcode  | rd  | rs1  | rs2  | funct5  | funct6  |
 |-----------------|-------------|--------------|--------------|----------------|-----------------|
 | 6 bits          | 5 bits      | 5 bits       | 5 bits       | 5 bits         | 6 bits          |
 
@@ -34,13 +34,13 @@ For this machine, the word size, instruction size, and register size were define
     - **rd**: Destination register.
     - **rs1**: Source register 1.
     - **rs2**: Source register 2.
-    - **funct3** and **funct7**: Opcode extensions.
+    - **funct5** and **funct6**: Opcode extensions.
 
 
 ### I-Type (Immediate type) format
 
 
-| opcode  | rs1/rd  | constant/address  | funct3  
+| opcode  | rs1/rd  | constant/address  | funct5  
 |-----------------|-------------|--------------|--------------|
 | 6 bits          | 5 bits      | 16 bits       | 5 bits       |
 
@@ -49,7 +49,7 @@ For this machine, the word size, instruction size, and register size were define
     - **opcode**: Operation code, such as LOAD, STORE, etc..
     - **rs1/rd**: Destination or source register.
     - **constant/address**: Constant or address value
-    - **funct3**: Opcode extension.
+    - **funct5**: Opcode extension.
 
 ## Definition of Instructions
 
@@ -125,7 +125,7 @@ These flags can be used by instructions to make decisions that can change the pr
 
 ### Zepa Machine Instruction Encoding Table
 
-| **Instruction** | **Format** | **opcode** | **rd** | **rs1** | **rs2** | **funct3** | **funct7** |
+| **Instruction** | **Format** | **opcode** | **rd** | **rs1** | **rs2** | **funct5** | **funct6** |
 |-----------------|------------|------------|---------|---------|------------|--------|------------|
 | **ADD**         | R-Type         | 001101    | reg     | reg     | reg        | 00000    | 000000    |
 | **SUB**         | R-Type          | 001110    | reg     | reg     | reg        | 00000    | 000000    |
@@ -133,7 +133,7 @@ These flags can be used by instructions to make decisions that can change the pr
 
 
 
-| **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate** | **funct3** |
+| **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate** | **funct5** |
 |-----------------|------------|---------------|---------|------------|--------|
 | **MV**          | I-Type          | 001100      | reg     | 16bit constant         | 00000    |
 | **JUMP**        | I-Type          | 010000      | 00000     | 16bit address        | 00000    |
