@@ -62,8 +62,8 @@ var opcodeMap = map[string]Opcode{
 type InstructionSpec struct {
 	Format string
 	Opcode Opcode
-	Funct3 byte
-	Funct7 byte
+	Funct5 byte
+	Funct6 byte
 }
 
 // Helper function to create a new InstructionSpec
@@ -71,8 +71,8 @@ func newInstructionSpec(format string, opcode Opcode) InstructionSpec {
 	return InstructionSpec{
 		Format: format,
 		Opcode: opcode,
-		Funct3: 0b00000,  // Default value
-		Funct7: 0b000000, // Default value
+		Funct5: 0b00000,  // Default value
+		Funct6: 0b000000, // Default value
 	}
 }
 
@@ -108,10 +108,10 @@ const (
 	RS2_MASK_R  = 0x1F
 
 	// Function codes (funct3 and funct7)
-	FUNCT3_SHIFT_R = 6 // Shift funct3 by 6 bits for R-Type
-	FUNCT3_MASK_R  = 0x1F
-	FUNCT7_SHIFT_R = 0 // Shift funct7 by 0 bits for R-Type
-	FUNCT7_MASK_R  = 0x3F
+	FUNCT5_SHIFT_R = 6 // Shift funct3 by 6 bits for R-Type
+	FUNCT5_MASK_R  = 0x1F
+	FUNCT6_SHIFT_R = 0 // Shift funct7 by 0 bits for R-Type
+	FUNCT6_MASK_R  = 0x3F
 )
 
 // I-Type instruction constants (shift and mask values)
@@ -121,8 +121,8 @@ const (
 	RD_RS1_MASK_I  = 0x1F
 
 	// Function code (funct3)
-	FUNCT3_SHIFT_I = 6 // Shift funct3 by 6 bits for I-Type
-	FUNCT3_MASK_I  = 0x1F
+	FUNCT5_SHIFT_I = 6 // Shift funct3 by 6 bits for I-Type
+	FUNCT5_MASK_I  = 0x1F
 
 	// Immediate value
 	IMM_SHIFT_I = 5 // Shift immediate value by 5 bits for I-Type
@@ -293,8 +293,8 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 	binaryInstruction |= uint32(rd&RD_MASK_R) << RD_SHIFT_R
 	binaryInstruction |= uint32(rs1&RS1_MASK_R) << RS1_SHIFT_R
 	binaryInstruction |= uint32(rs2&RS2_MASK_R) << RS2_SHIFT_R
-	binaryInstruction |= uint32(spec.Funct3&FUNCT3_MASK_R) << FUNCT3_SHIFT_R
-	binaryInstruction |= uint32(spec.Funct7&FUNCT7_MASK_R) << FUNCT7_SHIFT_R
+	binaryInstruction |= uint32(spec.Funct5&FUNCT5_MASK_R) << FUNCT5_SHIFT_R
+	binaryInstruction |= uint32(spec.Funct6&FUNCT6_MASK_R) << FUNCT6_SHIFT_R
 
 	return binaryInstruction, nil
 }
@@ -328,7 +328,7 @@ func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 	// Encode the I-Type instruction by combining the opcode, register, and immediate value
 	binaryInstruction := uint32(spec.Opcode&OPCODE_MASK) << OPCODE_SHIFT
 	binaryInstruction |= uint32(rd_rs1&RD_RS1_MASK_I) << RD_RS1_SHIFT_I
-	binaryInstruction |= uint32(spec.Funct3&FUNCT3_MASK_I) << FUNCT3_SHIFT_I
+	binaryInstruction |= uint32(spec.Funct5&FUNCT5_MASK_I) << FUNCT5_SHIFT_I
 	binaryInstruction |= uint32(immediate&IMM_MASK_I) << IMM_SHIFT_I
 
 	return binaryInstruction, nil
