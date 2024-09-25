@@ -11,28 +11,27 @@ func TestRunAssemblerAndMemory(t *testing.T) {
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)
 	if err != nil {
-		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+		t.Fatalf("Error reading the assembly file: %v", err)
 	}
 
 	file := bytes.NewBuffer(assemblyCode)
 
 	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
-		t.Fatalf("Erro ao rodar o assembler: %v", err)
+		t.Fatalf("Error running the assembler: %v", err)
 	}
 
 	expectedMemory := []byte{
 		0b00110100, 0b00100010, 0b00011000, 0b00000000, // ADD W1, W2, W3
 		0b00110000, 0b00100000, 0b00000000, 0b10100000, // MV W1, #5
 	}
-
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Tamanho da memória incorreto. Esperado: %d, Obtido: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Memória incorreta no bloco %d. Esperado: 0b%08b, Obtido: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -42,14 +41,14 @@ func TestSUBAndCMP(t *testing.T) {
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)
 	if err != nil {
-		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+		t.Fatalf("Error reading the assembly file: %v", err)
 	}
 
 	file := bytes.NewBuffer(assemblyCode)
 
 	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
-		t.Fatalf("Erro ao rodar o assembler: %v", err)
+		t.Fatalf("Error running the assembler: %v", err)
 	}
 
 	expectedMemory := []byte{
@@ -58,12 +57,12 @@ func TestSUBAndCMP(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Tamanho da memória incorreto. Esperado: %d, Obtido: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Memória incorreta no bloco %d. Esperado: 0b%08b, Obtido: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -73,14 +72,14 @@ func TestJUMPAndLOAD(t *testing.T) {
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)
 	if err != nil {
-		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+		t.Fatalf("Error reading the assembly file: %v", err)
 	}
 
 	file := bytes.NewBuffer(assemblyCode)
 
 	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
-		t.Fatalf("Erro ao rodar o assembler: %v", err)
+		t.Fatalf("Error running the assembler: %v", err)
 	}
 
 	expectedMemory := []byte{
@@ -89,12 +88,12 @@ func TestJUMPAndLOAD(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Tamanho da memória incorreto. Esperado: %d, Obtido: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Memória incorreta no bloco %d. Esperado: 0b%08b, Obtido: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -104,14 +103,14 @@ func TestSTORE(t *testing.T) {
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)
 	if err != nil {
-		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+		t.Fatalf("Error reading the assembly file: %v", err)
 	}
 
 	file := bytes.NewBuffer(assemblyCode)
 
 	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
-		t.Fatalf("Erro ao rodar o assembler: %v", err)
+		t.Fatalf("Error running the assembler: %v", err)
 	}
 
 	expectedMemory := []byte{
@@ -119,12 +118,12 @@ func TestSTORE(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Tamanho da memória incorreto. Esperado: %d, Obtido: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Memória incorreta no bloco %d. Esperado: 0b%08b, Obtido: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -134,14 +133,14 @@ func TestAddTwo(t *testing.T) {
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)
 	if err != nil {
-		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+		t.Fatalf("Error reading the assembly file: %v", err)
 	}
 
 	file := bytes.NewBuffer(assemblyCode)
 
 	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
-		t.Fatalf("Erro ao rodar o assembler: %v", err)
+		t.Fatalf("Error running the assembler: %v", err)
 	}
 
 	expectedMemory := []byte{
@@ -151,12 +150,12 @@ func TestAddTwo(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Tamanho da memória incorreto. Esperado: %d, Obtido: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Memória incorreta no bloco %d. Esperado: 0b%08b, Obtido: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -166,14 +165,14 @@ func TestMultiply(t *testing.T) {
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)
 	if err != nil {
-		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+		t.Fatalf("Error reading the assembly file: %v", err)
 	}
 
 	file := bytes.NewBuffer(assemblyCode)
 
 	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
-		t.Fatalf("Erro ao rodar o assembler: %v", err)
+		t.Fatalf("Error running the assembler: %v", err)
 	}
 
 	expectedMemory := []byte{
@@ -189,12 +188,12 @@ func TestMultiply(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Tamanho da memória incorreto. Esperado: %d, Obtido: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Memória incorreta no bloco %d. Esperado: 0b%08b, Obtido: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -204,14 +203,14 @@ func TestSumList(t *testing.T) {
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)
 	if err != nil {
-		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+		t.Fatalf("Error reading the assembly file: %v", err)
 	}
 
 	file := bytes.NewBuffer(assemblyCode)
 
 	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
-		t.Fatalf("Erro ao rodar o assembler: %v", err)
+		t.Fatalf("Error running the assembler: %v", err)
 	}
 
 	expectedMemory := []byte{
@@ -225,12 +224,12 @@ func TestSumList(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Tamanho da memória incorreto. Esperado: %d, Obtido: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Memória incorreta no bloco %d. Esperado: 0b%08b, Obtido: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -240,14 +239,14 @@ func TestInstructions(t *testing.T) {
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)
 	if err != nil {
-		t.Fatalf("Erro ao ler o arquivo de assembly: %v", err)
+		t.Fatalf("Error reading the assembly file: %v", err)
 	}
 
 	file := bytes.NewBuffer(assemblyCode)
 
 	memory, err := RunAssemblerFromReader(file)
 	if err != nil {
-		t.Fatalf("Erro ao rodar o assembler: %v", err)
+		t.Fatalf("Error running the assembler: %v", err)
 	}
 
 	expectedMemory := []byte{
@@ -260,12 +259,12 @@ func TestInstructions(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Tamanho da memória incorreto. Esperado: %d, Obtido: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Memória incorreta no bloco %d. Esperado: 0b%08b, Obtido: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
