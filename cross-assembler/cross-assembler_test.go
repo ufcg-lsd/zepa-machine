@@ -37,7 +37,7 @@ func TestAddAndMv(t *testing.T) {
 	}
 }
 
-func TestProgram2(t *testing.T) {
+func TestAddTwoNumber(t *testing.T) {
 	assemblyFilePath := "../asm/samples/add_two_number.asm"
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)
@@ -69,7 +69,7 @@ func TestProgram2(t *testing.T) {
 	}
 }
 
-func TestProgram3(t *testing.T) {
+func TestMultiplyTwoNumbers(t *testing.T) {
 	assemblyFilePath := "../asm/samples/multiply_two_numbers.asm"
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)
@@ -107,7 +107,7 @@ func TestProgram3(t *testing.T) {
 	}
 }
 
-func TestProgram4(t *testing.T) {
+func TestSimpleJump(t *testing.T) {
 	assemblyFilePath := "../asm/samples/simple_jump.asm"
 
 	assemblyCode, err := os.ReadFile(assemblyFilePath)

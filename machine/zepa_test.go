@@ -44,21 +44,21 @@ func TestDecode(t *testing.T) {
 	if decodedInstruction.rs2 != Register(1) {
 		t.Errorf("Expected rs2 to be 1, but got %d", decodedInstruction.rs2)
 	}
-	if decodedInstruction.funct3 != 0 {
-		t.Errorf("Expected funct3 to be 0, but got %d", decodedInstruction.funct3)
+	if decodedInstruction.funct5 != 0 {
+		t.Errorf("Expected funct5 to be 0, but got %d", decodedInstruction.funct5)
 	}
-	if decodedInstruction.funct7 != 0 {
-		t.Errorf("Expected funct7 to be 0, but got %d", decodedInstruction.funct7)
+	if decodedInstruction.funct6 != 0 {
+		t.Errorf("Expected funct6 to be 0, but got %d", decodedInstruction.funct6)
 	}
 }
 
 func TestMV(t *testing.T) {
 	machine := NewMachine(2048)
-	inst := Instruction{opcode: (*Machine).mv, rd: w0, addrConst: 0xFF}
+	inst := Instruction{opcode: (*Machine).mv, rd: w0, immediate: 0xFF}
 	machine.execute(inst)
 
 	if machine.registers[w0] != 0xFF {
-		t.Errorf("Expected w0 to be 42, got %d", machine.registers[w0])
+		t.Errorf("Expected w0 to be 255, got %d", machine.registers[w0])
 	}
 }
 
@@ -88,7 +88,7 @@ func TestSUB(t *testing.T) {
 
 func TestJUMP(t *testing.T) {
 	machine := NewMachine(2048)
-	inst := Instruction{opcode: (*Machine).jump, addrConst: 0xA}
+	inst := Instruction{opcode: (*Machine).jump, immediate: 0xA}
 	machine.execute(inst)
 
 	if machine.registers[pc] != 0xA {
@@ -98,18 +98,19 @@ func TestJUMP(t *testing.T) {
 
 func TestLOAD(t *testing.T) {
 	machine := NewMachine(2048)
-	inst := Instruction{opcode: (*Machine).load, rs1: w1, addrConst: 256}
+	machine.memory[256] = 42 // Definindo um valor na memória para ser carregado
+	inst := Instruction{opcode: (*Machine).load, rd: w1, immediate: 256}
 	machine.execute(inst)
 
-	if machine.registers[w1] != 256 {
-		t.Errorf("Expected w1 to be 256, got %d", machine.registers[w1])
+	if machine.registers[w1] != 42 {
+		t.Errorf("Expected w1 to be 42, got %d", machine.registers[w1])
 	}
 }
 
 func TestSTORE(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.registers[w1] = 65
-	inst := Instruction{opcode: (*Machine).store, rs1: w1, addrConst: 100}
+	inst := Instruction{opcode: (*Machine).store, rd: w1, immediate: 100}
 	machine.execute(inst)
 
 	if machine.memory[100] != 65 {
