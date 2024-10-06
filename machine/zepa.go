@@ -88,9 +88,9 @@ func (m *Machine) cmp(inst Instruction) {
 	if m.registers[inst.rs1] == m.registers[inst.rs2] {
 		m.registers[sr] = 0
 	} else if m.registers[inst.rs1] > m.registers[inst.rs2] {
-		m.registers[sr] = 1
-	} else {
 		m.registers[sr] = 2
+	} else {
+		m.registers[sr] = 1
 	}
 }
 

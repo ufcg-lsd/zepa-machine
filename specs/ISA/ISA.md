@@ -84,20 +84,20 @@ For this machine, the word size, instruction size, and register size were define
 - **Format**: R-Type
 - **Opcode (decimal)**: 15
 
-#### G, L and Z Test Flags
+#### Z, L and G Test Flags
 When a test instruction, such as CMP, is executed, the SR register is updated, and its value can be used by other instructions to change the program's flow. Each flag is represented by a bit, and the flag being set indicates that the bit value is 1.
 Considering the SR register [31:0], the following flags can be set in their respective bits:
-- **G**, bit [31] - Set if the result of the last comparison indicates that the first operand is greater than the second.
-- **L**, bit [30] - Set if the result of the last comparison indicates that the first operand is less than the second.
-- **Z**, bit [29] - Set if the result of the last comparison is 0, meaning the operands are equal.
+- **Z**, bit [0] - Set if the result of the last comparison is 0, meaning the operands are equal.
+- **L**, bit [1] - Set if the result of the last comparison indicates that the first operand is less than the second.
+- **G**, bit [2] - Set if the result of the last comparison indicates that the first operand is greater than the second.
 
 These flags can be used by instructions to make decisions that can change the program flow.
 
 ### Control Flow Operations
 **JUMP**:
 - **Description**: Change the value of the Program Counter (PC) register, updating the program's execution flow.
-- **Syntax**: JUMP \[<Address/Label>]
-- **Example**: JUMP START_LOOP
+- **Syntax**: JUMP \[<Address>]
+- **Example**: JUMP 0x14
 - **Format**: I-Type
 - **Opcode (decimal)**: 16
 

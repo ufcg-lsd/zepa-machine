@@ -1,2 +1,0 @@
-SUB W4, W5, W3
-CMP W0, W1
