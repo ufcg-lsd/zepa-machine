@@ -99,11 +99,11 @@ func (m *Machine) jump(inst Instruction) {
 }
 
 func (m *Machine) load(inst Instruction) {
-	m.registers[inst.rs1] = uint32(inst.immediate)
+	m.registers[inst.rd] = uint32(m.memory[inst.immediate])
 }
 
 func (m *Machine) store(inst Instruction) {
-	m.memory[inst.immediate] = byte(m.registers[inst.rs1])
+	m.memory[inst.immediate] = byte(m.registers[inst.rd])
 }
 
 func (m *Machine) fetch() {
