@@ -7,7 +7,7 @@ ZEPA is a simulated machine designed to help you learn aspects of computer organ
 Read the [ISA](specs/ISA) and [assembly](specs/assembly) specifications for detailed information about the instruction set architecture and assembly language.
 
 ## Demonstration
-
+Usage: go run ./main.go <asm/file/path>"
 ### Example Program: `add_two_numbers.asm`
 ``` assembly
 _start:
