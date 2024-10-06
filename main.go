@@ -83,14 +83,14 @@ func getRegisterName(reg machine.Register) string {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Uso: programa <arquivo_entrada.asm>")
+		fmt.Println("Usage: go run ./main.go <asm/file/path>")
 		return
 	}
 
 	sourceFile := os.Args[1]
 	binaryCode, err := assembler.RunAssembler(sourceFile)
 	if err != nil {
-		fmt.Printf("Erro no assembler: %v\n", err)
+		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
