@@ -27,12 +27,12 @@ func TestAddAndMv(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Incorrect memory size. Expected: %d, saiu: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, saiu: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -59,12 +59,12 @@ func TestAddTwoNumber(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Incorrect memory size. Expected: %d, saiu: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, saiu: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -97,12 +97,12 @@ func TestMultiplyTwoNumbers(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Incorrect memory size. Expected: %d, saiu: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, saiu: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -132,12 +132,12 @@ func TestSimpleJump(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Incorrect memory size. Expected: %d, saiu: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, saiu: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -164,12 +164,12 @@ func TestStoreAndLoad(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Incorrect memory size. Expected: %d, saiu: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, saiu: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
@@ -197,12 +197,12 @@ func TestSubAndCmp(t *testing.T) {
 	}
 
 	if len(memory) != len(expectedMemory) {
-		t.Fatalf("Incorrect memory size. Expected: %d, saiu: %d", len(expectedMemory), len(memory))
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
 	}
 
 	for i, byteVal := range memory {
 		if byteVal != expectedMemory[i] {
-			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, saiu: 0b%08b", i, expectedMemory[i], byteVal)
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
 		}
 	}
 }
