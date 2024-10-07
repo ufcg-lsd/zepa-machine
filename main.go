@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"zepa-machine/assembler"
+	assembler "zepa-machine/cross-assembler"
 	"zepa-machine/machine"
 )
 
