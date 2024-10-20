@@ -7,67 +7,40 @@ import (
 	"os"
 	"strconv"
 	"strings"
-)
-
-type Register uint8
-type Opcode uint8
-
-const (
-	// Define registers
-	W0 Register = iota
-	W1
-	W2
-	W3
-	W4
-	W5
-	_
-	_
-	_
-	_
-	_
-	_
-
-	// Define opcodes for different instructions
-	MV_OPCODE Opcode = iota
-	ADD_OPCODE
-	SUB_OPCODE
-	CMP_OPCODE
-	JUMP_OPCODE
-	LOAD_OPCODE
-	STORE_OPCODE
+	"zepa-machine/core"
 )
 
 // Map register names to Register values
-var registerMap = map[string]Register{
-	"W0": W0,
-	"W1": W1,
-	"W2": W2,
-	"W3": W3,
-	"W4": W4,
-	"W5": W5,
+var registerMap = map[string]core.Register{
+	"W0": core.W0,
+	"W1": core.W1,
+	"W2": core.W2,
+	"W3": core.W3,
+	"W4": core.W4,
+	"W5": core.W5,
 }
 
 // Map instruction names to Opcode values
-var opcodeMap = map[string]Opcode{
-	"ADD":   ADD_OPCODE,
-	"SUB":   SUB_OPCODE,
-	"CMP":   CMP_OPCODE,
-	"MV":    MV_OPCODE,
-	"JUMP":  JUMP_OPCODE,
-	"LOAD":  LOAD_OPCODE,
-	"STORE": STORE_OPCODE,
+var opcodeMap = map[string]core.Opcode{
+	"ADD":   core.ADD_OPCODE,
+	"SUB":   core.SUB_OPCODE,
+	"CMP":   core.CMP_OPCODE,
+	"MV":    core.MV_OPCODE,
+	"JUMP":  core.JUMP_OPCODE,
+	"LOAD":  core.LOAD_OPCODE,
+	"STORE": core.STORE_OPCODE,
 }
 
 // Define instruction format and function codes for each type
 type InstructionSpec struct {
 	Format string
-	Opcode Opcode
+	Opcode core.Opcode
 	Funct5 byte
 	Funct6 byte
 }
 
 // Helper function to create a new InstructionSpec
-func newInstructionSpec(format string, opcode Opcode) InstructionSpec {
+func newInstructionSpec(format string, opcode core.Opcode) InstructionSpec {
 	return InstructionSpec{
 		Format: format,
 		Opcode: opcode,
@@ -77,14 +50,14 @@ func newInstructionSpec(format string, opcode Opcode) InstructionSpec {
 }
 
 // Define the specifications for different instructions (R-Type and I-Type)
-var instructionSpecs = map[Opcode]InstructionSpec{
-	ADD_OPCODE:   newInstructionSpec("R-Type", ADD_OPCODE),
-	SUB_OPCODE:   newInstructionSpec("R-Type", SUB_OPCODE),
-	CMP_OPCODE:   newInstructionSpec("R-Type", CMP_OPCODE),
-	MV_OPCODE:    newInstructionSpec("I-Type", MV_OPCODE),
-	JUMP_OPCODE:  newInstructionSpec("I-Type", JUMP_OPCODE),
-	LOAD_OPCODE:  newInstructionSpec("I-Type", LOAD_OPCODE),
-	STORE_OPCODE: newInstructionSpec("I-Type", STORE_OPCODE),
+var instructionSpecs = map[core.Opcode]InstructionSpec{
+	core.ADD_OPCODE:   newInstructionSpec("R-Type", core.ADD_OPCODE),
+	core.SUB_OPCODE:   newInstructionSpec("R-Type", core.SUB_OPCODE),
+	core.CMP_OPCODE:   newInstructionSpec("R-Type", core.CMP_OPCODE),
+	core.MV_OPCODE:    newInstructionSpec("I-Type", core.MV_OPCODE),
+	core.JUMP_OPCODE:  newInstructionSpec("I-Type", core.JUMP_OPCODE),
+	core.LOAD_OPCODE:  newInstructionSpec("I-Type", core.LOAD_OPCODE),
+	core.STORE_OPCODE: newInstructionSpec("I-Type", core.STORE_OPCODE),
 }
 
 // Common fields used across all instruction types
