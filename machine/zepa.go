@@ -1,32 +1,8 @@
 package machine
 
-type Register uint32
-type Opcode byte
+import "zepa-machine/core"
+
 type Operation func(m *Machine, inst Instruction)
-
-const (
-	w0 Register = iota
-	w1
-	w2
-	w3
-	w4
-	w5
-	pc
-	sp
-	ir
-	sr
-	mdr
-	mar
-
-	MV Opcode = iota
-	ADD
-	SUB
-	CMP
-	JUMP
-	LOAD
-	STORE
-	FETCH
-)
 
 const (
 	opcodeLength = 6
@@ -39,29 +15,21 @@ const (
 	word         = 32
 )
 
-const (
-	opcodeBitMask    = 0b111111
-	registerBitMask  = 0b11111
-	immediateBitMask = 0b1111111111111111
-	funct5BitMask    = 0b11111
-	funct6BitMask    = 0b111111
-)
-
 var operations = map[byte]Operation{
-	byte(MV):    (*Machine).mv,
-	byte(ADD):   (*Machine).add,
-	byte(SUB):   (*Machine).sub,
-	byte(CMP):   (*Machine).cmp,
-	byte(JUMP):  (*Machine).jump,
-	byte(LOAD):  (*Machine).load,
-	byte(STORE): (*Machine).store,
+	byte(core.MV_OPCODE):    (*Machine).mv,
+	byte(core.ADD_OPCODE):   (*Machine).add,
+	byte(core.SUB_OPCODE):   (*Machine).sub,
+	byte(core.CMP_OPCODE):   (*Machine).cmp,
+	byte(core.JUMP_OPCODE):  (*Machine).jump,
+	byte(core.LOAD_OPCODE):  (*Machine).load,
+	byte(core.STORE_OPCODE): (*Machine).store,
 }
 
 type Instruction struct {
 	opcode    func(m *Machine, inst Instruction)
-	rd        Register
-	rs1       Register
-	rs2       Register
+	rd        core.Register
+	rs1       core.Register
+	rs2       core.Register
 	funct5    byte
 	funct6    byte
 	immediate uint16
@@ -69,7 +37,7 @@ type Instruction struct {
 
 type Machine struct {
 	memory    []byte
-	registers map[Register]uint32
+	registers map[core.Register]uint32
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -86,16 +54,16 @@ func (m *Machine) sub(inst Instruction) {
 
 func (m *Machine) cmp(inst Instruction) {
 	if m.registers[inst.rs1] == m.registers[inst.rs2] {
-		m.registers[sr] = 0
+		m.registers[core.SR] = 0
 	} else if m.registers[inst.rs1] > m.registers[inst.rs2] {
-		m.registers[sr] = 2
+		m.registers[core.SR] = 2
 	} else {
-		m.registers[sr] = 1
+		m.registers[core.SR] = 1
 	}
 }
 
 func (m *Machine) jump(inst Instruction) {
-	m.registers[pc] = uint32(inst.immediate)
+	m.registers[core.PC] = uint32(inst.immediate)
 }
 
 func (m *Machine) load(inst Instruction) {
@@ -109,12 +77,12 @@ func (m *Machine) store(inst Instruction) {
 func (m *Machine) fetch() {
 	var completeInstruction uint32 = 0
 	for i := 0; i < 4; i++ {
-		currentInstructionAddress := m.registers[pc]
+		currentInstructionAddress := m.registers[core.PC]
 		currentInstruction := m.memory[currentInstructionAddress]
 		completeInstruction = completeInstruction | uint32(currentInstruction)<<(24-8*i)
-		m.registers[pc] += 1
+		m.registers[core.PC] += 1
 	}
-	m.registers[ir] = completeInstruction
+	m.registers[core.IR] = completeInstruction
 }
 
 func (m *Machine) decodeRTypeInst(instruction uint32) Instruction {
@@ -125,20 +93,20 @@ func (m *Machine) decodeRTypeInst(instruction uint32) Instruction {
 	offSetFunct5 := offSetRs2 - funct5Length
 	offSetFunct6 := offSetFunct5 - funct6Length
 
-	opcode := instruction >> (uint32(offsetOpcode)) & opcodeBitMask
-	rd := (instruction >> uint32(offSetRd)) & registerBitMask
-	rs1 := (instruction >> (uint32(offSetRs1))) & registerBitMask
-	rs2 := (instruction >> (uint32(offSetRs2))) & registerBitMask
-	funct5 := (instruction >> (uint32(offSetFunct5))) & funct5BitMask
-	funct6 := (instruction >> (uint32(offSetFunct6))) & funct6BitMask
+	opcode := instruction >> (uint32(offsetOpcode)) & core.OpCodeBitMask
+	rd := (instruction >> uint32(offSetRd)) & core.RegisterBitMask
+	rs1 := (instruction >> (uint32(offSetRs1))) & core.RegisterBitMask
+	rs2 := (instruction >> (uint32(offSetRs2))) & core.RegisterBitMask
+	funct5 := (instruction >> (uint32(offSetFunct5))) & core.Funct5BitMask
+	funct6 := (instruction >> (uint32(offSetFunct6))) & core.Funct6BitMask
 
 	operation := operations[byte(opcode)]
 
 	return Instruction{
 		opcode: operation,
-		rd:     Register(rd),
-		rs1:    Register(rs1),
-		rs2:    Register(rs2),
+		rd:     core.Register(rd),
+		rs1:    core.Register(rs1),
+		rs2:    core.Register(rs2),
 		funct5: byte(funct5),
 		funct6: byte(funct6),
 	}
@@ -150,44 +118,44 @@ func (m *Machine) decodeITypeInst(instruction uint32) Instruction {
 	offSetImmediate := offSetRdRs1 - immediateLen
 	offSetFunct5 := offSetImmediate - funct5Length
 
-	opcode := instruction >> (uint32(offsetOpcode)) & opcodeBitMask
-	rdRs1 := (instruction >> uint32(offSetRdRs1)) & registerBitMask
-	immediate := (instruction >> (uint32(offSetImmediate))) & immediateBitMask
-	funct5 := (instruction >> (uint32(offSetFunct5))) & funct5BitMask
+	opcode := instruction >> (uint32(offsetOpcode)) & core.OpCodeBitMask
+	rdRs1 := (instruction >> uint32(offSetRdRs1)) & core.RegisterBitMask
+	immediate := (instruction >> (uint32(offSetImmediate))) & core.ImmediateBitMask
+	funct5 := (instruction >> (uint32(offSetFunct5))) & core.Funct5BitMask
 
 	operation := operations[byte(opcode)]
 
 	return Instruction{
 		opcode:    operation,
-		rd:        Register(rdRs1),
+		rd:        core.Register(rdRs1),
 		immediate: uint16(immediate),
 		funct5:    byte(funct5),
 	}
 }
 
 func (m *Machine) isEndOfProgram() bool {
-	if (m.registers[ir]) == 0 {
-		m.registers[pc] -= 4
+	if (m.registers[core.IR]) == 0 {
+		m.registers[core.PC] -= 4
 		return true
 	}
 	return false
 }
 
-func (m *Machine) getOpcode(instruction uint32) Opcode {
+func (m *Machine) getOpcode(instruction uint32) core.Opcode {
 	offsetOpcode := word - opcodeLength
 	opcode := instruction >> (uint32(offsetOpcode))
 
-	return Opcode(opcode)
+	return core.Opcode(opcode)
 }
 
 func (m *Machine) decode() Instruction {
-	instruction := m.registers[ir]
+	instruction := m.registers[core.IR]
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
-	case ADD, SUB, CMP:
+	case core.ADD_OPCODE, core.SUB_OPCODE, core.CMP_OPCODE:
 		return m.decodeRTypeInst(instruction)
-	case MV, JUMP, LOAD, STORE:
+	case core.MV_OPCODE, core.JUMP_OPCODE, core.LOAD_OPCODE, core.STORE_OPCODE:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)
@@ -217,14 +185,14 @@ func (m *Machine) GetMemory() []byte {
 	return m.memory
 }
 
-func (m *Machine) GetRegisters() map[Register]uint32 {
+func (m *Machine) GetRegisters() map[core.Register]uint32 {
 	return m.registers
 }
 
 func NewMachine(memoryBytes int) *Machine {
 	machine := &Machine{
 		memory:    make([]byte, memoryBytes),
-		registers: make(map[Register]uint32),
+		registers: make(map[core.Register]uint32),
 	}
 
 	return machine

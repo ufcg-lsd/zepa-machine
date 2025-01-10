@@ -63,43 +63,30 @@ var instructionSpecs = map[core.Opcode]InstructionSpec{
 // Common fields used across all instruction types
 const (
 	OPCODE_SHIFT = 26 // Shift opcode by 26 bits for all instructions
-	OPCODE_MASK  = 0x3F
 )
 
 // R-Type instruction constants (shift and mask values)
 const (
 	// Destination register (rd)
 	RD_SHIFT_R = 21 // Shift rd by 21 bits for R-Type
-	RD_MASK_R  = 0x1F
-
 	// Source register 1 (rs1)
 	RS1_SHIFT_R = 16 // Shift rs1 by 16 bits for R-Type
-	RS1_MASK_R  = 0x1F
-
 	// Source register 2 (rs2)
 	RS2_SHIFT_R = 11 // Shift rs2 by 11 bits for R-Type
-	RS2_MASK_R  = 0x1F
-
 	// Function codes (funct3 and funct7)
 	FUNCT5_SHIFT_R = 6 // Shift funct3 by 6 bits for R-Type
-	FUNCT5_MASK_R  = 0x1F
 	FUNCT6_SHIFT_R = 0 // Shift funct7 by 0 bits for R-Type
-	FUNCT6_MASK_R  = 0x3F
 )
 
 // I-Type instruction constants (shift and mask values)
 const (
 	// Destination/source register (rd/rs1)
 	RD_RS1_SHIFT_I = 21 // Shift rd/rs1 by 21 bits for I-Type
-	RD_RS1_MASK_I  = 0x1F
-
 	// Function code (funct3)
 	FUNCT5_SHIFT_I = 6 // Shift funct3 by 6 bits for I-Type
-	FUNCT5_MASK_I  = 0x1F
 
 	// Immediate value
 	IMM_SHIFT_I = 5 // Shift immediate value by 5 bits for I-Type
-	IMM_MASK_I  = 0xFFFF
 )
 
 // RunAssembler takes a file path to an assembly file, processes it, and returns the binary instructions as bytes
@@ -262,12 +249,12 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 	}
 
 	// Encode the R-Type instruction by combining the opcode, registers, and function fields
-	binaryInstruction := uint32(spec.Opcode&OPCODE_MASK) << OPCODE_SHIFT
-	binaryInstruction |= uint32(rd&RD_MASK_R) << RD_SHIFT_R
-	binaryInstruction |= uint32(rs1&RS1_MASK_R) << RS1_SHIFT_R
-	binaryInstruction |= uint32(rs2&RS2_MASK_R) << RS2_SHIFT_R
-	binaryInstruction |= uint32(spec.Funct5&FUNCT5_MASK_R) << FUNCT5_SHIFT_R
-	binaryInstruction |= uint32(spec.Funct6&FUNCT6_MASK_R) << FUNCT6_SHIFT_R
+	binaryInstruction := uint32(spec.Opcode&core.OpCodeBitMask) << OPCODE_SHIFT
+	binaryInstruction |= uint32(rd&core.RegisterBitMask) << RD_SHIFT_R
+	binaryInstruction |= uint32(rs1&core.RegisterBitMask) << RS1_SHIFT_R
+	binaryInstruction |= uint32(rs2&core.RegisterBitMask) << RS2_SHIFT_R
+	binaryInstruction |= uint32(spec.Funct5&core.Funct5BitMask) << FUNCT5_SHIFT_R
+	binaryInstruction |= uint32(spec.Funct6&core.Funct6BitMask) << FUNCT6_SHIFT_R
 
 	return binaryInstruction, nil
 }
@@ -299,10 +286,10 @@ func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 	}
 
 	// Encode the I-Type instruction by combining the opcode, register, and immediate value
-	binaryInstruction := uint32(spec.Opcode&OPCODE_MASK) << OPCODE_SHIFT
-	binaryInstruction |= uint32(rd_rs1&RD_RS1_MASK_I) << RD_RS1_SHIFT_I
-	binaryInstruction |= uint32(spec.Funct5&FUNCT5_MASK_I) << FUNCT5_SHIFT_I
-	binaryInstruction |= uint32(immediate&IMM_MASK_I) << IMM_SHIFT_I
+	binaryInstruction := uint32(spec.Opcode&core.OpCodeBitMask) << OPCODE_SHIFT
+	binaryInstruction |= uint32(rd_rs1&core.RegisterBitMask) << RD_RS1_SHIFT_I
+	binaryInstruction |= uint32(spec.Funct5&core.Funct5BitMask) << FUNCT5_SHIFT_I
+	binaryInstruction |= uint32(immediate&core.ImmediateBitMask) << IMM_SHIFT_I
 
 	return binaryInstruction, nil
 }

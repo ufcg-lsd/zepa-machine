@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"zepa-machine/core"
 	assembler "zepa-machine/cross-assembler"
 	"zepa-machine/machine"
 )
@@ -50,7 +51,7 @@ func DebugRegisters(m *machine.Machine) {
 	}
 }
 
-func getRegisterName(reg machine.Register) string {
+func getRegisterName(reg core.Register) string {
 	switch reg {
 	case 0:
 		return "w0"

@@ -26,4 +26,13 @@ const (
 	JUMP_OPCODE
 	LOAD_OPCODE
 	STORE_OPCODE
+	FETCH_OPCODE
+)
+
+const (
+	OpCodeBitMask    = 0x3F
+	RegisterBitMask  = 0x1F
+	ImmediateBitMask = 0xFFFF
+	Funct5BitMask    = 0x1F
+	Funct6BitMask    = 0x3F
 )
