@@ -23,7 +23,7 @@ In this example, we load the constant value 5 into the register W1, the constant
 
 ![Execution Demo](assets/add_two_numbers.gif)
 
-The static image of the result can be found The static image of the result can be found [here](assets/add_two_number.jpeg).
+The static image of the result can be found [here](assets/add_two_number.jpeg).
 
 ### Example Program: `multiply_two_numbers.asm`
 ```assembly
