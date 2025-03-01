@@ -17,6 +17,8 @@ const (
 	SR
 	MDR
 	MAR
+	LR
+	EVT
 
 	// Define opcodes for different instructions
 	MV_OPCODE Opcode = iota

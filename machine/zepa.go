@@ -1,6 +1,10 @@
 package machine
 
-import "zepa-machine/core"
+import (
+	"fmt"
+	"os"
+	"zepa-machine/core"
+)
 
 type Operation func(m *Machine, inst Instruction)
 
@@ -13,6 +17,11 @@ const (
 	funct6Length = 6
 	immediateLen = 16
 	word         = 32
+)
+
+// Exception codes
+const (
+	EXC_MEMORY_VIOLATION = 1
 )
 
 var operations = map[byte]Operation{
@@ -67,10 +76,22 @@ func (m *Machine) jump(inst Instruction) {
 }
 
 func (m *Machine) load(inst Instruction) {
+	// Verify invalid address
+	if int(inst.immediate) >= len(m.memory) {
+		m.exception(EXC_MEMORY_VIOLATION)
+		return
+	}
+
 	m.registers[inst.rd] = uint32(m.memory[inst.immediate])
 }
 
 func (m *Machine) store(inst Instruction) {
+	// Verify invalid address
+	if int(inst.immediate) >= len(m.memory) {
+		m.exception(EXC_MEMORY_VIOLATION)
+		return
+	}
+
 	m.memory[inst.immediate] = byte(m.registers[inst.rd])
 }
 
@@ -196,4 +217,15 @@ func NewMachine(memoryBytes int) *Machine {
 	}
 
 	return machine
+}
+
+func (m *Machine) exception(code int) {
+	fmt.Printf("Exception raised: Code %d\n", code)
+
+	// Save next instruction address
+	m.registers[core.LR] = m.registers[core.PC]
+
+	// TODO: Call exception Handler
+
+	os.Exit(1)
 }
