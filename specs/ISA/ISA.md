@@ -13,12 +13,15 @@ Initially, this machine has 6 registers, which are named W0 to W5, each of them 
 The special registers have specific purposes and exist to handle essential functions for the machine's operation.
 For the specific case of this machine, six registers were defined, mainly to assist in memory manipulation, all storing values up to 32 bits.
 
-- **Program Counter (PC) [31:0]**: Stores the address of the next instruction to be executed. Is automaticaly incremented after every instruction cycle, unless modified by a JUMP instruction.
+- **Program Counter (PC) [31:0]**: Stores the address of the next instruction to be executed. Is automatically incremented after every instruction cycle, unless modified by a JUMP instruction.
 - **Instruction Register (IR) [31:0]**: Contains the current instruction being decoded and executed.
 - **Memory Data Register (MDR) [31:0]**: Holds the data being transferred from or to memory.
 - **Stack Pointer (SP) [31:0]**: Points to the top of the stack, used to manage function calls and local variable storage.
 - **Memory Address Register (MAR) [31:0]**: Stores the memory address where reading or writing operations will be executed.
 - **Status Register (SR) [31:0]**: Stores flags that indicate the result of test operations executed. The first bits are reserved for the G, L and Z flags, and the last ones are flexible.
+- **Link Register (LR) [31:0]**: Stores the return address when a subroutine is called. Can be used to restore execution flow after the subroutine finishes.
+- **Exception Vector Table (EVT) [31:0]**: Stores the addresses of exception service routines. Automatically referenced by the processor when an exception occurs.
+- **Saved Status Register (SSR) [31:0]**: Stores flags that are saved in the Status Register (SR), used to restore the status after the subroutine finishes.
 
 ## Encoding
 For this machine, the word size, instruction size, and register size were defined to be 32 bits.
