@@ -104,6 +104,13 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Format**: I-Type
 - **Opcode (decimal)**: 16
 
+**HALT**:
+- **Description**: Terminate the program execution
+- **Syntax**: HALT
+- **Example**: HALT
+- **Format**: U-Type
+- **Opcode (decimal)**: 16
+
 ### Load and Store Operations with Addresses
 **LOAD**:
 - **Description**: Loads the content stored at a specific memory address into a specific register.
@@ -143,6 +150,12 @@ These flags can be used by instructions to make decisions that can change the pr
 | **LOAD**        | I-Type          | 010001       | reg     | 16bit address        | 00000    |
 | **STORE**        | I-Type          | 010010       | reg     | 16bit address        | 00000    |
 | **FETCH**        | I-Type          | 010011       | 00000     | 0000000000000000        | 00000    |
+
+
+
+| **Instruction** | **Format** | **opcode** | **immediate** | **rd** 
+|----------------|------------|------------|---------------------|---------
+| **HALT**        | U-Type    | 0010110    | 00000000000000000000 | 00000    
 
 
 ## References

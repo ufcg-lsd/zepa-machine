@@ -29,6 +29,7 @@ var opcodeMap = map[string]core.Opcode{
 	"JUMP":  core.JUMP_OPCODE,
 	"LOAD":  core.LOAD_OPCODE,
 	"STORE": core.STORE_OPCODE,
+	"HALT":  core.HALT_OPCODE,
 }
 
 // Define instruction format and function codes for each type
@@ -58,6 +59,7 @@ var instructionSpecs = map[core.Opcode]InstructionSpec{
 	core.JUMP_OPCODE:  newInstructionSpec("I-Type", core.JUMP_OPCODE),
 	core.LOAD_OPCODE:  newInstructionSpec("I-Type", core.LOAD_OPCODE),
 	core.STORE_OPCODE: newInstructionSpec("I-Type", core.STORE_OPCODE),
+	core.HALT_OPCODE:  newInstructionSpec("U-Type", core.HALT_OPCODE),
 }
 
 // Common fields used across all instruction types
@@ -179,6 +181,18 @@ func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 	opcode, ok := opcodeMap[opcodeStr]
 	if !ok {
 		return nil, fmt.Errorf("Invalid opcode: %s", opcodeStr)
+	}
+
+	// Special treatment HALT instruction
+	if opcodeStr == "HALT" {
+		binaryInstruction := uint32(opcode) << 26 // Apenas o opcode
+		bytes := []byte{
+			byte((binaryInstruction >> 24) & 0xFF),
+			byte((binaryInstruction >> 16) & 0xFF),
+			byte((binaryInstruction >> 8) & 0xFF),
+			byte(binaryInstruction & 0xFF),
+		}
+		return bytes, nil
 	}
 
 	// Get the instruction specification (format, funct3, funct7)

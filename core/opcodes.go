@@ -29,6 +29,7 @@ const (
 	LOAD_OPCODE
 	STORE_OPCODE
 	FETCH_OPCODE
+	HALT_OPCODE
 )
 
 const (

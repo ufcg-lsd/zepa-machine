@@ -32,6 +32,7 @@ var operations = map[byte]Operation{
 	byte(core.JUMP_OPCODE):  (*Machine).jump,
 	byte(core.LOAD_OPCODE):  (*Machine).load,
 	byte(core.STORE_OPCODE): (*Machine).store,
+	byte(core.HALT_OPCODE):  (*Machine).halt,
 }
 
 type Instruction struct {
@@ -154,6 +155,24 @@ func (m *Machine) decodeITypeInst(instruction uint32) Instruction {
 	}
 }
 
+func (m *Machine) decodeUTypeInst(instruction uint32) Instruction {
+	offsetOpcode := word - opcodeLength
+	offSetRd := offsetOpcode - rdLength
+	offSetImmediate := offSetRd - immediateLen
+
+	opcode := instruction >> (uint32(offsetOpcode)) & core.OpCodeBitMask
+	rdRs1 := (instruction >> uint32(offSetRd)) & core.RegisterBitMask
+	immediate := (instruction >> (uint32(offSetImmediate))) & core.ImmediateBitMask
+
+	operation := operations[byte(opcode)]
+
+	return Instruction{
+		opcode:    operation,
+		rd:        core.Register(rdRs1),
+		immediate: uint16(immediate),
+	}
+}
+
 func (m *Machine) isEndOfProgram() bool {
 	if (m.registers[core.IR]) == 0 {
 		m.registers[core.PC] -= 4
@@ -176,6 +195,8 @@ func (m *Machine) decode() Instruction {
 	switch opcode {
 	case core.ADD_OPCODE, core.SUB_OPCODE, core.CMP_OPCODE:
 		return m.decodeRTypeInst(instruction)
+	case core.HALT_OPCODE:
+		return m.decodeUTypeInst(instruction)
 	case core.MV_OPCODE, core.JUMP_OPCODE, core.LOAD_OPCODE, core.STORE_OPCODE:
 		fallthrough
 	default:
@@ -216,6 +237,17 @@ func NewMachine(memoryBytes int) *Machine {
 		registers: make(map[core.Register]uint32),
 	}
 
+	handlerAddress := uint32(memoryBytes - 8) // Set handler address
+	machine.registers[core.EVT] = handlerAddress
+
+	// Set handler code
+	handlerCode := []byte{
+		byte(core.HALT_OPCODE),
+		// byte(88), assim funciona o halt
+	}
+
+	copy(machine.memory[handlerAddress:], handlerCode)
+
 	return machine
 }
 
@@ -225,7 +257,12 @@ func (m *Machine) exception(code int) {
 	// Save next instruction address
 	m.registers[core.LR] = m.registers[core.PC]
 
-	// TODO: Call exception Handler
+	// Call exception Handler
+	m.registers[core.PC] = m.registers[core.EVT]
 
+	// os.Exit(1)
+}
+
+func (m *Machine) halt(inst Instruction) {
 	os.Exit(1)
 }
