@@ -12,12 +12,14 @@ import (
 
 // Map register names to Register values
 var registerMap = map[string]core.Register{
-	"W0": core.W0,
-	"W1": core.W1,
-	"W2": core.W2,
-	"W3": core.W3,
-	"W4": core.W4,
-	"W5": core.W5,
+	"W0":  core.W0,
+	"W1":  core.W1,
+	"W2":  core.W2,
+	"W3":  core.W3,
+	"W4":  core.W4,
+	"W5":  core.W5,
+	"PID": core.PID,
+	"TR":  core.TR,
 }
 
 // Map instruction names to Opcode values
