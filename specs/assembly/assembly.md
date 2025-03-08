@@ -39,12 +39,11 @@ Moves an immediate value or the contents of one register to another register.
 
 **Syntax:**
 ```
-MV <Dest Reg.>, #<Value> or <Source Reg.>
+MV <Dest Reg.>, #<Value> 
 ```
 **Example:**
 ```
 MV W1, #5    ; Move the value 5 into register W1
-MV W2, W1    ; Move the value from W1 into W2
 ```
 
 ## Arithmetic and Logical Operations
@@ -77,21 +76,6 @@ SUB <Dest Reg.>, <Op1>, <Op2>
 MV W1, #5
 MV W2, #2
 SUB W0, W1, W2    ; W0 = 5 - 2
-```
-
-### MUL (Multiply)
-Multiplies the values of two registers.
-
-**Syntax:**
-```
-MUL <Dest Reg.>, <Op1>, <Op2>
-```
-
-**Example:**
-```
-MV W1, #4
-MV W2, #3
-MUL W0, W1, W2    ; W0 = 4 * 3
 ```
 
 ## Control Flow Operations
