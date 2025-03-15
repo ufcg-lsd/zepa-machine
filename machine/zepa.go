@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"zepa-machine/core"
+	assembler "zepa-machine/cross-assembler"
 )
 
 type Operation func(m *Machine, inst Instruction)
@@ -17,11 +18,6 @@ const (
 	funct6Length = 6
 	immediateLen = 16
 	word         = 32
-)
-
-// Exception codes
-const (
-	EXC_MEMORY_VIOLATION = 1
 )
 
 var operations = map[byte]Operation{
@@ -79,7 +75,7 @@ func (m *Machine) jump(inst Instruction) {
 func (m *Machine) load(inst Instruction) {
 	// Verify invalid address
 	if int(inst.immediate) >= len(m.memory) {
-		m.exception(EXC_MEMORY_VIOLATION)
+		m.exception(core.EXC_MEMORY_VIOLATION)
 		return
 	}
 
@@ -89,7 +85,7 @@ func (m *Machine) load(inst Instruction) {
 func (m *Machine) store(inst Instruction) {
 	// Verify invalid address
 	if int(inst.immediate) >= len(m.memory) {
-		m.exception(EXC_MEMORY_VIOLATION)
+		m.exception(core.EXC_MEMORY_VIOLATION)
 		return
 	}
 
@@ -155,24 +151,6 @@ func (m *Machine) decodeITypeInst(instruction uint32) Instruction {
 	}
 }
 
-func (m *Machine) decodeUTypeInst(instruction uint32) Instruction {
-	offsetOpcode := word - opcodeLength
-	offSetRd := offsetOpcode - rdLength
-	offSetImmediate := offSetRd - immediateLen
-
-	opcode := instruction >> (uint32(offsetOpcode)) & core.OpCodeBitMask
-	rdRs1 := (instruction >> uint32(offSetRd)) & core.RegisterBitMask
-	immediate := (instruction >> (uint32(offSetImmediate))) & core.ImmediateBitMask
-
-	operation := operations[byte(opcode)]
-
-	return Instruction{
-		opcode:    operation,
-		rd:        core.Register(rdRs1),
-		immediate: uint16(immediate),
-	}
-}
-
 func (m *Machine) isEndOfProgram() bool {
 	if (m.registers[core.IR]) == 0 {
 		m.registers[core.PC] -= 4
@@ -195,9 +173,7 @@ func (m *Machine) decode() Instruction {
 	switch opcode {
 	case core.ADD_OPCODE, core.SUB_OPCODE, core.CMP_OPCODE:
 		return m.decodeRTypeInst(instruction)
-	case core.HALT_OPCODE:
-		return m.decodeUTypeInst(instruction)
-	case core.MV_OPCODE, core.JUMP_OPCODE, core.LOAD_OPCODE, core.STORE_OPCODE:
+	case core.MV_OPCODE, core.JUMP_OPCODE, core.LOAD_OPCODE, core.STORE_OPCODE, core.HALT_OPCODE:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)
@@ -237,13 +213,17 @@ func NewMachine(memoryBytes int) *Machine {
 		registers: make(map[core.Register]uint32),
 	}
 
-	handlerAddress := uint32(memoryBytes - 8) // Set handler address
+	handlerAddress := uint32(memoryBytes - 16) // Set handler address
 	machine.registers[core.EVT] = handlerAddress
 
 	// Set handler code
-	handlerCode := []byte{
-		byte(core.HALT_OPCODE),
-		// byte(88), assim funciona o halt
+	handlerCode, err := assembler.ConvertInstructionsToBinary([][]string{
+		{"MV", "W0", "#4"},
+		{"ADD", "PC", "LR", "W0"},
+	})
+
+	if err != nil {
+		fmt.Printf("%d\n", err)
 	}
 
 	copy(machine.memory[handlerAddress:], handlerCode)
@@ -259,8 +239,6 @@ func (m *Machine) exception(code int) {
 
 	// Call exception Handler
 	m.registers[core.PC] = m.registers[core.EVT]
-
-	// os.Exit(1)
 }
 
 func (m *Machine) halt(inst Instruction) {

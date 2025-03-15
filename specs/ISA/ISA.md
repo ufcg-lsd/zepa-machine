@@ -108,8 +108,8 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Description**: Terminate the program execution
 - **Syntax**: HALT
 - **Example**: HALT
-- **Format**: U-Type
-- **Opcode (decimal)**: 16
+- **Format**: I-Type
+- **Opcode (decimal)**: 22
 
 ### Load and Store Operations with Addresses
 **LOAD**:
@@ -150,12 +150,7 @@ These flags can be used by instructions to make decisions that can change the pr
 | **LOAD**        | I-Type          | 010001       | reg     | 16bit address        | 00000    |
 | **STORE**        | I-Type          | 010010       | reg     | 16bit address        | 00000    |
 | **FETCH**        | I-Type          | 010011       | 00000     | 0000000000000000        | 00000    |
-
-
-
-| **Instruction** | **Format** | **opcode** | **immediate** | **rd** 
-|----------------|------------|------------|---------------------|---------
-| **HALT**        | U-Type    | 0010110    | 00000000000000000000 | 00000    
+| **HALT**         | I-Type          | 010110        | 00000    | 0000000000000000   | 00000    | 
 
 
 ## References

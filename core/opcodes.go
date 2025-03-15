@@ -39,3 +39,8 @@ const (
 	Funct5BitMask    = 0x1F
 	Funct6BitMask    = 0x3F
 )
+
+// Exception codes
+const (
+	EXC_MEMORY_VIOLATION = 1
+)

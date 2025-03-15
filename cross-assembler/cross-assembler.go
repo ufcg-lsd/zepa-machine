@@ -18,6 +18,9 @@ var registerMap = map[string]core.Register{
 	"W3": core.W3,
 	"W4": core.W4,
 	"W5": core.W5,
+	// Isso deve/pode ser feito (?)
+	"PC": core.PC,
+	"LR": core.LR,
 }
 
 // Map instruction names to Opcode values
@@ -59,7 +62,7 @@ var instructionSpecs = map[core.Opcode]InstructionSpec{
 	core.JUMP_OPCODE:  newInstructionSpec("I-Type", core.JUMP_OPCODE),
 	core.LOAD_OPCODE:  newInstructionSpec("I-Type", core.LOAD_OPCODE),
 	core.STORE_OPCODE: newInstructionSpec("I-Type", core.STORE_OPCODE),
-	core.HALT_OPCODE:  newInstructionSpec("U-Type", core.HALT_OPCODE),
+	core.HALT_OPCODE:  newInstructionSpec("I-Type", core.HALT_OPCODE),
 }
 
 // Common fields used across all instruction types

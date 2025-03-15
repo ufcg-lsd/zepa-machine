@@ -1,4 +1,3 @@
 LOAD W2, 0xFFFF
-HALT
 ADD W1, W2, W3
-MV W1, #5
+MV W1, #3
