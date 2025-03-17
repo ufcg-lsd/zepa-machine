@@ -87,18 +87,31 @@ func main() {
 		fmt.Println("Usage: go run ./main.go <asm/file/path>")
 		return
 	}
-
-	sourceFile := os.Args[1]
-	binaryCode, err := assembler.RunAssembler(sourceFile)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
-	}
-
+	programFiles := os.Args[1:]
 	machine := machine.NewMachine(64)
-	machine.LoadProgram(binaryCode)
-	machine.Boot()
+	isBatchMode := len(programFiles) > 1
 
-	DebugRegisters(machine)
-	DebugMemory(machine)
+	for _, file := range programFiles {
+		instructions, err := assembler.LoadAssemblyFile(file)
+		if err != nil {
+			fmt.Printf("Erro ao carregar o arquivo %s: %v\n", file, err)
+			return
+		}
+		if isBatchMode && !assembler.ContainsHalt(instructions) {
+			fmt.Printf("Erro no arquivo %s: O programa não contém a instrução HALT\n", file)
+			return
+		}
+		binaryCode, err := assembler.ConvertInstructionsToBinary(instructions)
+		if err != nil {
+			fmt.Printf("Erro ao montar o arquivo %s: %v\n", file, err)
+			return
+		}
+
+		machine.Reset()
+		machine.LoadProgram(binaryCode)
+		machine.Boot()
+
+		DebugRegisters(machine)
+		DebugMemory(machine)
+	}
 }

@@ -1,6 +1,9 @@
 package machine
 
-import "zepa-machine/core"
+import (
+	"fmt"
+	"zepa-machine/core"
+)
 
 type Operation func(m *Machine, inst Instruction)
 
@@ -23,6 +26,7 @@ var operations = map[byte]Operation{
 	byte(core.JUMP_OPCODE):  (*Machine).jump,
 	byte(core.LOAD_OPCODE):  (*Machine).load,
 	byte(core.STORE_OPCODE): (*Machine).store,
+	byte(core.HALT_OPCODE):  (*Machine).halt,
 }
 
 type Instruction struct {
@@ -170,6 +174,7 @@ func (m *Machine) Boot() {
 	for {
 		m.fetch()
 		if m.isEndOfProgram() {
+			fmt.Println("----Carregando próximo programa----")
 			break
 		}
 		decodedInstruction := m.decode()
@@ -196,4 +201,15 @@ func NewMachine(memoryBytes int) *Machine {
 	}
 
 	return machine
+}
+
+func (m *Machine) halt(inst Instruction) {
+	fmt.Println("----------HALT---------")
+	m.registers[core.IR] = 0
+}
+
+func (m *Machine) Reset() {
+	for reg := range m.registers {
+		m.registers[reg] = 0
+	}
 }

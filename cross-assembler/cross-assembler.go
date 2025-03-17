@@ -29,6 +29,7 @@ var opcodeMap = map[string]core.Opcode{
 	"JUMP":  core.JUMP_OPCODE,
 	"LOAD":  core.LOAD_OPCODE,
 	"STORE": core.STORE_OPCODE,
+	"HALT":  core.HALT_OPCODE,
 }
 
 // Define instruction format and function codes for each type
@@ -58,6 +59,7 @@ var instructionSpecs = map[core.Opcode]InstructionSpec{
 	core.JUMP_OPCODE:  newInstructionSpec("I-Type", core.JUMP_OPCODE),
 	core.LOAD_OPCODE:  newInstructionSpec("I-Type", core.LOAD_OPCODE),
 	core.STORE_OPCODE: newInstructionSpec("I-Type", core.STORE_OPCODE),
+	core.HALT_OPCODE:  newInstructionSpec("I-Type", core.HALT_OPCODE),
 }
 
 // Common fields used across all instruction types
@@ -264,25 +266,31 @@ func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 	var immediate uint16
 	var err error
 
-	// Expect either 1 or 2 operands for I-Type instructions
-	switch len(operands) {
-	case 2:
-		rd_rs1, err = parseRegister(operands[0])
-		if err != nil {
-			return 0, err
-		}
-		immediate, err = parseImmediate(operands[1])
-		if err != nil {
-			return 0, err
-		}
-	case 1:
+	if spec.Opcode == core.HALT_OPCODE {
 		rd_rs1 = 0
-		immediate, err = parseImmediate(operands[0])
-		if err != nil {
-			return 0, err
+		immediate = 0
+	} else {
+
+		// Expect either 1 or 2 operands for I-Type instructions
+		switch len(operands) {
+		case 2:
+			rd_rs1, err = parseRegister(operands[0])
+			if err != nil {
+				return 0, err
+			}
+			immediate, err = parseImmediate(operands[1])
+			if err != nil {
+				return 0, err
+			}
+		case 1:
+			rd_rs1 = 0
+			immediate, err = parseImmediate(operands[0])
+			if err != nil {
+				return 0, err
+			}
+		default:
+			return 0, fmt.Errorf("I-Type instruction expects 1 or 2 operands, got %d", len(operands))
 		}
-	default:
-		return 0, fmt.Errorf("I-Type instruction expects 1 or 2 operands, got %d", len(operands))
 	}
 
 	// Encode the I-Type instruction by combining the opcode, register, and immediate value
@@ -322,4 +330,12 @@ func parseImmediate(immediate string) (uint16, error) {
 	}
 
 	return uint16(uintValue), nil
+}
+func ContainsHalt(instructions [][]string) bool {
+	for _, instruction := range instructions {
+		if strings.ToUpper(instruction[0]) == "HALT" {
+			return true
+		}
+	}
+	return false
 }
