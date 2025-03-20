@@ -33,6 +33,7 @@ var operations = map[byte]Operation{
 	byte(core.BEQ_OPCODE):   (*Machine).beq,
 	byte(core.BLT_OPCODE):   (*Machine).blt,
 	byte(core.BGT_OPCODE):   (*Machine).bgt,
+	byte(core.UDF_OPCODE):   (*Machine).udf,
 }
 
 type Instruction struct {
@@ -196,7 +197,7 @@ func (m *Machine) decode() Instruction {
 	case core.ADD_OPCODE, core.SUB_OPCODE, core.CMP_OPCODE:
 		return m.decodeRTypeInst(instruction)
 	case core.MV_OPCODE, core.JUMP_OPCODE, core.LOAD_OPCODE, core.STORE_OPCODE,
-		core.HALT_OPCODE, core.RET_OPCODE, core.BEQ_OPCODE, core.BGT_OPCODE, core.BLT_OPCODE:
+		core.HALT_OPCODE, core.RET_OPCODE, core.BEQ_OPCODE, core.BGT_OPCODE, core.BLT_OPCODE, core.UDF_OPCODE:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)
@@ -306,4 +307,8 @@ func (m *Machine) ret(inst Instruction) {
 
 	// Reset link register
 	m.registers[core.LR] = 0
+}
+
+func (m *Machine) udf(inst Instruction) {
+	m.exception(0)
 }

@@ -34,6 +34,7 @@ var opcodeMap = map[string]core.Opcode{
 	"BEQ":   core.BEQ_OPCODE,
 	"BLT":   core.BLT_OPCODE,
 	"BGT":   core.BGT_OPCODE,
+	"UDF":   core.UDF_OPCODE,
 }
 
 // Define instruction format and function codes for each type
@@ -68,6 +69,7 @@ var instructionSpecs = map[core.Opcode]InstructionSpec{
 	core.BEQ_OPCODE:   newInstructionSpec("I-Type", core.BEQ_OPCODE),
 	core.BLT_OPCODE:   newInstructionSpec("I-Type", core.BLT_OPCODE),
 	core.BGT_OPCODE:   newInstructionSpec("I-Type", core.BGT_OPCODE),
+	core.UDF_OPCODE:   newInstructionSpec("I-Type", core.UDF_OPCODE),
 }
 
 // Common fields used across all instruction types
@@ -191,8 +193,8 @@ func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 		return nil, fmt.Errorf("Invalid opcode: %s", opcodeStr)
 	}
 
-	// Special treatment HALT instruction
-	if opcodeStr == "HALT" || opcodeStr == "RET" {
+	// Special treatment HALT, RET, UDF instructions
+	if opcodeStr == "HALT" || opcodeStr == "RET" || opcodeStr == "UDF" {
 		binaryInstruction := uint32(opcode) << 26 // Apenas o opcode
 		bytes := []byte{
 			byte((binaryInstruction >> 24) & 0xFF),

@@ -1,0 +1,3 @@
+ADD W1, W2, W3
+UDF
+MV W1, #3

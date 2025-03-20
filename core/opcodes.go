@@ -35,6 +35,7 @@ const (
 	BEQ_OPCODE
 	BLT_OPCODE
 	BGT_OPCODE
+	UDF_OPCODE
 )
 
 const (
