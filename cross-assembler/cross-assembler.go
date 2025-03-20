@@ -18,9 +18,6 @@ var registerMap = map[string]core.Register{
 	"W3": core.W3,
 	"W4": core.W4,
 	"W5": core.W5,
-	// Isso deve/pode ser feito (?)
-	"PC": core.PC,
-	"LR": core.LR,
 }
 
 // Map instruction names to Opcode values
@@ -33,6 +30,10 @@ var opcodeMap = map[string]core.Opcode{
 	"LOAD":  core.LOAD_OPCODE,
 	"STORE": core.STORE_OPCODE,
 	"HALT":  core.HALT_OPCODE,
+	"RET":   core.RET_OPCODE,
+	"BEQ":   core.BEQ_OPCODE,
+	"BLT":   core.BLT_OPCODE,
+	"BGT":   core.BGT_OPCODE,
 }
 
 // Define instruction format and function codes for each type
@@ -63,6 +64,10 @@ var instructionSpecs = map[core.Opcode]InstructionSpec{
 	core.LOAD_OPCODE:  newInstructionSpec("I-Type", core.LOAD_OPCODE),
 	core.STORE_OPCODE: newInstructionSpec("I-Type", core.STORE_OPCODE),
 	core.HALT_OPCODE:  newInstructionSpec("I-Type", core.HALT_OPCODE),
+	core.RET_OPCODE:   newInstructionSpec("I-Type", core.RET_OPCODE),
+	core.BEQ_OPCODE:   newInstructionSpec("I-Type", core.BEQ_OPCODE),
+	core.BLT_OPCODE:   newInstructionSpec("I-Type", core.BLT_OPCODE),
+	core.BGT_OPCODE:   newInstructionSpec("I-Type", core.BGT_OPCODE),
 }
 
 // Common fields used across all instruction types
@@ -187,7 +192,7 @@ func ConvertInstructionToBinary(instruction []string) ([]byte, error) {
 	}
 
 	// Special treatment HALT instruction
-	if opcodeStr == "HALT" {
+	if opcodeStr == "HALT" || opcodeStr == "RET" {
 		binaryInstruction := uint32(opcode) << 26 // Apenas o opcode
 		bytes := []byte{
 			byte((binaryInstruction >> 24) & 0xFF),

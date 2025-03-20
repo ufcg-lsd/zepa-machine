@@ -19,6 +19,7 @@ const (
 	MAR
 	LR
 	EVT
+	SSR
 
 	// Define opcodes for different instructions
 	MV_OPCODE Opcode = iota
@@ -30,6 +31,10 @@ const (
 	STORE_OPCODE
 	FETCH_OPCODE
 	HALT_OPCODE
+	RET_OPCODE
+	BEQ_OPCODE
+	BLT_OPCODE
+	BGT_OPCODE
 )
 
 const (

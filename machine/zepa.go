@@ -29,6 +29,10 @@ var operations = map[byte]Operation{
 	byte(core.LOAD_OPCODE):  (*Machine).load,
 	byte(core.STORE_OPCODE): (*Machine).store,
 	byte(core.HALT_OPCODE):  (*Machine).halt,
+	byte(core.RET_OPCODE):   (*Machine).ret,
+	byte(core.BEQ_OPCODE):   (*Machine).beq,
+	byte(core.BLT_OPCODE):   (*Machine).blt,
+	byte(core.BGT_OPCODE):   (*Machine).bgt,
 }
 
 type Instruction struct {
@@ -70,6 +74,24 @@ func (m *Machine) cmp(inst Instruction) {
 
 func (m *Machine) jump(inst Instruction) {
 	m.registers[core.PC] = uint32(inst.immediate)
+}
+
+func (m *Machine) beq(inst Instruction) {
+	if m.registers[core.SR] == 0 {
+		m.registers[core.PC] = uint32(inst.immediate)
+	}
+}
+
+func (m *Machine) blt(inst Instruction) {
+	if m.registers[core.SR] == 1 {
+		m.registers[core.PC] = uint32(inst.immediate)
+	}
+}
+
+func (m *Machine) bgt(inst Instruction) {
+	if m.registers[core.SR] == 2 {
+		m.registers[core.PC] = uint32(inst.immediate)
+	}
 }
 
 func (m *Machine) load(inst Instruction) {
@@ -173,7 +195,8 @@ func (m *Machine) decode() Instruction {
 	switch opcode {
 	case core.ADD_OPCODE, core.SUB_OPCODE, core.CMP_OPCODE:
 		return m.decodeRTypeInst(instruction)
-	case core.MV_OPCODE, core.JUMP_OPCODE, core.LOAD_OPCODE, core.STORE_OPCODE, core.HALT_OPCODE:
+	case core.MV_OPCODE, core.JUMP_OPCODE, core.LOAD_OPCODE, core.STORE_OPCODE,
+		core.HALT_OPCODE, core.RET_OPCODE, core.BEQ_OPCODE, core.BGT_OPCODE, core.BLT_OPCODE:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)
@@ -208,24 +231,36 @@ func (m *Machine) GetRegisters() map[core.Register]uint32 {
 }
 
 func NewMachine(memoryBytes int) *Machine {
-	machine := &Machine{
-		memory:    make([]byte, memoryBytes),
-		registers: make(map[core.Register]uint32),
-	}
-
-	handlerAddress := uint32(memoryBytes - 16) // Set handler address
-	machine.registers[core.EVT] = handlerAddress
-
-	// Set handler code
+	// Define exception handler code
 	handlerCode, err := assembler.ConvertInstructionsToBinary([][]string{
-		{"MV", "W0", "#4"},
-		{"ADD", "PC", "LR", "W0"},
+		{"MV", "W1", "#1"},  //64
+		{"CMP", "W0", "W1"}, //68
+		{"BEQ", "#80"},      //72
+
+		{"HALT"}, //76 Default Handle
+
+		{"RET"}, //80 Default Return
 	})
 
 	if err != nil {
 		fmt.Printf("%d\n", err)
 	}
 
+	// Setting some space to exception handler and W registers backup
+	qntRegisters := 6
+	exceptionHandlerSize := len(handlerCode) + qntRegisters
+	machineMemory := memoryBytes + exceptionHandlerSize
+
+	// Define the machine
+	machine := &Machine{
+		memory:    make([]byte, machineMemory),
+		registers: make(map[core.Register]uint32),
+	}
+
+	handlerAddress := uint32(machineMemory - exceptionHandlerSize) // Set handler address
+	machine.registers[core.EVT] = handlerAddress
+
+	// Load exception handler to memory
 	copy(machine.memory[handlerAddress:], handlerCode)
 
 	return machine
@@ -234,13 +269,41 @@ func NewMachine(memoryBytes int) *Machine {
 func (m *Machine) exception(code int) {
 	fmt.Printf("Exception raised: Code %d\n", code)
 
-	// Save next instruction address
-	m.registers[core.LR] = m.registers[core.PC]
+	// Save W registers into memory
+	m.memory[len(m.memory)-6] = byte(m.registers[core.W0])
+	m.memory[len(m.memory)-5] = byte(m.registers[core.W1])
+	m.memory[len(m.memory)-4] = byte(m.registers[core.W2])
+	m.memory[len(m.memory)-3] = byte(m.registers[core.W3])
+	m.memory[len(m.memory)-2] = byte(m.registers[core.W4])
+	m.memory[len(m.memory)-1] = byte(m.registers[core.W5])
 
-	// Call exception Handler
+	// Save information
+	m.registers[core.LR] = m.registers[core.PC]  // Save instruction
+	m.registers[core.SSR] = m.registers[core.SR] // Save Status
+
+	m.registers[core.W0] = uint32(code) // Save exception code using W0 register
+
+	// Redirect to exception Handler
 	m.registers[core.PC] = m.registers[core.EVT]
 }
 
 func (m *Machine) halt(inst Instruction) {
 	os.Exit(1)
+}
+
+func (m *Machine) ret(inst Instruction) {
+	// Restore values
+	m.registers[core.PC] = m.registers[core.LR]  // Restore PC (value before procedure) and go to next instruction
+	m.registers[core.SSR] = m.registers[core.SR] // Restore status (value before procedure)
+
+	// Restore W registers
+	m.registers[core.W0] = uint32(m.memory[len(m.memory)-6])
+	m.registers[core.W1] = uint32(m.memory[len(m.memory)-5])
+	m.registers[core.W2] = uint32(m.memory[len(m.memory)-4])
+	m.registers[core.W3] = uint32(m.memory[len(m.memory)-3])
+	m.registers[core.W4] = uint32(m.memory[len(m.memory)-2])
+	m.registers[core.W5] = uint32(m.memory[len(m.memory)-1])
+
+	// Reset link register
+	m.registers[core.LR] = 0
 }

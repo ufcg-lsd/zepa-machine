@@ -1,3 +1,5 @@
+MV W0, #1
+MV W5, #1
 LOAD W2, 0xFFFF
 ADD W1, W2, W3
 MV W1, #3
