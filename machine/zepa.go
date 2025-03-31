@@ -49,6 +49,7 @@ type Instruction struct {
 type Machine struct {
 	memory    []byte
 	registers map[core.Register]uint32
+	evt       map[uint32]byte
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -234,21 +235,16 @@ func (m *Machine) GetRegisters() map[core.Register]uint32 {
 func NewMachine(memoryBytes int) *Machine {
 	// Define exception handler code
 	handlerCode, err := assembler.ConvertInstructionsToBinary([][]string{
-		{"MV", "W1", "#1"},  //64
-		{"CMP", "W0", "W1"}, //68
-		{"BEQ", "#80"},      //72
-
-		{"HALT"}, //76 Default Handle
-
-		{"RET"}, //80 Default Return
+		{"HALT"}, //M + 0 : Default Handler
+		{"RET"},  //M + 4 : Memory Violation Handler
 	})
 
 	if err != nil {
 		fmt.Printf("%d\n", err)
 	}
 
-	// Setting some space to exception handler and W registers backup
-	qntRegisters := 6
+	// Setting space to exception handler and W registers backup
+	qntRegisters := len(assembler.RegisterMap)
 	exceptionHandlerSize := len(handlerCode) + qntRegisters
 	machineMemory := memoryBytes + exceptionHandlerSize
 
@@ -256,10 +252,13 @@ func NewMachine(memoryBytes int) *Machine {
 	machine := &Machine{
 		memory:    make([]byte, machineMemory),
 		registers: make(map[core.Register]uint32),
+		evt:       make(map[uint32]byte),
 	}
 
 	handlerAddress := uint32(machineMemory - exceptionHandlerSize) // Set handler address
-	machine.registers[core.EVT] = handlerAddress
+
+	machine.evt[0] = byte(memoryBytes)                             // Default handler location
+	machine.evt[core.EXC_MEMORY_VIOLATION] = byte(memoryBytes + 4) // Set memory violation handler location
 
 	// Load exception handler to memory
 	copy(machine.memory[handlerAddress:], handlerCode)
@@ -267,7 +266,7 @@ func NewMachine(memoryBytes int) *Machine {
 	return machine
 }
 
-func (m *Machine) exception(code int) {
+func (m *Machine) exception(code uint32) {
 	fmt.Printf("Exception raised: Code %d\n", code)
 
 	// Save W registers into memory
@@ -282,10 +281,8 @@ func (m *Machine) exception(code int) {
 	m.registers[core.LR] = m.registers[core.PC]  // Save instruction
 	m.registers[core.SSR] = m.registers[core.SR] // Save Status
 
-	m.registers[core.W0] = uint32(code) // Save exception code using W0 register
-
 	// Redirect to exception Handler
-	m.registers[core.PC] = m.registers[core.EVT]
+	m.registers[core.PC] = uint32(m.evt[code])
 }
 
 func (m *Machine) halt(inst Instruction) {

@@ -11,7 +11,7 @@ import (
 )
 
 // Map register names to Register values
-var registerMap = map[string]core.Register{
+var RegisterMap = map[string]core.Register{
 	"W0": core.W0,
 	"W1": core.W1,
 	"W2": core.W2,
@@ -320,7 +320,7 @@ func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 
 // parses a register name and returns its corresponding byte value
 func parseRegister(register string) (byte, error) {
-	reg, ok := registerMap[strings.ToUpper(register)]
+	reg, ok := RegisterMap[strings.ToUpper(register)]
 	if !ok {
 		return 0, fmt.Errorf("Invalid register: %s", register)
 	}

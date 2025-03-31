@@ -107,4 +107,5 @@ func main() {
 
 	DebugRegisters(machine)
 	DebugMemory(machine)
+
 }
