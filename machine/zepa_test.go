@@ -1,6 +1,8 @@
 package machine
 
 import (
+	"bytes"
+	"os"
 	"testing"
 	"zepa-machine/core"
 )
@@ -116,5 +118,177 @@ func TestSTORE(t *testing.T) {
 
 	if machine.memory[100] != 65 {
 		t.Errorf("Expected memory value to be 65, got %d", machine.memory[100])
+	}
+}
+
+func TestBEQ(t *testing.T) {
+	machine := NewMachine(2048)
+	cmpInst := Instruction{opcode: (*Machine).cmp, rs1: core.W0, rs2: core.W1}
+	inst := Instruction{opcode: (*Machine).beq, immediate: 0xA}
+
+	// Equals
+	machine.execute(cmpInst)
+	machine.execute(inst)
+
+	if machine.registers[core.PC] != 0xA {
+		t.Errorf("Expected pc to be 10, got %d", machine.registers[core.PC])
+	}
+
+	// Greater
+	machine.registers[core.PC] = 0
+	machine.registers[core.W0] = 1
+
+	machine.execute(cmpInst)
+	machine.execute(inst)
+
+	if machine.registers[core.PC] != 0 {
+		t.Errorf("Expected pc to be 0, got %d", machine.registers[core.PC])
+	}
+
+	// Lower
+	machine.registers[core.PC] = 0
+	machine.registers[core.W1] = 0
+
+	machine.execute(cmpInst)
+	machine.execute(inst)
+
+	if machine.registers[core.PC] != 0 {
+		t.Errorf("Expected pc to be 0, got %d", machine.registers[core.PC])
+	}
+}
+
+func TestBLT(t *testing.T) {
+	machine := NewMachine(2048)
+	machine.registers[core.W1] = 1
+	cmpInst := Instruction{opcode: (*Machine).cmp, rs1: core.W0, rs2: core.W1}
+	inst := Instruction{opcode: (*Machine).blt, immediate: 0xA}
+
+	// Lower
+	machine.execute(cmpInst)
+	machine.execute(inst)
+
+	if machine.registers[core.PC] != 0xA {
+		t.Errorf("Expected pc to be 10, got %d", machine.registers[core.PC])
+	}
+
+	// Equals
+	machine.registers[core.PC] = 0
+	machine.registers[core.W0] = 1
+
+	machine.execute(cmpInst)
+	machine.execute(inst)
+
+	if machine.registers[core.PC] != 0 {
+		t.Errorf("Expected pc to be 0, got %d", machine.registers[core.PC])
+	}
+
+	// Greater
+	machine.registers[core.PC] = 0
+	machine.registers[core.W0] = 1
+	machine.registers[core.W1] = 0
+
+	machine.execute(cmpInst)
+	machine.execute(inst)
+
+	if machine.registers[core.PC] != 0 {
+		t.Errorf("Expected pc to be 0, got %d", machine.registers[core.PC])
+	}
+}
+
+func TestBGT(t *testing.T) {
+	machine := NewMachine(2048)
+	machine.registers[core.W0] = 1
+	cmpInst := Instruction{opcode: (*Machine).cmp, rs1: core.W0, rs2: core.W1}
+	inst := Instruction{opcode: (*Machine).bgt, immediate: 0xA}
+
+	// Greater
+	machine.execute(cmpInst)
+	machine.execute(inst)
+
+	if machine.registers[core.PC] != 0xA {
+		t.Errorf("Expected pc to be 10, got %d", machine.registers[core.PC])
+	}
+
+	// Equals
+	machine.registers[core.PC] = 0
+	machine.registers[core.W0] = 0
+
+	machine.execute(cmpInst)
+	machine.execute(inst)
+
+	if machine.registers[core.PC] != 0 {
+		t.Errorf("Expected pc to be 0, got %d", machine.registers[core.PC])
+	}
+
+	// Lower
+	machine.registers[core.PC] = 0
+	machine.registers[core.W0] = 0
+	machine.registers[core.W1] = 1
+
+	machine.execute(cmpInst)
+	machine.execute(inst)
+
+	if machine.registers[core.PC] != 0 {
+		t.Errorf("Expected pc to be 0, got %d", machine.registers[core.PC])
+	}
+}
+func TestRET(t *testing.T) {
+	machine := NewMachine(2048)
+	inst := Instruction{opcode: (*Machine).ret}
+
+	machine.execute(inst)
+
+	if machine.registers[core.PC] != 0 {
+		t.Errorf("Expected pc to be 0, got %d", machine.registers[core.PC])
+	}
+}
+
+func TestUndefinedException(t *testing.T) {
+	machine := NewMachine(2048)
+	inst := Instruction{opcode: (*Machine).udf}
+
+	// Get default exit
+	old := os.Stdout // Save stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	machine.execute(inst)
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(r)
+	got := buf.String()
+
+	expected := "Exception raised: Code 0\n"
+
+	if got != expected {
+		t.Errorf("Expected: %s, got %s", expected, got)
+	}
+}
+
+func TestMemoryViolationException(t *testing.T) {
+	machine := NewMachine(2048)
+	inst := Instruction{opcode: (*Machine).load, immediate: 0xFFF}
+
+	// Get default exit
+	old := os.Stdout // Save stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	machine.execute(inst)
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(r)
+	got := buf.String()
+
+	expected := "Exception raised: Code 1\n"
+
+	if got != expected {
+		t.Errorf("Expected: %s, got %s", expected, got)
 	}
 }

@@ -112,6 +112,54 @@ CMP W1, W2    ; Sets the G flag (W1 > W2)
 ```
 
 
+### BEQ (Branch if equals)
+Use comparison to go to a specific address if comparison are equal.
+
+**Syntax:**
+```
+BEQ <Label/Address>
+```
+
+**Example:**
+```
+MV W1, #3
+MV W2, #3
+CMP W1, W2    ; Sets the Z flag (W1 = W2)
+BEQ #10       ; Go to instruction at address 10
+```
+
+### BLT (Branch if lower than)
+Use comparison to go to a specific address if comparison are lower.
+
+**Syntax:**
+```
+BLT <Label/Address>
+```
+
+**Example:**
+```
+MV W1, #2
+MV W2, #3
+CMP W1, W2    ; Sets the Z flag (W1 < W2)
+BLT #10       ; Go to instruction at address 10
+```
+
+### BGT (Branch if greater than)
+Use comparison to go to a specific address if comparison are greater.
+
+**Syntax:**
+```
+BGT <Label/Address>
+```
+
+**Example:**
+```
+MV W1, #3
+MV W2, #2
+CMP W1, W2    ; Sets the Z flag (W1 > W2)
+BGT #10       ; Go to instruction at address 10
+```
+
 ### JUMP (Unconditional Jump)
 Unconditionally jumps to a specific address or label, modifying the Program Counter (PC).
 
@@ -123,6 +171,34 @@ JUMP <Label/Address>
 **Example:**
 ```
 JUMP _loop    ; Jump to the _loop label
+```
+
+### HALT (Halt)
+Terminate program.
+
+**Syntax:**
+```
+HALT
+```
+
+**Example:**
+```
+HALT
+MV W0 #1 ; Not executed
+```
+
+### UDF (Undefined)
+Raise an exception.
+
+**Syntax:**
+```
+UDF
+```
+
+**Example:**
+```
+UDF      ; Show: Exception Raised
+MV W0 #1 ; Not executed
 ```
 
 ## Memory Operations

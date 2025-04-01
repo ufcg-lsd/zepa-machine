@@ -62,7 +62,7 @@ For this machine, the word size, instruction size, and register size were define
 - **Syntax**: MV \<Destination Reg.> \#\<Constant>
 - **Example**: MV W1 #5
 - **Format**: I-Type
-- **Opcode (decimal)**: 15
+- **Opcode (decimal)**: 14
 
 ### Arithmetic and Logical Operations
 **ADD**:
@@ -70,14 +70,14 @@ For this machine, the word size, instruction size, and register size were define
 - **Syntax**: ADD \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
 - **Example**: ADD W0, W1, W0
 - **Format**: R-Type
-- **Opcode (decimal)**: 16
+- **Opcode (decimal)**: 15
 
 **SUB**:
 - **Description**: Subtracts the value of one register from another and stores the result in a third one.
 - **Syntax**: SUB \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
 - **Example**: SUB W0, W1, W0
 - **Format**: R-Type
-- **Opcode (decimal)**: 17
+- **Opcode (decimal)**: 16
 
 ### Test Instructions
 **CMP**:
@@ -85,7 +85,7 @@ For this machine, the word size, instruction size, and register size were define
 - **Syntax**: CMP \<Input Reg.>, \<Input Reg.>
 - **Example**: CMP W0, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 18
+- **Opcode (decimal)**: 17
 
 #### Z, L and G Test Flags
 When a test instruction, such as CMP, is executed, the SR register is updated, and its value can be used by other instructions to change the program's flow. Each flag is represented by a bit, and the flag being set indicates that the bit value is 1.
@@ -102,49 +102,49 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Syntax**: JUMP \[<Address>]
 - **Example**: JUMP 0x14
 - **Format**: I-Type
-- **Opcode (decimal)**: 19
+- **Opcode (decimal)**: 18
 
 **HALT**:
 - **Description**: Terminate the program execution
 - **Syntax**: HALT
 - **Example**: HALT
 - **Format**: I-Type
-- **Opcode (decimal)**: 23
+- **Opcode (decimal)**: 22
 
 **RET**:
 - **Description**: Return from procedure
 - **Syntax**: RET
 - **Example**: RET
 - **Format**: I-Type
-- **Opcode (decimal)**: 24
+- **Opcode (decimal)**: 23
 
 **BEQ**:
 - **Description**: Change the value of the Program Counter (PC) register if the last comparison (CMP) indicates equality, updating the program's execution flow.
 - **Syntax**: BEQ \[<Address>]
 - **Example**: BEQ 0x14
 - **Format**: I-Type
-- **Opcode (decimal)**: 25
+- **Opcode (decimal)**: 24
 
 **BLT**:
 - **Description**: Change the value of the Program Counter (PC) register if the last comparison (CMP) indicates that the second value is smaller, updating the program's execution flow.
 - **Syntax**: BLT \[<Address>]
 - **Example**: BLT 0x14
 - **Format**: I-Type
-- **Opcode (decimal)**: 26
+- **Opcode (decimal)**: 25
 
 **BGT**:
 - **Description**: Change the value of the Program Counter (PC) register if the last comparison (CMP) indicates that the second value is greater, updating the program's execution flow.
 - **Syntax**: BGT \[<Address>]
 - **Example**: BGT 0x14
 - **Format**: I-Type
-- **Opcode (decimal)**: 27
+- **Opcode (decimal)**: 26
 
 **UDF**:
 - **Description**: Raise exception
 - **Syntax**: UDF
 - **Example**: UDF
 - **Format**: I-Type
-- **Opcode (decimal)**: 28
+- **Opcode (decimal)**: 27
 
 ### Load and Store Operations with Addresses
 **LOAD**:
@@ -152,45 +152,45 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Syntax**: LOAD \<Destination Reg.>, [\<Address>]
 - **Example**: LOAD W0, 0x68DB00AD
 - **Format**: I-Type
-- **Opcode (decimal)**: 20
+- **Opcode (decimal)**: 19
 
 **STORE**:
 - **Description**: Stores the value of a register to memory.
 - **Syntax**: STORE \<Source Reg.>, [\<Address>]
 - **Example**: STORE W1, 0x68DB00AD
 - **Format**: I-Type
-- **Opcode (decimal)**: 21
+- **Opcode (decimal)**: 20
 
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).
 - **Syntax and Example**: FETCH
 - **Format**: I-Type
-- **Opcode (decimal)**: 22
+- **Opcode (decimal)**: 21
 
 ### Zepa Machine Instruction Encoding Table
 
 | **Instruction** | **Format** | **opcode** | **rd** | **rs1** | **rs2** | **funct5** | **funct6** |
 |-----------------|------------|------------|---------|---------|------------|--------|------------|
-| **ADD**         | R-Type         | 010000    | reg     | reg     | reg        | 00000    | 000000    |
-| **SUB**         | R-Type          | 010001    | reg     | reg     | reg        | 00000    | 000000    |
-| **CMP**         | R-Type          | 010010   | 00000     | reg     | reg        | 00000    | 000000    |
+| **ADD**         | R-Type         | 001111    | reg     | reg     | reg        | 00000    | 000000    |
+| **SUB**         | R-Type          | 010000    | reg     | reg     | reg        | 00000    | 000000    |
+| **CMP**         | R-Type          | 010001   | 00000     | reg     | reg        | 00000    | 000000    |
 
 
 
 | **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate** | **funct5** |
 |-----------------|------------|---------------|---------|------------|--------|
-| **MV**          | I-Type          | 001111      | reg     | 16bit constant         | 00000    |
-| **JUMP**        | I-Type          | 010011      | 00000     | 16bit address        | 00000    |
-| **LOAD**        | I-Type          | 010100       | reg     | 16bit address        | 00000    |
-| **STORE**        | I-Type          | 010101       | reg     | 16bit address        | 00000    |
-| **FETCH**        | I-Type          | 010110       | 00000     | 0000000000000000        | 00000    |
-| **HALT**         | I-Type          | 010111        | 00000    | 0000000000000000   | 00000    | 
-| **RET**         | I-Type          | 011000        | 00000    | 0000000000000000   | 00000    | 
-| **BEQ**         | I-Type          | 011001        | 00000    | 16bit address   | 00000    | 
-| **BLT**         | I-Type          | 011010        | 00000    | 16bit address   | 00000    | 
-| **BGT**         | I-Type          | 011011        | 00000    | 16bit address   | 00000    | 
-| **UDF**         | I-Type          | 011100        | 00000    | 0000000000000000   | 00000    | 
+| **MV**          | I-Type          | 001110      | reg     | 16bit constant         | 00000    |
+| **JUMP**        | I-Type          | 010010      | 00000     | 16bit address        | 00000    |
+| **LOAD**        | I-Type          | 010011       | reg     | 16bit address        | 00000    |
+| **STORE**        | I-Type          | 010100       | reg     | 16bit address        | 00000    |
+| **FETCH**        | I-Type          | 010101       | 00000     | 0000000000000000        | 00000    |
+| **HALT**         | I-Type          | 010110        | 00000    | 0000000000000000   | 00000    | 
+| **RET**         | I-Type          | 010111        | 00000    | 0000000000000000   | 00000    | 
+| **BEQ**         | I-Type          | 011000        | 00000    | 16bit address   | 00000    | 
+| **BLT**         | I-Type          | 011001        | 00000    | 16bit address   | 00000    | 
+| **BGT**         | I-Type          | 011010        | 00000    | 16bit address   | 00000    | 
+| **UDF**         | I-Type          | 011011        | 00000    | 0000000000000000   | 00000    | 
 
 
 ## References

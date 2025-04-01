@@ -18,7 +18,6 @@ const (
 	MDR
 	MAR
 	LR
-	EVT
 	SSR
 
 	// Define opcodes for different instructions
