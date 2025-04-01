@@ -1,0 +1,8 @@
+; Teste de manipulação de memória
+MV W0, #0xAA
+MV W1, #0xBB
+STORE W0, #0
+STORE W1, #4
+LOAD W2, #0
+LOAD W3, #4
+HALT
