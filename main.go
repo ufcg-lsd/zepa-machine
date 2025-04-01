@@ -88,24 +88,60 @@ func getRegisterName(reg core.Register) string {
 	}
 }
 
+func loadProgramsToDisk(m *machine.Machine, filePaths []string) error {
+	for _, filePath := range filePaths {
+		binaryCode, err := assembler.RunAssembler(filePath)
+		if err != nil {
+			return fmt.Errorf("error assembling %s: %v", filePath, err)
+		}
+		m.AddToDisk(binaryCode)
+	}
+	return nil
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run ./main.go <asm/file/path>")
 		return
 	}
+	machine := machine.NewMachine(64)
+	machine.SetDebugMode(true)
+	machine.InitDisk()
 
-	sourceFile := os.Args[1]
-	binaryCode, err := assembler.RunAssembler(sourceFile)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+	filePaths := os.Args[1:]
+
+	// Mostrar status inicial
+	fmt.Println("\n=== Initial State ===")
+	machine.PrintDiskStatus()
+	machine.PrintMemoryMap()
+
+	if err := loadProgramsToDisk(machine, filePaths); err != nil {
+		fmt.Printf("Error loading programs: %v\n", err)
 		return
 	}
 
-	machine := machine.NewMachine(64)
-	machine.LoadProgram(binaryCode)
-	machine.Boot()
+	// Mostrar status após carregar para o disco
+	fmt.Println("\n=== After Loading to Disk ===")
+	machine.PrintDiskStatus()
 
-	DebugRegisters(machine)
-	DebugMemory(machine)
+	// Executar cada programa
+	for i := range filePaths {
+		fmt.Printf("\n=== Preparing to execute program %d ===\n", i+1)
 
+		if err := machine.LoadFromDisk(i); err != nil {
+			fmt.Printf("Error loading program %d: %v\n", i+1, err)
+			continue
+		}
+
+		// Mostrar status após carregar para memória
+		fmt.Println("\n=== After Loading to Memory ===")
+		machine.PrintMemoryMap()
+
+		fmt.Printf("\nExecuting program %d...\n", i+1)
+		machine.Boot()
+
+		DebugRegisters(machine)
+		DebugMemory(machine)
+
+	}
 }
