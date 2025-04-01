@@ -46,10 +46,33 @@ type Instruction struct {
 	immediate uint16
 }
 
+type Disk struct {
+	programs [][]byte
+}
+
 type Machine struct {
 	memory    []byte
 	registers map[core.Register]uint32
 	evt       map[uint32]byte
+	disk      Disk
+	debug     bool
+}
+
+func (m *Machine) InitDisk() {
+	m.disk.programs = make([][]byte, 0)
+}
+
+func (m *Machine) AddToDisk(program []byte) {
+	m.disk.programs = append(m.disk.programs, program)
+}
+
+func (m *Machine) LoadFromDisk(index int) error {
+	if index < 0 || index >= len(m.disk.programs) {
+		return fmt.Errorf("program index %d out of bounds", index)
+	}
+	m.memory = make([]byte, len(m.memory))
+	copy(m.memory, m.disk.programs[index])
+	return nil
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -253,6 +276,7 @@ func NewMachine(memoryBytes int) *Machine {
 		memory:    make([]byte, machineMemory),
 		registers: make(map[core.Register]uint32),
 		evt:       make(map[uint32]byte),
+		disk:      Disk{programs: make([][]byte, 0)},
 	}
 
 	handlerAddress := uint32(machineMemory - exceptionHandlerSize) // Set handler address
@@ -308,4 +332,44 @@ func (m *Machine) ret(inst Instruction) {
 
 func (m *Machine) udf(inst Instruction) {
 	m.exception(0)
+}
+
+func (m *Machine) SetDebugMode(enable bool) {
+	m.debug = enable
+}
+
+func (m *Machine) PrintDiskStatus() {
+	if !m.debug {
+		return
+	}
+
+	fmt.Println("\n=== Disk Status ===")
+	fmt.Printf("Total programs stored: %d\n", len(m.disk.programs))
+
+	for i, program := range m.disk.programs {
+		fmt.Printf("Program %d: Size %d bytes\n", i, len(program))
+		if len(program) > 0 {
+			fmt.Printf("First instruction: %08b %08b %08b %08b\n",
+				program[0], program[1], program[2], program[3])
+		}
+	}
+	fmt.Println("==================\n")
+}
+
+func (m *Machine) PrintMemoryMap() {
+	if !m.debug {
+		return
+	}
+
+	fmt.Println("\n=== Memory Map ===")
+	fmt.Printf("Total memory: %d bytes\n", len(m.memory))
+	fmt.Printf("Memory contents (first 32 bytes):\n")
+
+	for i := 0; i < 32 && i < len(m.memory); i += 4 {
+		if i+3 < len(m.memory) {
+			fmt.Printf("0x%04X: %08b %08b %08b %08b\n", i,
+				m.memory[i], m.memory[i+1], m.memory[i+2], m.memory[i+3])
+		}
+	}
+	fmt.Println("=================\n")
 }
