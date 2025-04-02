@@ -50,7 +50,7 @@ type Instruction struct {
 type Machine struct {
 	memory         []byte
 	registers      map[core.Register]uint32
-	evt            map[uint32]byte
+	evt            map[uint32]int
 	ivt            map[uint32]func(m *Machine)
 	interruptQueue []uint32
 }
@@ -220,7 +220,7 @@ func (m *Machine) Boot() {
 		}
 		decodedInstruction := m.decode()
 		m.execute(decodedInstruction)
-		m.handleInterrupt()
+		m.handleInterrupts()
 	}
 }
 
@@ -244,7 +244,7 @@ func NewMachine(memoryBytes int) *Machine {
 	})
 
 	if err != nil {
-		fmt.Printf("%d\n", err)
+		fmt.Printf("%v\n", err)
 	}
 
 	// Setting space to exception handler and W registers backup
@@ -256,16 +256,16 @@ func NewMachine(memoryBytes int) *Machine {
 	machine := &Machine{
 		memory:         make([]byte, machineMemory),
 		registers:      make(map[core.Register]uint32),
-		evt:            make(map[uint32]byte),
+		evt:            make(map[uint32]int),
 		ivt:            make(map[uint32]func(m *Machine)),
 		interruptQueue: []uint32{},
 	}
 
-	handlerAddress := uint32(machineMemory - exceptionHandlerSize) // Set handler address
+	handlerAddress := machineMemory - exceptionHandlerSize // Set handler address
 
 	// Load exceptions
-	machine.evt[0] = byte(memoryBytes)                             // Default handler location
-	machine.evt[core.EXC_MEMORY_VIOLATION] = byte(memoryBytes + 4) // Set memory violation handler location
+	machine.evt[0] = memoryBytes                             // Default handler location
+	machine.evt[core.EXC_MEMORY_VIOLATION] = memoryBytes + 4 // Set memory violation handler location
 
 	//Load interrupts
 	machine.ivt[core.INT_TIMER] = TimerInterrupt // Set timer interrupt handler
@@ -277,6 +277,7 @@ func NewMachine(memoryBytes int) *Machine {
 }
 
 func (m *Machine) exception(code uint32) {
+	m.interruptQueue = append(m.interruptQueue, code)
 	fmt.Printf("Exception raised: Code %d\n", code)
 
 	// Save W registers into memory
@@ -314,6 +315,12 @@ func (m *Machine) ret(inst Instruction) {
 
 	// Reset link register
 	m.registers[core.LR] = 0
+
+	if len(m.interruptQueue) > 0 {
+		if m.interruptQueue[0] < 10 {
+			m.interruptQueue = m.interruptQueue[1:] // Remove from queue
+		}
+	}
 }
 
 func (m *Machine) udf(inst Instruction) {
@@ -324,20 +331,22 @@ func (m *Machine) interrupt(code uint32) {
 	m.interruptQueue = append(m.interruptQueue, code)
 }
 
-func (m *Machine) handleInterrupt() {
-	for len(m.interruptQueue) > 0 {
-		interruptCode := m.interruptQueue[0]
-		m.interruptQueue = m.interruptQueue[1:] // Remove from queue
+func (m *Machine) handleInterrupts() {
+	if len(m.interruptQueue) > 0 && m.interruptQueue[0] >= 10 { // If not an exception
+		for len(m.interruptQueue) > 0 {
+			interruptCode := m.interruptQueue[0]
+			m.interruptQueue = m.interruptQueue[1:] // Remove from queue
 
-		if handler, exists := m.ivt[interruptCode]; exists {
-			handler(m)
-		} else {
-			fmt.Printf("Unhandled interrupt: Code %d\n", interruptCode)
+			if handler, exists := m.ivt[interruptCode]; exists {
+				handler(m)
+			} else {
+				fmt.Printf("Unhandled interrupt: Code %d\n", interruptCode)
+			}
 		}
 	}
 }
 
 func TimerInterrupt(m *Machine) {
-	fmt.Printf("Timer Interrupt: 2s")
+	fmt.Printf("Timer Interrupt: 2s\n")
 	time.Sleep(2 * time.Second)
 }
