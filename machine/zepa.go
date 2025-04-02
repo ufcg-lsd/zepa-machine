@@ -3,6 +3,7 @@ package machine
 import (
 	"fmt"
 	"os"
+	"time"
 	"zepa-machine/core"
 	assembler "zepa-machine/cross-assembler"
 )
@@ -47,9 +48,11 @@ type Instruction struct {
 }
 
 type Machine struct {
-	memory    []byte
-	registers map[core.Register]uint32
-	evt       map[uint32]byte
+	memory         []byte
+	registers      map[core.Register]uint32
+	evt            map[uint32]byte
+	ivt            map[uint32]func(m *Machine)
+	interruptQueue []uint32
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -217,6 +220,7 @@ func (m *Machine) Boot() {
 		}
 		decodedInstruction := m.decode()
 		m.execute(decodedInstruction)
+		m.handleInterrupt()
 	}
 }
 
@@ -250,15 +254,21 @@ func NewMachine(memoryBytes int) *Machine {
 
 	// Define the machine
 	machine := &Machine{
-		memory:    make([]byte, machineMemory),
-		registers: make(map[core.Register]uint32),
-		evt:       make(map[uint32]byte),
+		memory:         make([]byte, machineMemory),
+		registers:      make(map[core.Register]uint32),
+		evt:            make(map[uint32]byte),
+		ivt:            make(map[uint32]func(m *Machine)),
+		interruptQueue: []uint32{},
 	}
 
 	handlerAddress := uint32(machineMemory - exceptionHandlerSize) // Set handler address
 
+	// Load exceptions
 	machine.evt[0] = byte(memoryBytes)                             // Default handler location
 	machine.evt[core.EXC_MEMORY_VIOLATION] = byte(memoryBytes + 4) // Set memory violation handler location
+
+	//Load interrupts
+	machine.ivt[core.INT_TIMER] = TimerInterrupt // Set timer interrupt handler
 
 	// Load exception handler to memory
 	copy(machine.memory[handlerAddress:], handlerCode)
@@ -308,4 +318,26 @@ func (m *Machine) ret(inst Instruction) {
 
 func (m *Machine) udf(inst Instruction) {
 	m.exception(0)
+}
+
+func (m *Machine) interrupt(code uint32) {
+	m.interruptQueue = append(m.interruptQueue, code)
+}
+
+func (m *Machine) handleInterrupt() {
+	for len(m.interruptQueue) > 0 {
+		interruptCode := m.interruptQueue[0]
+		m.interruptQueue = m.interruptQueue[1:] // Remove from queue
+
+		if handler, exists := m.ivt[interruptCode]; exists {
+			handler(m)
+		} else {
+			fmt.Printf("Unhandled interrupt: Code %d\n", interruptCode)
+		}
+	}
+}
+
+func TimerInterrupt(m *Machine) {
+	fmt.Printf("Timer Interrupt: 2s")
+	time.Sleep(2 * time.Second)
 }

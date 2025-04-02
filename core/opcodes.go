@@ -48,4 +48,5 @@ const (
 // Exception codes
 const (
 	EXC_MEMORY_VIOLATION = 1
+	INT_TIMER            = 10
 )
