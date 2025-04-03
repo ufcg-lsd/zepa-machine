@@ -259,22 +259,20 @@ func NewMachine(memoryBytes int) *Machine {
 	// Setting space to exception handler and W registers backup
 	qntRegisters := len(assembler.RegisterMap)
 	exceptionHandlerSize := len(handlerCode) + qntRegisters
-	machineMemory := memoryBytes + exceptionHandlerSize
+	handlerAddress := memoryBytes - exceptionHandlerSize // Set handler position in memory
 
 	// Define the machine
 	machine := &Machine{
-		memory:         make([]byte, machineMemory),
+		memory:         make([]byte, memoryBytes),
 		registers:      make(map[core.Register]uint32),
 		evt:            make(map[core.Exception]int),
 		ivt:            make(map[core.Interrupt]func(m *Machine)),
 		interruptQueue: []core.Interrupt{},
 	}
 
-	handlerAddress := machineMemory - exceptionHandlerSize // Set handler address
-
 	// Load exceptions
-	machine.evt[core.EXC_DEFAULT] = memoryBytes              // Default handler location
-	machine.evt[core.EXC_MEMORY_VIOLATION] = memoryBytes + 4 // Set memory violation handler location
+	machine.evt[core.EXC_DEFAULT] = handlerAddress              // Default handler location
+	machine.evt[core.EXC_MEMORY_VIOLATION] = handlerAddress + 4 // Set memory violation handler location
 
 	//Load interrupts
 	machine.ivt[core.INT_TIMER] = TimerInterrupt // Set timer interrupt handler
