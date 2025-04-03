@@ -50,9 +50,9 @@ type Instruction struct {
 type Machine struct {
 	memory         []byte
 	registers      map[core.Register]uint32
-	evt            map[uint32]int
-	ivt            map[uint32]func(m *Machine)
-	interruptQueue []uint32
+	evt            map[core.Exception]int
+	ivt            map[core.Interrupt]func(m *Machine)
+	interruptQueue []core.Interrupt
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -213,6 +213,7 @@ func (m *Machine) execute(inst Instruction) {
 }
 
 func (m *Machine) Boot() {
+	cycle := 0
 	for {
 		m.fetch()
 		if m.isEndOfProgram() {
@@ -220,6 +221,14 @@ func (m *Machine) Boot() {
 		}
 		decodedInstruction := m.decode()
 		m.execute(decodedInstruction)
+
+		cycle++
+
+		if cycle >= 4 { // Timer interrupt example
+			m.interrupt(core.INT_TIMER)
+			cycle = 0
+		}
+
 		m.handleInterrupts()
 	}
 }
@@ -256,15 +265,15 @@ func NewMachine(memoryBytes int) *Machine {
 	machine := &Machine{
 		memory:         make([]byte, machineMemory),
 		registers:      make(map[core.Register]uint32),
-		evt:            make(map[uint32]int),
-		ivt:            make(map[uint32]func(m *Machine)),
-		interruptQueue: []uint32{},
+		evt:            make(map[core.Exception]int),
+		ivt:            make(map[core.Interrupt]func(m *Machine)),
+		interruptQueue: []core.Interrupt{},
 	}
 
 	handlerAddress := machineMemory - exceptionHandlerSize // Set handler address
 
 	// Load exceptions
-	machine.evt[0] = memoryBytes                             // Default handler location
+	machine.evt[core.EXC_DEFAULT] = memoryBytes              // Default handler location
 	machine.evt[core.EXC_MEMORY_VIOLATION] = memoryBytes + 4 // Set memory violation handler location
 
 	//Load interrupts
@@ -276,8 +285,7 @@ func NewMachine(memoryBytes int) *Machine {
 	return machine
 }
 
-func (m *Machine) exception(code uint32) {
-	m.interruptQueue = append(m.interruptQueue, code)
+func (m *Machine) exception(code core.Exception) {
 	fmt.Printf("Exception raised: Code %d\n", code)
 
 	// Save W registers into memory
@@ -315,33 +323,25 @@ func (m *Machine) ret(inst Instruction) {
 
 	// Reset link register
 	m.registers[core.LR] = 0
-
-	if len(m.interruptQueue) > 0 {
-		if m.interruptQueue[0] < 10 {
-			m.interruptQueue = m.interruptQueue[1:] // Remove from queue
-		}
-	}
 }
 
 func (m *Machine) udf(inst Instruction) {
 	m.exception(0)
 }
 
-func (m *Machine) interrupt(code uint32) {
+func (m *Machine) interrupt(code core.Interrupt) {
 	m.interruptQueue = append(m.interruptQueue, code)
 }
 
 func (m *Machine) handleInterrupts() {
-	if len(m.interruptQueue) > 0 && m.interruptQueue[0] >= 10 { // If not an exception
-		for len(m.interruptQueue) > 0 {
-			interruptCode := m.interruptQueue[0]
-			m.interruptQueue = m.interruptQueue[1:] // Remove from queue
+	for len(m.interruptQueue) > 0 {
+		interruptCode := m.interruptQueue[0]
+		m.interruptQueue = m.interruptQueue[1:] // Remove from queue
 
-			if handler, exists := m.ivt[interruptCode]; exists {
-				handler(m)
-			} else {
-				fmt.Printf("Unhandled interrupt: Code %d\n", interruptCode)
-			}
+		if handler, exists := m.ivt[interruptCode]; exists {
+			handler(m)
+		} else {
+			fmt.Printf("Unhandled interrupt: Code %d\n", interruptCode)
 		}
 	}
 }

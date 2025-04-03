@@ -2,6 +2,8 @@ package core
 
 type Opcode uint8
 type Register uint8
+type Exception uint8
+type Interrupt uint8
 
 const (
 	// Define registers
@@ -47,6 +49,8 @@ const (
 
 // Exception codes
 const (
-	EXC_MEMORY_VIOLATION = 1
-	INT_TIMER            = 10
+	EXC_DEFAULT Exception = iota
+	EXC_MEMORY_VIOLATION
+
+	INT_TIMER Interrupt = iota
 )
