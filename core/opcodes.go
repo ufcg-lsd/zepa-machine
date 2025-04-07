@@ -35,6 +35,9 @@ const (
 	BLT_OPCODE
 	BGT_OPCODE
 	UDF_OPCODE
+	LD_OPCODE  Opcode = 28 // Load from memory using register address
+	ST_OPCODE  Opcode = 29 // Store to memory using register address
+	LDI_OPCODE Opcode = 30 // Load immediate (extended immediate)
 )
 
 const (

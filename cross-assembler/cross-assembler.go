@@ -35,6 +35,9 @@ var opcodeMap = map[string]core.Opcode{
 	"BLT":   core.BLT_OPCODE,
 	"BGT":   core.BGT_OPCODE,
 	"UDF":   core.UDF_OPCODE,
+	"LD":    core.LD_OPCODE,
+	"ST":    core.ST_OPCODE,
+	"LDI":   core.LDI_OPCODE,
 }
 
 // Define instruction format and function codes for each type
@@ -70,6 +73,9 @@ var instructionSpecs = map[core.Opcode]InstructionSpec{
 	core.BLT_OPCODE:   newInstructionSpec("I-Type", core.BLT_OPCODE),
 	core.BGT_OPCODE:   newInstructionSpec("I-Type", core.BGT_OPCODE),
 	core.UDF_OPCODE:   newInstructionSpec("I-Type", core.UDF_OPCODE),
+	core.LD_OPCODE:    newInstructionSpec("R-Type", core.LD_OPCODE),
+	core.ST_OPCODE:    newInstructionSpec("R-Type", core.ST_OPCODE),
+	core.LDI_OPCODE:   newInstructionSpec("I-Type", core.LDI_OPCODE),
 }
 
 // Common fields used across all instruction types

@@ -34,6 +34,9 @@ var operations = map[byte]Operation{
 	byte(core.BLT_OPCODE):   (*Machine).blt,
 	byte(core.BGT_OPCODE):   (*Machine).bgt,
 	byte(core.UDF_OPCODE):   (*Machine).udf,
+	byte(core.LD_OPCODE):    (*Machine).ld,
+	byte(core.ST_OPCODE):    (*Machine).st,
+	byte(core.LDI_OPCODE):   (*Machine).ldi,
 }
 
 type Instruction struct {
@@ -55,7 +58,6 @@ type Machine struct {
 	registers map[core.Register]uint32
 	evt       map[uint32]byte
 	disk      Disk
-	debug     bool
 }
 
 func (m *Machine) InitDisk() {
@@ -334,42 +336,24 @@ func (m *Machine) udf(inst Instruction) {
 	m.exception(0)
 }
 
-func (m *Machine) SetDebugMode(enable bool) {
-	m.debug = enable
-}
-
-func (m *Machine) PrintDiskStatus() {
-	if !m.debug {
+func (m *Machine) ld(inst Instruction) {
+	addr := m.registers[inst.rs1]
+	if int(addr) >= len(m.memory) {
+		m.exception(core.EXC_MEMORY_VIOLATION)
 		return
 	}
-
-	fmt.Println("\n=== Disk Status ===")
-	fmt.Printf("Total programs stored: %d\n", len(m.disk.programs))
-
-	for i, program := range m.disk.programs {
-		fmt.Printf("Program %d: Size %d bytes\n", i, len(program))
-		if len(program) > 0 {
-			fmt.Printf("First instruction: %08b %08b %08b %08b\n",
-				program[0], program[1], program[2], program[3])
-		}
-	}
-	fmt.Println("==================\n")
+	m.registers[inst.rd] = uint32(m.memory[addr])
 }
 
-func (m *Machine) PrintMemoryMap() {
-	if !m.debug {
+func (m *Machine) st(inst Instruction) {
+	addr := m.registers[inst.rs1]
+	if int(addr) >= len(m.memory) {
+		m.exception(core.EXC_MEMORY_VIOLATION)
 		return
 	}
+	m.memory[addr] = byte(m.registers[inst.rd])
+}
 
-	fmt.Println("\n=== Memory Map ===")
-	fmt.Printf("Total memory: %d bytes\n", len(m.memory))
-	fmt.Printf("Memory contents (first 32 bytes):\n")
-
-	for i := 0; i < 32 && i < len(m.memory); i += 4 {
-		if i+3 < len(m.memory) {
-			fmt.Printf("0x%04X: %08b %08b %08b %08b\n", i,
-				m.memory[i], m.memory[i+1], m.memory[i+2], m.memory[i+3])
-		}
-	}
-	fmt.Println("=================\n")
+func (m *Machine) ldi(inst Instruction) {
+	m.registers[inst.rd] = uint32(inst.immediate)
 }

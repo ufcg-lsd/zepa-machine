@@ -1,0 +1,17 @@
+MV W0, 0       ; 0x00: Contador do disco (3 bytes)
+MV W1, 32      ; 0x03: Endereço de memória (0x20) (3 bytes)
+MV W3, 0       ; 0x06: Registrador zero (3 bytes)
+MV W4, 4       ; 0x09: Incremento (3 bytes)
+
+; Loop de cópia (15 bytes)
+LOAD W2, 0     ; 0x0C: Carrega do disco (3 bytes)
+CMP W2, W3     ; 0x0F: Compara com zero (3 bytes)
+BEQ 9          ; 0x12: Se zero, pula para JUMP 32 (pula +9 bytes = 3 instruções)
+STORE W2, 32   ; 0x15: Armazena na memória (3 bytes)
+ADD W0, W0, W4 ; 0x18: Avança disco (3 bytes)
+ADD W1, W1, W4 ; 0x1B: Avança memória (3 bytes)
+JUMP 65512     ; 0x1E: Loop (65536 - 24 = 65512, equivale a -24 bytes)
+
+; Execução (5 bytes)
+JUMP 32        ; 0x21: Salta para o programa em 0x20 (3 bytes)
+MV W5, 0       ; 0x24: Preenchimento (2 bytes - ajuste final)
