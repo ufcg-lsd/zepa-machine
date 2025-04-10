@@ -161,6 +161,13 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Format**: I-Type
 - **Opcode (decimal)**: 20
 
+**D2M**:
+- **Description**: Disk to Memory - Loads the first program from disk into memory at the address specified in W1. Sets W3 to 1 if successful, 0 if no programs remain. Sets W4 to the length of the loaded program.
+- **Syntax**: D2M \<Destination Reg.>, [\<Address>]
+- **Example**: D2M W0, 0
+- **Format**: I-Type
+- **Opcode (decimal)**: 28
+
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).
@@ -191,6 +198,7 @@ These flags can be used by instructions to make decisions that can change the pr
 | **BLT**         | I-Type          | 011001        | 00000    | 16bit address   | 00000    | 
 | **BGT**         | I-Type          | 011010        | 00000    | 16bit address   | 00000    | 
 | **UDF**         | I-Type          | 011011        | 00000    | 0000000000000000   | 00000    | 
+| **D2M**         | I-Type          | 011100        | reg     | 16bit address   | 00000    | 
 
 
 ## References

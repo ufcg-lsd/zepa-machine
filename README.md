@@ -6,6 +6,17 @@ ZEPA is a simulated machine designed to help you learn aspects of computer organ
 
 Read the [ISA](specs/ISA) and [assembly](specs/assembly) specifications for detailed information about the instruction set architecture and assembly language.
 
+## Running the Machine
+
+Usage: `go run ./main.go <program1.asm> [program2.asm...]`
+
+You can now run multiple programs by passing them as arguments:
+```
+go run ./main.go program1.asm program2.asm program3.asm
+```
+
+Each program is executed separately with its own instance of the machine, and results for each execution are displayed sequentially.
+
 ## Demonstration
 Usage: go run ./main.go <asm/file/path>"
 ### Example Program: `add_two_numbers.asm`

@@ -1,4 +1,3 @@
-
 # Assembly for Zepa Machine Architecture
 
 ## Introduction
@@ -228,6 +227,25 @@ STORE <Source Reg.>, [<Memory Address>]
 ```
 STORE W1, [0x200]   ; Store the value from register W1 into memory address 0x200
 ```
+
+## Disk Operations
+
+### D2M (Disk to Memory)
+Loads the first program from disk into memory at the address specified in register W1. Sets W3 to 1 if successful, 0 if no programs remain. Sets W4 to the length of the loaded program.
+
+**Syntax:**
+```
+D2M <Dest Reg.>, <Address>
+```
+
+**Example:**
+```
+D2M W0, 0           ; Load the first program from disk into memory at address in W1
+```
+
+After execution:
+- W3: contains 1 if a program was loaded successfully, 0 if no programs remain
+- W4: contains the length of the loaded program in bytes
 
 ## References
 
