@@ -2,7 +2,6 @@ package machine
 
 import (
 	"fmt"
-	"os"
 	"zepa-machine/core"
 	assembler "zepa-machine/cross-assembler"
 )
@@ -21,22 +20,20 @@ const (
 )
 
 var operations = map[byte]Operation{
-	byte(core.MV_OPCODE):    (*Machine).mv,
-	byte(core.ADD_OPCODE):   (*Machine).add,
-	byte(core.SUB_OPCODE):   (*Machine).sub,
-	byte(core.CMP_OPCODE):   (*Machine).cmp,
-	byte(core.JUMP_OPCODE):  (*Machine).jump,
-	byte(core.LOAD_OPCODE):  (*Machine).load,
-	byte(core.STORE_OPCODE): (*Machine).store,
-	byte(core.HALT_OPCODE):  (*Machine).halt,
-	byte(core.RET_OPCODE):   (*Machine).ret,
-	byte(core.BEQ_OPCODE):   (*Machine).beq,
-	byte(core.BLT_OPCODE):   (*Machine).blt,
-	byte(core.BGT_OPCODE):   (*Machine).bgt,
-	byte(core.UDF_OPCODE):   (*Machine).udf,
-	byte(core.LD_OPCODE):    (*Machine).ld,
-	byte(core.ST_OPCODE):    (*Machine).st,
-	byte(core.LDI_OPCODE):   (*Machine).ldi,
+	byte(core.MV_OPCODE):       (*Machine).mv,
+	byte(core.ADD_OPCODE):      (*Machine).add,
+	byte(core.SUB_OPCODE):      (*Machine).sub,
+	byte(core.CMP_OPCODE):      (*Machine).cmp,
+	byte(core.JUMP_OPCODE):     (*Machine).jump,
+	byte(core.LOAD_OPCODE):     (*Machine).load,
+	byte(core.STORE_OPCODE):    (*Machine).store,
+	byte(core.HALT_OPCODE):     (*Machine).halt,
+	byte(core.RET_OPCODE):      (*Machine).ret,
+	byte(core.BEQ_OPCODE):      (*Machine).beq,
+	byte(core.BLT_OPCODE):      (*Machine).blt,
+	byte(core.BGT_OPCODE):      (*Machine).bgt,
+	byte(core.UDF_OPCODE):      (*Machine).udf,
+	byte(core.DISK2MEM_OPCODE): (*Machine).d2m,
 }
 
 type Instruction struct {
@@ -58,6 +55,7 @@ type Machine struct {
 	registers map[core.Register]uint32
 	evt       map[uint32]byte
 	disk      Disk
+	halted    bool
 }
 
 func (m *Machine) InitDisk() {
@@ -77,6 +75,24 @@ func (m *Machine) LoadFromDisk(index int) error {
 	return nil
 }
 
+func (m *Machine) d2m(inst Instruction) {
+	// Check if there are programs in the disk
+	if len(m.disk.programs) > 0 {
+		program := m.disk.programs[0]
+		// Copy it to memory at the address in W1
+		copy(m.memory[m.registers[core.W1]:], program)
+		m.registers[core.W4] = uint32(len(program))
+		// success flag in W3
+		m.registers[core.W3] = 1
+
+		// Remove 1st and shift the array
+		m.disk.programs = m.disk.programs[1:]
+	} else {
+		// No more programs in disk
+		m.registers[core.W3] = 0
+		m.registers[core.W4] = 0
+	}
+}
 func (m *Machine) mv(inst Instruction) {
 	m.registers[inst.rd] = uint32(inst.immediate)
 }
@@ -235,7 +251,7 @@ func (m *Machine) execute(inst Instruction) {
 }
 
 func (m *Machine) Boot() {
-	for {
+	for !m.halted {
 		m.fetch()
 		if m.isEndOfProgram() {
 			break
@@ -312,7 +328,8 @@ func (m *Machine) exception(code uint32) {
 }
 
 func (m *Machine) halt(inst Instruction) {
-	os.Exit(1)
+	// Set halted flag instead of exiting
+	m.halted = true
 }
 
 func (m *Machine) ret(inst Instruction) {
@@ -334,26 +351,4 @@ func (m *Machine) ret(inst Instruction) {
 
 func (m *Machine) udf(inst Instruction) {
 	m.exception(0)
-}
-
-func (m *Machine) ld(inst Instruction) {
-	addr := m.registers[inst.rs1]
-	if int(addr) >= len(m.memory) {
-		m.exception(core.EXC_MEMORY_VIOLATION)
-		return
-	}
-	m.registers[inst.rd] = uint32(m.memory[addr])
-}
-
-func (m *Machine) st(inst Instruction) {
-	addr := m.registers[inst.rs1]
-	if int(addr) >= len(m.memory) {
-		m.exception(core.EXC_MEMORY_VIOLATION)
-		return
-	}
-	m.memory[addr] = byte(m.registers[inst.rd])
-}
-
-func (m *Machine) ldi(inst Instruction) {
-	m.registers[inst.rd] = uint32(inst.immediate)
 }
