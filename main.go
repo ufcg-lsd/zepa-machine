@@ -88,59 +88,47 @@ func getRegisterName(reg core.Register) string {
 	}
 }
 
-func loadProgramsToDisk(m *machine.Machine, filePaths []string) error {
-	for _, filePath := range filePaths {
-		binaryCode, err := assembler.RunAssembler(filePath)
-		if err != nil {
-			return fmt.Errorf("error assembling %s: %v", filePath, err)
-		}
-		m.AddToDisk(binaryCode)
-	}
-	return nil
-}
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run ./main.go program1.asm [program2.asm...]")
 		return
 	}
 
-	machine := machine.NewMachine(64) // 64 bytes fixos
+	programPaths := os.Args[1:]
 
-	loaderInstrs, err := assembler.LoadAssemblyFile("diskLoader.asm")
-	if err != nil {
-		fmt.Printf("Error loading loader: %v\n", err)
-		return
-	}
+	// Execute each program
+	for i, path := range programPaths {
+		fmt.Printf("\n===== Program %d: %s =====\n", i+1, path)
 
-	loaderCode, err := assembler.ConvertInstructionsToBinary(loaderInstrs)
-	if err != nil {
-		fmt.Printf("Error assembling loader: %v\n", err)
-		return
-	}
+		// Create a new machine for each program
+		m := machine.NewMachine(2048)
+		m.InitDisk()
 
-	// Configura disco
-	machine.InitDisk()
-	for _, filePath := range os.Args[1:] {
-		programInstrs, err := assembler.LoadAssemblyFile(filePath)
+		// Assemble and load this program to disk
+		code, err := assembler.RunAssembler(path)
 		if err != nil {
-			fmt.Printf("Error loading %s: %v\n", filePath, err)
+			fmt.Printf("Error assembling %s: %v\n", path, err)
+			continue
+		}
+		m.AddToDisk(code)
+
+		// Load diskLoader.asm
+		loaderInstrs, err := assembler.LoadAssemblyFile("diskLoader.asm")
+		if err != nil {
+			fmt.Printf("Error loading diskLoader: %v\n", path, err)
 			continue
 		}
 
-		programCode, err := assembler.ConvertInstructionsToBinary(programInstrs)
+		loaderCode, err := assembler.ConvertInstructionsToBinary(loaderInstrs)
 		if err != nil {
-			fmt.Printf("Error assembling %s: %v\n", filePath, err)
+			fmt.Printf("Error assembling diskLoader: %v\n", path, err)
 			continue
 		}
+		copy(m.GetMemory()[:len(loaderCode)], loaderCode)
 
-		machine.AddToDisk(append(programCode, []byte{0, 0, 0, 0}...))
+		m.GetRegisters()[core.PC] = 0
+		m.Boot()
+		DebugRegisters(m)
+		DebugMemory(m)
 	}
-
-	// Configura memória
-	copy(machine.GetMemory()[:32], loaderCode) // Loader nos primeiros 32 bytes
-
-	fmt.Println("=== Executing ===")
-	machine.Boot()
-	DebugRegisters(machine)
-	DebugMemory(machine)
 }

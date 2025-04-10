@@ -35,9 +35,7 @@ var opcodeMap = map[string]core.Opcode{
 	"BLT":   core.BLT_OPCODE,
 	"BGT":   core.BGT_OPCODE,
 	"UDF":   core.UDF_OPCODE,
-	"LD":    core.LD_OPCODE,
-	"ST":    core.ST_OPCODE,
-	"LDI":   core.LDI_OPCODE,
+	"D2M":   core.DISK2MEM_OPCODE,
 }
 
 // Define instruction format and function codes for each type
@@ -60,22 +58,20 @@ func newInstructionSpec(format string, opcode core.Opcode) InstructionSpec {
 
 // Define the specifications for different instructions (R-Type and I-Type)
 var instructionSpecs = map[core.Opcode]InstructionSpec{
-	core.ADD_OPCODE:   newInstructionSpec("R-Type", core.ADD_OPCODE),
-	core.SUB_OPCODE:   newInstructionSpec("R-Type", core.SUB_OPCODE),
-	core.CMP_OPCODE:   newInstructionSpec("R-Type", core.CMP_OPCODE),
-	core.MV_OPCODE:    newInstructionSpec("I-Type", core.MV_OPCODE),
-	core.JUMP_OPCODE:  newInstructionSpec("I-Type", core.JUMP_OPCODE),
-	core.LOAD_OPCODE:  newInstructionSpec("I-Type", core.LOAD_OPCODE),
-	core.STORE_OPCODE: newInstructionSpec("I-Type", core.STORE_OPCODE),
-	core.HALT_OPCODE:  newInstructionSpec("I-Type", core.HALT_OPCODE),
-	core.RET_OPCODE:   newInstructionSpec("I-Type", core.RET_OPCODE),
-	core.BEQ_OPCODE:   newInstructionSpec("I-Type", core.BEQ_OPCODE),
-	core.BLT_OPCODE:   newInstructionSpec("I-Type", core.BLT_OPCODE),
-	core.BGT_OPCODE:   newInstructionSpec("I-Type", core.BGT_OPCODE),
-	core.UDF_OPCODE:   newInstructionSpec("I-Type", core.UDF_OPCODE),
-	core.LD_OPCODE:    newInstructionSpec("R-Type", core.LD_OPCODE),
-	core.ST_OPCODE:    newInstructionSpec("R-Type", core.ST_OPCODE),
-	core.LDI_OPCODE:   newInstructionSpec("I-Type", core.LDI_OPCODE),
+	core.ADD_OPCODE:      newInstructionSpec("R-Type", core.ADD_OPCODE),
+	core.SUB_OPCODE:      newInstructionSpec("R-Type", core.SUB_OPCODE),
+	core.CMP_OPCODE:      newInstructionSpec("R-Type", core.CMP_OPCODE),
+	core.MV_OPCODE:       newInstructionSpec("I-Type", core.MV_OPCODE),
+	core.JUMP_OPCODE:     newInstructionSpec("I-Type", core.JUMP_OPCODE),
+	core.LOAD_OPCODE:     newInstructionSpec("I-Type", core.LOAD_OPCODE),
+	core.STORE_OPCODE:    newInstructionSpec("I-Type", core.STORE_OPCODE),
+	core.HALT_OPCODE:     newInstructionSpec("I-Type", core.HALT_OPCODE),
+	core.RET_OPCODE:      newInstructionSpec("I-Type", core.RET_OPCODE),
+	core.BEQ_OPCODE:      newInstructionSpec("I-Type", core.BEQ_OPCODE),
+	core.BLT_OPCODE:      newInstructionSpec("I-Type", core.BLT_OPCODE),
+	core.BGT_OPCODE:      newInstructionSpec("I-Type", core.BGT_OPCODE),
+	core.UDF_OPCODE:      newInstructionSpec("I-Type", core.UDF_OPCODE),
+	core.DISK2MEM_OPCODE: newInstructionSpec("I-Type", core.DISK2MEM_OPCODE),
 }
 
 // Common fields used across all instruction types
