@@ -1,8 +1,9 @@
-; Teste de manipulação de memória
-MV W0, #0xAA
-MV W1, #0xBB
-STORE W0, #0
-STORE W1, #4
-LOAD W2, #0
-LOAD W3, #4
+MV W0, #1
+MV W1, #2
+ADD W2, W0, W1
+SUB W3, W1, W0
+CMP W2, W3
+BEQ #28         ; Não deve pular
+MV W4, #10
+MV W5, #20
 HALT
