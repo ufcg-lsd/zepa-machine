@@ -66,29 +66,14 @@ func (m *Machine) AddToDisk(program []byte) {
 	m.disk.programs = append(m.disk.programs, program)
 }
 
-func (m *Machine) LoadFromDisk(index int) error {
-	if index < 0 || index >= len(m.disk.programs) {
-		return fmt.Errorf("program index %d out of bounds", index)
-	}
-	m.memory = make([]byte, len(m.memory))
-	copy(m.memory, m.disk.programs[index])
-	return nil
-}
-
 func (m *Machine) d2m(inst Instruction) {
-	// Check if there are programs in the disk
 	if len(m.disk.programs) > 0 {
 		program := m.disk.programs[0]
-		// Copy it to memory at the address in W1
 		copy(m.memory[m.registers[core.W1]:], program)
 		m.registers[core.W4] = uint32(len(program))
-		// success flag in W3
 		m.registers[core.W3] = 1
-
-		// Remove 1st and shift the array
 		m.disk.programs = m.disk.programs[1:]
 	} else {
-		// No more programs in disk
 		m.registers[core.W3] = 0
 		m.registers[core.W4] = 0
 	}
