@@ -9,11 +9,19 @@ import (
 )
 
 func DebugMemory(m *machine.Machine) {
-	const bytesPerRow = 4
+	const (
+		bytesPerRow   = 4
+		diskLoaderEnd = 0x20 // Define o fim do diskLoader (32 em decimal)
+	)
+
 	memory := m.GetMemory()
 
 	fmt.Print("\n----------Memory----------")
 	for i := 0; i < len(memory); i += bytesPerRow {
+		if i < diskLoaderEnd {
+			continue
+		}
+
 		allZero := true
 		for j := 0; j < bytesPerRow; j++ {
 			if i+j < len(memory) && memory[i+j] != 0 {
