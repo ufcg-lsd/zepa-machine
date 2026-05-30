@@ -46,7 +46,7 @@ func DebugRegisters(m *machine.Machine) {
 		if k == 8 {
 			continue
 		}
-		fmt.Printf("%v: %d\n", getRegisterName(k), v)
+		fmt.Printf("%v: %d\n", getRegisterName(k), int32(v))
 	}
 }
 

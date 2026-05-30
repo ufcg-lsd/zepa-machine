@@ -21,6 +21,9 @@ const (
 	MV Opcode = iota
 	ADD
 	SUB
+	MUL
+	UDIV
+	SDIV
 	CMP
 	JUMP
 	LOAD
@@ -51,6 +54,9 @@ var operations = map[byte]Operation{
 	byte(MV):    (*Machine).mv,
 	byte(ADD):   (*Machine).add,
 	byte(SUB):   (*Machine).sub,
+	byte(MUL):   (*Machine).mul,
+	byte(UDIV):  (*Machine).udiv,
+	byte(SDIV):  (*Machine).sdiv,
 	byte(CMP):   (*Machine).cmp,
 	byte(JUMP):  (*Machine).jump,
 	byte(LOAD):  (*Machine).load,
@@ -73,7 +79,7 @@ type Machine struct {
 }
 
 func (m *Machine) mv(inst Instruction) {
-	m.registers[inst.rd] = uint32(inst.immediate)
+	m.registers[inst.rd] = uint32(int16(inst.immediate))
 }
 
 func (m *Machine) add(inst Instruction) {
@@ -82,6 +88,18 @@ func (m *Machine) add(inst Instruction) {
 
 func (m *Machine) sub(inst Instruction) {
 	m.registers[inst.rd] = m.registers[inst.rs1] - m.registers[inst.rs2]
+}
+
+func (m *Machine) mul(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] * m.registers[inst.rs2]
+}
+
+func (m *Machine) udiv(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] / m.registers[inst.rs2]
+}
+
+func (m *Machine) sdiv(inst Instruction) {
+	m.registers[inst.rd] = uint32(int32(m.registers[inst.rs1]) / int32(m.registers[inst.rs2]))
 }
 
 func (m *Machine) cmp(inst Instruction) {
@@ -185,7 +203,7 @@ func (m *Machine) decode() Instruction {
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
-	case ADD, SUB, CMP:
+	case ADD, SUB, MUL, UDIV, SDIV, CMP:
 		return m.decodeRTypeInst(instruction)
 	case MV, JUMP, LOAD, STORE:
 		fallthrough

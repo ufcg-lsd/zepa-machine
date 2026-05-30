@@ -31,6 +31,9 @@ const (
 	MV_OPCODE Opcode = iota
 	ADD_OPCODE
 	SUB_OPCODE
+	MUL_OPCODE
+	UDIV_OPCODE
+	SDIV_OPCODE
 	CMP_OPCODE
 	JUMP_OPCODE
 	LOAD_OPCODE
@@ -51,6 +54,9 @@ var registerMap = map[string]Register{
 var opcodeMap = map[string]Opcode{
 	"ADD":   ADD_OPCODE,
 	"SUB":   SUB_OPCODE,
+	"MUL":   MUL_OPCODE,
+	"UDIV":  UDIV_OPCODE,
+	"SDIV":  SDIV_OPCODE,
 	"CMP":   CMP_OPCODE,
 	"MV":    MV_OPCODE,
 	"JUMP":  JUMP_OPCODE,
@@ -80,6 +86,9 @@ func newInstructionSpec(format string, opcode Opcode) InstructionSpec {
 var instructionSpecs = map[Opcode]InstructionSpec{
 	ADD_OPCODE:   newInstructionSpec("R-Type", ADD_OPCODE),
 	SUB_OPCODE:   newInstructionSpec("R-Type", SUB_OPCODE),
+	MUL_OPCODE:   newInstructionSpec("R-Type", MUL_OPCODE),
+	UDIV_OPCODE:  newInstructionSpec("R-Type", UDIV_OPCODE),
+	SDIV_OPCODE:  newInstructionSpec("R-Type", SDIV_OPCODE),
 	CMP_OPCODE:   newInstructionSpec("R-Type", CMP_OPCODE),
 	MV_OPCODE:    newInstructionSpec("I-Type", MV_OPCODE),
 	JUMP_OPCODE:  newInstructionSpec("I-Type", JUMP_OPCODE),
@@ -347,19 +356,19 @@ func parseRegister(register string) (byte, error) {
 func parseImmediate(immediate string) (uint16, error) {
 	immediate = strings.TrimPrefix(immediate, "#")
 
-	var uintValue uint64
+	var intValue int64
 	var err error
 
 	// Handle hexadecimal and decimal immediate values
 	if strings.HasPrefix(immediate, "0x") || strings.HasPrefix(immediate, "0X") {
-		uintValue, err = strconv.ParseUint(immediate, 0, 16)
+		intValue, err = strconv.ParseInt(immediate, 0, 16)
 	} else {
-		uintValue, err = strconv.ParseUint(immediate, 10, 16)
+		intValue, err = strconv.ParseInt(immediate, 10, 16)
 	}
 
 	if err != nil {
 		return 0, fmt.Errorf("Invalid immediate value: %s", immediate)
 	}
 
-	return uint16(uintValue), nil
+	return uint16(intValue), nil
 }
