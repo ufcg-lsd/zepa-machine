@@ -122,27 +122,55 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Format**: I-Type
 - **Opcode (decimal)**: 19
 
+**JMPR**:
+- **Description**: Unconditionally sets the Program Counter (PC) to an absolute memory address currently stored in a register.
+- **Syntax**: JMPR \<Source Reg.\>
+- **Example**: JMPR W5
+- **Format**: R-Type
+- **Opcode (decimal)**: 20
+
+**BEQ**:
+- **Description**: Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) if the Z (Equal) flag in the Status Register is set.
+- **Syntax**: BEQ \<Label/Offset\>
+- **Example**: BEQ 0x05
+- **Format**: I-Type
+- **Opcode (decimal)**: 21
+
+**BLT**:
+- **Description**: Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) if the L (Less Than) flag in the Status Register is set.
+- **Syntax**: BLT \<Label/Offset\>
+- **Example**: BLT 0x03
+- **Format**: I-Type
+- **Opcode (decimal)**: 22
+
+**BGT**:
+- **Description**: Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) if the G (Greater Than) flag in the Status Register is set.
+- **Syntax**: BGT \<Label/Offset\>
+- **Example**: BGT 0x02
+- **Format**: I-Type
+- **Opcode (decimal)**: 23
+
 ### Load and Store Operations with Addresses
 **LOAD**:
 - **Description**: Loads the content stored at a specific memory address into a specific register.
 - **Syntax**: LOAD \<Destination Reg.>, [\<Address>]
 - **Example**: LOAD W0, 0x68DB00AD
 - **Format**: I-Type
-- **Opcode (decimal)**: 20
+- **Opcode (decimal)**: 24
 
 **STORE**:
 - **Description**: Stores the value of a register to memory.
 - **Syntax**: STORE \<Source Reg.>, [\<Address>]
 - **Example**: STORE W1, 0x68DB00AD
 - **Format**: I-Type
-- **Opcode (decimal)**: 21
+- **Opcode (decimal)**: 25
 
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).
 - **Syntax and Example**: FETCH
 - **Format**: I-Type
-- **Opcode (decimal)**: 22
+- **Opcode (decimal)**: 26
 
 ### Zepa Machine Instruction Encoding Table
 
@@ -154,6 +182,7 @@ These flags can be used by instructions to make decisions that can change the pr
 | **UDIV**         | R-Type          | 010000    | reg     | reg     | reg        | 00000    | 000000    |
 | **SDIV**         | R-Type          | 010001    | reg     | reg     | reg        | 00000    | 000000    |
 | **CMP**         | R-Type          | 010010    | 00000     | reg     | reg        | 00000    | 000000    |
+| **JMPR**         | R-Type          | 010100    | 00000     | reg     | 00000      | 00000    | 000000    |
 
 
 
@@ -161,9 +190,12 @@ These flags can be used by instructions to make decisions that can change the pr
 |-----------------|------------|---------------|---------|------------|--------|
 | **MV**          | I-Type          | 001100      | reg     | 16bit constant         | 00000    |
 | **JUMP**        | I-Type          | 010011      | 00000     | 16bit address        | 00000    |
-| **LOAD**        | I-Type          | 010100       | reg     | 16bit address        | 00000    |
-| **STORE**        | I-Type          | 010101       | reg     | 16bit address        | 00000    |
-| **FETCH**        | I-Type          | 010110       | 00000     | 0000000000000000        | 00000    |
+| **BEQ**         | I-Type          | 010101       | 00000     | 16bit offset         | 00000    |
+| **BLT**         | I-Type          | 010110       | 00000     | 16bit offset         | 00000    |
+| **BGT**         | I-Type          | 010111       | 00000     | 16bit offset         | 00000    |
+| **LOAD**        | I-Type          | 011000       | reg     | 16bit address        | 00000    |
+| **STORE**        | I-Type          | 011001       | reg     | 16bit address        | 00000    |
+| **FETCH**        | I-Type          | 011010       | 00000     | 0000000000000000        | 00000    |
 
 
 ## References

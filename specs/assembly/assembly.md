@@ -155,6 +155,62 @@ JUMP <Label/Offset>
 JUMP _loop    ; Jump to the _loop label
 ```
 
+### JMPR (Jump Register)
+Unconditionally sets the Program Counter (PC) to an absolute memory address currently stored in a register.
+
+**Syntax:**
+```
+JMPR <Source Reg.>
+```
+
+**Example:**
+```
+MV W5, #0x0040      ; Store a return address in W5
+JMPR W5             ; Jump exactly to the address stored in W5
+```
+
+### BEQ (Branch if Equal)
+Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) or to a specific label if the Z (Equal) flag in the Status Register is set.
+
+**Syntax:**
+```
+BEQ <Label/Offset>
+```
+
+**Example:**
+```
+CMP W1, W2
+BEQ _equal_logic    ; Jump to the _equal_logic label if W1 == W2
+```
+
+### BLT (Branch if Less Than)
+Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) or to a specific label if the L (Less Than) flag in the Status Register is set.
+
+**Syntax:**
+```
+BLT <Label/Offset>
+```
+
+**Example:**
+```
+CMP W1, W2
+BLT _less_logic     ; Jump to the _less_logic label if W1 < W2
+```
+
+### BGT (Branch if Greater Than)
+Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) or to a specific label if the G (Greater Than) flag in the Status Register is set.
+
+**Syntax:**
+```
+BGT <Label/Offset>
+```
+
+**Example:**
+```
+CMP W1, W2
+BGT _greater_logic  ; Jump to the _greater_logic label if W1 > W2
+```
+
 ## Memory Operations
 
 ### LOAD (Load from Memory)
