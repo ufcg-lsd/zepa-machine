@@ -94,7 +94,7 @@ func main() {
 		return
 	}
 
-	machine := machine.NewMachine(64)
+	machine := machine.NewMachine(128)
 	machine.LoadProgram(binaryCode)
 	machine.Boot()
 

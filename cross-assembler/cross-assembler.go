@@ -36,6 +36,10 @@ const (
 	SDIV_OPCODE
 	CMP_OPCODE
 	JUMP_OPCODE
+	JMPR_OPCODE
+	BEQ_OPCODE
+	BLT_OPCODE
+	BGT_OPCODE
 	LOAD_OPCODE
 	STORE_OPCODE
 )
@@ -60,6 +64,10 @@ var opcodeMap = map[string]Opcode{
 	"CMP":   CMP_OPCODE,
 	"MV":    MV_OPCODE,
 	"JUMP":  JUMP_OPCODE,
+	"JMPR":  JMPR_OPCODE,
+	"BEQ":   BEQ_OPCODE,
+	"BLT":   BLT_OPCODE,
+	"BGT":   BGT_OPCODE,
 	"LOAD":  LOAD_OPCODE,
 	"STORE": STORE_OPCODE,
 }
@@ -92,6 +100,10 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 	CMP_OPCODE:   newInstructionSpec("R-Type", CMP_OPCODE),
 	MV_OPCODE:    newInstructionSpec("I-Type", MV_OPCODE),
 	JUMP_OPCODE:  newInstructionSpec("I-Type", JUMP_OPCODE),
+	JMPR_OPCODE:  newInstructionSpec("R-Type", JMPR_OPCODE),
+	BEQ_OPCODE:   newInstructionSpec("I-Type", BEQ_OPCODE),
+	BLT_OPCODE:   newInstructionSpec("I-Type", BLT_OPCODE),
+	BGT_OPCODE:   newInstructionSpec("I-Type", BGT_OPCODE),
 	LOAD_OPCODE:  newInstructionSpec("I-Type", LOAD_OPCODE),
 	STORE_OPCODE: newInstructionSpec("I-Type", STORE_OPCODE),
 }
@@ -277,7 +289,7 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 	var rd, rs1, rs2 byte
 	var err error
 
-	// Expect either 2 or 3 operands for R-Type instructions
+	// Expect either 1, 2 or 3 operands for R-Type instructions
 	switch len(operands) {
 	case 3:
 		rd, err = parseRegister(operands[0])
@@ -302,8 +314,15 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 		if err != nil {
 			return 0, err
 		}
+	case 1:
+		rd = 0
+		rs2 = 0
+		rs1, err = parseRegister(operands[0])
+		if err != nil {
+			return 0, err
+		}
 	default:
-		return 0, fmt.Errorf("R-Type instruction expects 2 or 3 operands, got %d", len(operands))
+		return 0, fmt.Errorf("R-Type instruction expects from 1 to 3 operands, got %d", len(operands))
 	}
 
 	// Encode the R-Type instruction by combining the opcode, registers, and function fields

@@ -26,6 +26,10 @@ const (
 	SDIV
 	CMP
 	JUMP
+	JMPR
+	BEQ
+	BLT
+	BGT
 	LOAD
 	STORE
 	FETCH
@@ -59,6 +63,10 @@ var operations = map[byte]Operation{
 	byte(SDIV):  (*Machine).sdiv,
 	byte(CMP):   (*Machine).cmp,
 	byte(JUMP):  (*Machine).jump,
+	byte(JMPR):  (*Machine).jmpr,
+	byte(BEQ):   (*Machine).beq,
+	byte(BLT):   (*Machine).blt,
+	byte(BGT):   (*Machine).bgt,
 	byte(LOAD):  (*Machine).load,
 	byte(STORE): (*Machine).store,
 }
@@ -113,7 +121,29 @@ func (m *Machine) cmp(inst Instruction) {
 }
 
 func (m *Machine) jump(inst Instruction) {
-	m.registers[pc] += uint32(int16(inst.immediate)) * 4
+	m.registers[pc] += (uint32(int16(inst.immediate)) - 1) * 4
+}
+
+func (m *Machine) jmpr(inst Instruction) {
+	m.registers[pc] = m.registers[inst.rs1]
+}
+
+func (m *Machine) beq(inst Instruction) {
+	if m.registers[sr] == 0 {
+		m.jump(inst)
+	}
+}
+
+func (m *Machine) blt(inst Instruction) {
+	if m.registers[sr] == 1 {
+		m.jump(inst)
+	}
+}
+
+func (m *Machine) bgt(inst Instruction) {
+	if m.registers[sr] == 2 {
+		m.jump(inst)
+	}
 }
 
 func (m *Machine) load(inst Instruction) {
@@ -203,9 +233,9 @@ func (m *Machine) decode() Instruction {
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
-	case ADD, SUB, MUL, UDIV, SDIV, CMP:
+	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR:
 		return m.decodeRTypeInst(instruction)
-	case MV, JUMP, LOAD, STORE:
+	case MV, JUMP, BEQ, BLT, BGT, LOAD, STORE:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)
