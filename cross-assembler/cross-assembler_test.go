@@ -69,6 +69,70 @@ func TestAddTwoNumber(t *testing.T) {
 	}
 }
 
+func TestDivideNegatives(t *testing.T) {
+	assemblyFilePath := "../asm/samples/divide_negatives.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Error reading the assembly file: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
+
+	memory, err := RunAssemblerFromReader(file)
+	if err != nil {
+		t.Fatalf("Error running the assembler: %v", err)
+	}
+
+	expectedMemory := []byte{
+		0b00110000, 0b00111111, 0b11111110, 0b11000000, // MV W1, #-10
+		0b00110000, 0b01000000, 0b00000000, 0b01100000, // MV W2, #3
+		0b01000100, 0b00000001, 0b00010000, 0b00000000, // SDIV W0, W1, W2
+	}
+
+	if len(memory) != len(expectedMemory) {
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
+	}
+
+	for i, byteVal := range memory {
+		if byteVal != expectedMemory[i] {
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
+		}
+	}
+}
+
+func TestDividePositives(t *testing.T) {
+	assemblyFilePath := "../asm/samples/divide_positives.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Error reading the assembly file: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
+
+	memory, err := RunAssemblerFromReader(file)
+	if err != nil {
+		t.Fatalf("Error running the assembler: %v", err)
+	}
+
+	expectedMemory := []byte{
+		0b00110000, 0b00100000, 0b00000001, 0b11100000, // MV W1, #15
+		0b00110000, 0b01000000, 0b00000000, 0b01100000, // MV W2, #3
+		0b01000000, 0b00000001, 0b00010000, 0b00000000, // UDIV W0, W1, W2
+	}
+
+	if len(memory) != len(expectedMemory) {
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
+	}
+
+	for i, byteVal := range memory {
+		if byteVal != expectedMemory[i] {
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
+		}
+	}
+}
+
 func TestMultiplyTwoNumbers(t *testing.T) {
 	assemblyFilePath := "../asm/samples/multiply_two_numbers.asm"
 
@@ -107,6 +171,39 @@ func TestMultiplyTwoNumbers(t *testing.T) {
 	}
 }
 
+func TestMultiplyWithMul(t *testing.T) {
+	// Assuming you saved the provided assembly snippet to this path
+	assemblyFilePath := "../asm/samples/multiply_with_mul.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Error reading the assembly file: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
+
+	memory, err := RunAssemblerFromReader(file)
+	if err != nil {
+		t.Fatalf("Error running the assembler: %v", err)
+	}
+
+	expectedMemory := []byte{
+		0b00110000, 0b00100000, 0b00000000, 0b10000000, // MV W1, #4
+		0b00110000, 0b01000000, 0b00000000, 0b11000000, // MV W2, #6
+		0b00111100, 0b00000001, 0b00010000, 0b00000000, // MUL W0, W1, W2
+	}
+
+	if len(memory) != len(expectedMemory) {
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
+	}
+
+	for i, byteVal := range memory {
+		if byteVal != expectedMemory[i] {
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
+		}
+	}
+}
+
 func TestSimpleJump(t *testing.T) {
 	assemblyFilePath := "../asm/samples/simple_jump.asm"
 
@@ -125,7 +222,7 @@ func TestSimpleJump(t *testing.T) {
 	expectedMemory := []byte{
 		0b00110000, 0b00100000, 0b00000000, 0b01000000, // MV W1, #2
 		0b00110000, 0b01000000, 0b00000000, 0b10100000, // MV W2, #5
-		0b01000000, 0b00000000, 0b00000010, 0b10000000, // JUMP 0x14
+		0b01001100, 0b00000000, 0b00000010, 0b10000000, // JUMP 0x14
 		0b00110000, 0b00100000, 0b00000011, 0b11000000, // MV W1, #30 (this instruction is skipped due to jump)
 		0b00110000, 0b01000000, 0b00000101, 0b00000000, // MV W2, #40 (this instruction is skipped due to jump)
 		0b00110100, 0b00000001, 0b00010000, 0b00000000, // ADD W0, W1, W2
@@ -159,8 +256,8 @@ func TestStoreAndLoad(t *testing.T) {
 
 	expectedMemory := []byte{
 		0b00110000, 0b01100000, 0b00001000, 0b01000000, // MV W3, #66
-		0b01001000, 0b01100000, 0b00000100, 0b00000000, // STORE W3, 0x020
-		0b01000100, 0b01000000, 0b00000100, 0b00000000, // LOAD W2, 0x020
+		0b01010100, 0b01100000, 0b00000100, 0b00000000, // STORE W3, 0x020
+		0b01010000, 0b01000000, 0b00000100, 0b00000000, // LOAD W2, 0x020
 	}
 
 	if len(memory) != len(expectedMemory) {
@@ -193,7 +290,7 @@ func TestSubAndCmp(t *testing.T) {
 		0b00110000, 0b01100000, 0b00000111, 0b10000000, // MV W3, #60
 		0b00110000, 0b10100000, 0b00000100, 0b01100000, // MV W5, #35
 		0b00111000, 0b01100011, 0b00101000, 0b00000000, // SUB W3, W3, W5
-		0b00111100, 0b00000101, 0b00011000, 0b00000000, // CMP W5, W3
+		0b01001000, 0b00000101, 0b00011000, 0b00000000, // CMP W5, W3
 	}
 
 	if len(memory) != len(expectedMemory) {

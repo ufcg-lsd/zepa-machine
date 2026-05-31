@@ -86,6 +86,47 @@ func TestSUB(t *testing.T) {
 	}
 }
 
+func TestMUL(t *testing.T) {
+	machine := NewMachine(2048)
+	machine.registers[w1] = 12
+	machine.registers[w2] = 4
+	inst := Instruction{opcode: (*Machine).mul, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w0] != 48 {
+		t.Errorf("Expected w0 to be 48, got %d", machine.registers[w0])
+	}
+}
+
+func TestUDIV(t *testing.T) {
+	machine := NewMachine(2048)
+	machine.registers[w1] = 20
+	machine.registers[w2] = 3
+	inst := Instruction{opcode: (*Machine).udiv, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w0] != 6 {
+		t.Errorf("Expected w0 to be 6, got %d", machine.registers[w0])
+	}
+}
+
+func TestSDIV(t *testing.T) {
+	machine := NewMachine(2048)
+
+	var numerator int32 = -15
+	var denominator int32 = -5
+	machine.registers[w1] = uint32(numerator)
+	machine.registers[w2] = 3
+	inst := Instruction{opcode: (*Machine).sdiv, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	expected := uint32(denominator)
+
+	if machine.registers[w0] != expected {
+		t.Errorf("Expected w0 to be %d (-5), got %d", expected, machine.registers[w0])
+	}
+}
+
 func TestJUMP(t *testing.T) {
 	machine := NewMachine(2048)
 	inst := Instruction{opcode: (*Machine).jump, immediate: 0xA}

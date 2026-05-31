@@ -35,7 +35,7 @@ func DebugMemory(m *machine.Machine) {
 			}
 		}
 	}
-	fmt.Println("\n")
+	fmt.Print("\n\n")
 }
 
 func DebugRegisters(m *machine.Machine) {
