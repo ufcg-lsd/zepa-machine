@@ -156,7 +156,7 @@ func TestBEQ(t *testing.T) {
 	inst := Instruction{opcode: (*Machine).beq, immediate: 5} // Jump offset of 5 ((5-1) * 4 = 16 bytes)
 
 	machine.registers[pc] = 100
-	machine.registers[sr] = 0
+	machine.registers[sr] = 1
 	machine.execute(inst)
 
 	if machine.registers[pc] != 116 {
@@ -177,7 +177,7 @@ func TestBLT(t *testing.T) {
 	inst := Instruction{opcode: (*Machine).blt, immediate: 3} // Jump offset of 3 ((3-1) * 4 = 8 bytes)
 
 	machine.registers[pc] = 50
-	machine.registers[sr] = 1
+	machine.registers[sr] = 2
 	machine.execute(inst)
 
 	if machine.registers[pc] != 58 {
@@ -199,7 +199,7 @@ func TestBGT(t *testing.T) {
 	inst := Instruction{opcode: (*Machine).bgt, immediate: uint16(offset)} // Offset of -4 ((-4-1) * 4 = -20 bytes)
 
 	machine.registers[pc] = 200
-	machine.registers[sr] = 2
+	machine.registers[sr] = 4
 	machine.execute(inst)
 
 	if machine.registers[pc] != 180 {
