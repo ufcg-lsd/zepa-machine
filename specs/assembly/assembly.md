@@ -94,6 +94,36 @@ MV W2, #3
 MUL W0, W1, W2    ; W0 = 4 * 3
 ```
 
+### UDIV (Unsigned Divide)
+Divides the unsigned values of two registers, the remainder is discarded.
+
+**Syntax:**
+```
+UDIV <Dest Reg.>, <Op1>, <Op2>
+```
+
+**Example:**
+```
+MV W1, #6
+MV W2, #3
+UDIV W0, W1, W2    ; W0 = 6 / 3
+```
+
+### SDIV (Signed Divide)
+Divides the signed values of two registers, the remainder is discarded.
+
+**Syntax:**
+```
+SDIV <Dest Reg.>, <Op1>, <Op2>
+```
+
+**Example:**
+```
+MV W1, #-5
+MV W2, #2
+SDIV W0, W1, W2    ; W0 = (-5) / 2
+```
+
 ## Control Flow Operations
 
 ### CMP (Compare)

@@ -76,13 +76,34 @@ For this machine, the word size, instruction size, and register size were define
 - **Format**: R-Type
 - **Opcode (decimal)**: 14
 
+**MUL**:
+- **Description**: Multiplies the value of two registers and stores the result in a third one.
+- **Syntax**: MUL \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
+- **Example**: MUL W0, W1, W0
+- **Format**: R-Type
+- **Opcode (decimal)**: 15
+
+**UDIV**:
+- **Description**: Divides the unsigned value of one register by another and stores the result in a third one, discarding the remainder.
+- **Syntax**: UDIV \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
+- **Example**: UDIV W0, W1, W0
+- **Format**: R-Type
+- **Opcode (decimal)**: 16
+
+**SDIV**:
+- **Description**: Divides the signed value of one register by another and stores the result in a third one, discarding the remainder.
+- **Syntax**: SDIV \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
+- **Example**: SDIV W0, W1, W0
+- **Format**: R-Type
+- **Opcode (decimal)**: 17
+
 ### Test Instructions
 **CMP**:
 - **Description**: Compares the values of two registers and stores the flag in the SR.
 - **Syntax**: CMP \<Input Reg.>, \<Input Reg.>
 - **Example**: CMP W0, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 15
+- **Opcode (decimal)**: 18
 
 #### Z, L and G Test Flags
 When a test instruction, such as CMP, is executed, the SR register is updated, and its value can be used by other instructions to change the program's flow. Each flag is represented by a bit, and the flag being set indicates that the bit value is 1.
@@ -99,7 +120,7 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Syntax**: JUMP \[<Address>]
 - **Example**: JUMP 0x14
 - **Format**: I-Type
-- **Opcode (decimal)**: 16
+- **Opcode (decimal)**: 19
 
 ### Load and Store Operations with Addresses
 **LOAD**:
@@ -107,21 +128,21 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Syntax**: LOAD \<Destination Reg.>, [\<Address>]
 - **Example**: LOAD W0, 0x68DB00AD
 - **Format**: I-Type
-- **Opcode (decimal)**: 17
+- **Opcode (decimal)**: 20
 
 **STORE**:
 - **Description**: Stores the value of a register to memory.
 - **Syntax**: STORE \<Source Reg.>, [\<Address>]
 - **Example**: STORE W1, 0x68DB00AD
 - **Format**: I-Type
-- **Opcode (decimal)**: 18
+- **Opcode (decimal)**: 21
 
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).
 - **Syntax and Example**: FETCH
 - **Format**: I-Type
-- **Opcode (decimal)**: 19
+- **Opcode (decimal)**: 22
 
 ### Zepa Machine Instruction Encoding Table
 
@@ -129,17 +150,20 @@ These flags can be used by instructions to make decisions that can change the pr
 |-----------------|------------|------------|---------|---------|------------|--------|------------|
 | **ADD**         | R-Type         | 001101    | reg     | reg     | reg        | 00000    | 000000    |
 | **SUB**         | R-Type          | 001110    | reg     | reg     | reg        | 00000    | 000000    |
-| **CMP**         | R-Type          | 001111    | 00000     | reg     | reg        | 00000    | 000000    |
+| **MUL**         | R-Type          | 001111    | reg     | reg     | reg        | 00000    | 000000    |
+| **UDIV**         | R-Type          | 010000    | reg     | reg     | reg        | 00000    | 000000    |
+| **SDIV**         | R-Type          | 010001    | reg     | reg     | reg        | 00000    | 000000    |
+| **CMP**         | R-Type          | 010010    | 00000     | reg     | reg        | 00000    | 000000    |
 
 
 
 | **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate** | **funct5** |
 |-----------------|------------|---------------|---------|------------|--------|
 | **MV**          | I-Type          | 001100      | reg     | 16bit constant         | 00000    |
-| **JUMP**        | I-Type          | 010000      | 00000     | 16bit address        | 00000    |
-| **LOAD**        | I-Type          | 010001       | reg     | 16bit address        | 00000    |
-| **STORE**        | I-Type          | 010010       | reg     | 16bit address        | 00000    |
-| **FETCH**        | I-Type          | 010011       | 00000     | 0000000000000000        | 00000    |
+| **JUMP**        | I-Type          | 010011      | 00000     | 16bit address        | 00000    |
+| **LOAD**        | I-Type          | 010100       | reg     | 16bit address        | 00000    |
+| **STORE**        | I-Type          | 010101       | reg     | 16bit address        | 00000    |
+| **FETCH**        | I-Type          | 010110       | 00000     | 0000000000000000        | 00000    |
 
 
 ## References
