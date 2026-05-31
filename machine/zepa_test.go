@@ -132,8 +132,86 @@ func TestJUMP(t *testing.T) {
 	inst := Instruction{opcode: (*Machine).jump, immediate: 0xA}
 	machine.execute(inst)
 
-	if machine.registers[pc] != 40 {
-		t.Errorf("Expected pc to be 40, got %d", machine.registers[pc])
+	if machine.registers[pc] != 36 {
+		t.Errorf("Expected pc to be 36, got %d", machine.registers[pc])
+	}
+}
+
+func TestJMPR(t *testing.T) {
+	machine := NewMachine(2048)
+
+	expectedAddress := uint32(128)
+	machine.registers[w5] = expectedAddress
+
+	inst := Instruction{opcode: (*Machine).jmpr, rs1: w5}
+	machine.execute(inst)
+
+	if machine.registers[pc] != expectedAddress {
+		t.Errorf("Expected pc to be %d, got %d", expectedAddress, machine.registers[pc])
+	}
+}
+
+func TestBEQ(t *testing.T) {
+	machine := NewMachine(2048)
+	inst := Instruction{opcode: (*Machine).beq, immediate: 5} // Jump offset of 5 ((5-1) * 4 = 16 bytes)
+
+	machine.registers[pc] = 100
+	machine.registers[sr] = 0
+	machine.execute(inst)
+
+	if machine.registers[pc] != 116 {
+		t.Errorf("Branch Taken: Expected pc to be 116, got %d", machine.registers[pc])
+	}
+
+	machine.registers[pc] = 100
+	machine.registers[sr] = 10
+	machine.execute(inst)
+
+	if machine.registers[pc] != 100 {
+		t.Errorf("Branch Not Taken: Expected pc to remain 100, got %d", machine.registers[pc])
+	}
+}
+
+func TestBLT(t *testing.T) {
+	machine := NewMachine(2048)
+	inst := Instruction{opcode: (*Machine).blt, immediate: 3} // Jump offset of 3 ((3-1) * 4 = 8 bytes)
+
+	machine.registers[pc] = 50
+	machine.registers[sr] = 1
+	machine.execute(inst)
+
+	if machine.registers[pc] != 58 {
+		t.Errorf("Branch Taken: Expected pc to be 58, got %d", machine.registers[pc])
+	}
+
+	machine.registers[pc] = 50
+	machine.registers[sr] = 10
+	machine.execute(inst)
+
+	if machine.registers[pc] != 50 {
+		t.Errorf("Branch Not Taken: Expected pc to remain 50, got %d", machine.registers[pc])
+	}
+}
+
+func TestBGT(t *testing.T) {
+	machine := NewMachine(2048)
+	offset := -4
+	inst := Instruction{opcode: (*Machine).bgt, immediate: uint16(offset)} // Offset of -4 ((-4-1) * 4 = -20 bytes)
+
+	machine.registers[pc] = 200
+	machine.registers[sr] = 2
+	machine.execute(inst)
+
+	if machine.registers[pc] != 180 {
+		t.Errorf("Branch Taken: Expected pc to be 180, got %d", machine.registers[pc])
+	}
+
+	machine.registers[pc] = 200
+	machine.registers[sr] = 10
+	machine.execute(inst)
+
+	if machine.registers[pc] != 200 {
+		t.Errorf("Branch Not Taken: Expected pc to remain 200, got %d", machine.registers[pc])
 	}
 }
 

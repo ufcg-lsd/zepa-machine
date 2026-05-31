@@ -69,6 +69,50 @@ func TestAddTwoNumber(t *testing.T) {
 	}
 }
 
+func TestBranches(t *testing.T) {
+	assemblyFilePath := "../asm/samples/branches.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Error reading the assembly file: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
+
+	memory, err := RunAssemblerFromReader(file)
+	if err != nil {
+		t.Fatalf("Error running the assembler: %v", err)
+	}
+
+	expectedMemory := []byte{
+		0b00110000, 0b00100000, 0b00000001, 0b11100000, // MV W1, #15
+		0b00110000, 0b01000000, 0b00000010, 0b10000000, // MV W2, #20
+		0b00110000, 0b10100000, 0b00000010, 0b00000000, // MV W5, #16
+		0b01001100, 0b00000000, 0b00000000, 0b01000000, // JUMP COMPARE_FUNC
+		0b01001100, 0b00000000, 0b00000001, 0b01100000, // JUMP _end
+		0b01001000, 0b00000001, 0b00010000, 0b00000000, // CMP W1, W2
+		0b01010100, 0b00000000, 0b00000000, 0b01100000, // BEQ SET_EQUAL
+		0b01011000, 0b00000000, 0b00000000, 0b10000000, // BLT SET_LESS
+		0b01011100, 0b00000000, 0b00000000, 0b10100000, // BGT SET_GREATER
+		0b00110000, 0b00000000, 0b00000000, 0b00000000, // MV W0, #0
+		0b01010000, 0b00000101, 0b00000000, 0b00000000, // JMPR W5
+		0b00110000, 0b00000000, 0b00000000, 0b00100000, // MV W0, #1
+		0b01010000, 0b00000101, 0b00000000, 0b00000000, // JMPR W5
+		0b00110000, 0b00000000, 0b00000000, 0b01000000, // MV W0, #2
+		0b01010000, 0b00000101, 0b00000000, 0b00000000, // JMPR W5
+	}
+
+	if len(memory) != len(expectedMemory) {
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
+	}
+
+	for i, byteVal := range memory {
+		if byteVal != expectedMemory[i] {
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
+		}
+	}
+}
+
 func TestDivideNegatives(t *testing.T) {
 	assemblyFilePath := "../asm/samples/divide_negatives.asm"
 
@@ -256,8 +300,8 @@ func TestStoreAndLoad(t *testing.T) {
 
 	expectedMemory := []byte{
 		0b00110000, 0b01100000, 0b00001000, 0b01000000, // MV W3, #66
-		0b01010100, 0b01100000, 0b00000100, 0b00000000, // STORE W3, 0x020
-		0b01010000, 0b01000000, 0b00000100, 0b00000000, // LOAD W2, 0x020
+		0b01100100, 0b01100000, 0b00000100, 0b00000000, // STORE W3, 0x020
+		0b01100000, 0b01000000, 0b00000100, 0b00000000, // LOAD W2, 0x020
 	}
 
 	if len(memory) != len(expectedMemory) {
