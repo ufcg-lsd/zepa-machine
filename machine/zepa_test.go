@@ -132,8 +132,8 @@ func TestJUMP(t *testing.T) {
 	inst := Instruction{opcode: (*Machine).jump, immediate: 0xA}
 	machine.execute(inst)
 
-	if machine.registers[pc] != 0xA {
-		t.Errorf("Expected pc to be 10, got %d", machine.registers[pc])
+	if machine.registers[pc] != 40 {
+		t.Errorf("Expected pc to be 40, got %d", machine.registers[pc])
 	}
 }
 

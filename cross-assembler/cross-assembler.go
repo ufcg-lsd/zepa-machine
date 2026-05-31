@@ -181,16 +181,40 @@ func LoadAssemblyFile(filePath string) ([][]string, error) {
 // LoadAssemblyFromReader reads and processes lines of assembly code from a reader
 func LoadAssemblyFromReader(reader io.Reader) ([][]string, error) {
 	var instructions [][]string
+	labels := make(map[string]int)
 	scanner := bufio.NewScanner(reader)
 
 	// Read each line
 	for scanner.Scan() {
-		line := processLine(scanner.Text())
-		if line != "" {
-			// Split the line into components (opcode, registers)
-			parts := strings.Fields(line)
-			if len(parts) > 0 {
-				instructions = append(instructions, parts)
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		// Remove comments
+		if idx := strings.Index(line, ";"); idx != -1 {
+			line = strings.TrimSpace(line[:idx])
+		}
+		// stores instruction position of label
+		if strings.HasSuffix(line, ":") {
+			labelName := line[:len(line)-1]
+			if _, exists := labels[labelName]; exists {
+				return nil, fmt.Errorf("Duplicate label: %v", labelName)
+			}
+			labels[labelName] = len(instructions)
+			continue
+		}
+		line = strings.ReplaceAll(line, ",", "")
+
+		parts := strings.Fields(line)
+		if len(parts) > 0 {
+			instructions = append(instructions, parts)
+		}
+
+	}
+
+	//Resolve labels to relative address
+	for currentAddress, instruction := range instructions {
+		for j, part := range instruction[1:] { // Skip opcode
+			if labelAddress, exists := labels[part]; exists {
+				instructions[currentAddress][j+1] = fmt.Sprint(labelAddress - currentAddress)
 			}
 		}
 	}
@@ -200,21 +224,6 @@ func LoadAssemblyFromReader(reader io.Reader) ([][]string, error) {
 	}
 
 	return instructions, nil
-}
-
-// Processes an individual line of assembly code, removing comments and trimming whitespace
-func processLine(line string) string {
-	line = strings.TrimSpace(line)
-	// Remove comments
-	if idx := strings.Index(line, ";"); idx != -1 {
-		line = strings.TrimSpace(line[:idx])
-	}
-	// Ignore labels
-	if strings.HasSuffix(line, ":") {
-		return ""
-	}
-
-	return strings.ReplaceAll(line, ",", "")
 }
 
 // Takes a single parsed instruction and converts it to binary
@@ -356,15 +365,7 @@ func parseRegister(register string) (byte, error) {
 func parseImmediate(immediate string) (uint16, error) {
 	immediate = strings.TrimPrefix(immediate, "#")
 
-	var intValue int64
-	var err error
-
-	// Handle hexadecimal and decimal immediate values
-	if strings.HasPrefix(immediate, "0x") || strings.HasPrefix(immediate, "0X") {
-		intValue, err = strconv.ParseInt(immediate, 0, 16)
-	} else {
-		intValue, err = strconv.ParseInt(immediate, 10, 16)
-	}
+	var intValue, err = strconv.ParseInt(immediate, 0, 16)
 
 	if err != nil {
 		return 0, fmt.Errorf("Invalid immediate value: %s", immediate)

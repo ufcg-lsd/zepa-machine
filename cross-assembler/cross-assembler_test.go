@@ -222,7 +222,7 @@ func TestSimpleJump(t *testing.T) {
 	expectedMemory := []byte{
 		0b00110000, 0b00100000, 0b00000000, 0b01000000, // MV W1, #2
 		0b00110000, 0b01000000, 0b00000000, 0b10100000, // MV W2, #5
-		0b01001100, 0b00000000, 0b00000010, 0b10000000, // JUMP 0x14
+		0b01001100, 0b00000000, 0b00000000, 0b01100000, // JUMP 0x14
 		0b00110000, 0b00100000, 0b00000011, 0b11000000, // MV W1, #30 (this instruction is skipped due to jump)
 		0b00110000, 0b01000000, 0b00000101, 0b00000000, // MV W2, #40 (this instruction is skipped due to jump)
 		0b00110100, 0b00000001, 0b00010000, 0b00000000, // ADD W0, W1, W2

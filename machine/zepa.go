@@ -113,7 +113,7 @@ func (m *Machine) cmp(inst Instruction) {
 }
 
 func (m *Machine) jump(inst Instruction) {
-	m.registers[pc] = uint32(inst.immediate)
+	m.registers[pc] += uint32(int16(inst.immediate)) * 4
 }
 
 func (m *Machine) load(inst Instruction) {

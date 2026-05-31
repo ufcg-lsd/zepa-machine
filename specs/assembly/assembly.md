@@ -143,11 +143,11 @@ CMP W1, W2    ; Sets the G flag (W1 > W2)
 
 
 ### JUMP (Unconditional Jump)
-Unconditionally jumps to a specific address or label, modifying the Program Counter (PC).
+Unconditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) or to a specific label.
 
 **Syntax:**
 ```
-JUMP <Label/Address>
+JUMP <Label/Offset>
 ```
 
 **Example:**

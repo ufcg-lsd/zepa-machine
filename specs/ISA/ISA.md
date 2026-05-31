@@ -116,8 +116,8 @@ These flags can be used by instructions to make decisions that can change the pr
 
 ### Control Flow Operations
 **JUMP**:
-- **Description**: Change the value of the Program Counter (PC) register, updating the program's execution flow.
-- **Syntax**: JUMP \[<Address>]
+- **Description**: Unconditionally jumps the Program Counter (PC) forward or backward by a specific instruction offset (PC-relative).
+- **Syntax**: JUMP [\<Label/Offset\>]
 - **Example**: JUMP 0x14
 - **Format**: I-Type
 - **Opcode (decimal)**: 19
