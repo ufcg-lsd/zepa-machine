@@ -104,8 +104,8 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 	BEQ_OPCODE:   newInstructionSpec("I-Type", BEQ_OPCODE),
 	BLT_OPCODE:   newInstructionSpec("I-Type", BLT_OPCODE),
 	BGT_OPCODE:   newInstructionSpec("I-Type", BGT_OPCODE),
-	LOAD_OPCODE:  newInstructionSpec("I-Type", LOAD_OPCODE),
-	STORE_OPCODE: newInstructionSpec("I-Type", STORE_OPCODE),
+	LOAD_OPCODE:  newInstructionSpec("R-Type", LOAD_OPCODE),
+	STORE_OPCODE: newInstructionSpec("R-Type", STORE_OPCODE),
 }
 
 // Common fields used across all instruction types

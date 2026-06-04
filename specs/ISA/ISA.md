@@ -183,6 +183,8 @@ These flags can be used by instructions to make decisions that can change the pr
 | **SDIV**         | R-Type          | 010001    | reg     | reg     | reg        | 00000    | 000000    |
 | **CMP**         | R-Type          | 010010    | 00000     | reg     | reg        | 00000    | 000000    |
 | **JMPR**         | R-Type          | 010100    | 00000     | reg     | 00000      | 00000    | 000000    |
+| **LOAD**        | R-Type          | 011000       | 00000     | reg        | reg    | 00000    | 000000    |
+| **STORE**        | R-Type          | 011001       | 00000     | reg        | reg    | 00000    | 000000    |
 
 
 
@@ -193,8 +195,6 @@ These flags can be used by instructions to make decisions that can change the pr
 | **BEQ**         | I-Type          | 010101       | 00000     | 16bit offset         | 00000    |
 | **BLT**         | I-Type          | 010110       | 00000     | 16bit offset         | 00000    |
 | **BGT**         | I-Type          | 010111       | 00000     | 16bit offset         | 00000    |
-| **LOAD**        | I-Type          | 011000       | reg     | 16bit address        | 00000    |
-| **STORE**        | I-Type          | 011001       | reg     | 16bit address        | 00000    |
 | **FETCH**        | I-Type          | 011010       | 00000     | 0000000000000000        | 00000    |
 
 

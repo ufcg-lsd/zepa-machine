@@ -218,12 +218,12 @@ Loads a value from a memory address into a register.
 
 **Syntax:**
 ```
-LOAD <Dest Reg.>, [<Memory Address>]
+LOAD <Dest Reg.>, [< Address Reg.>]
 ```
 
 **Example:**
 ```
-LOAD W1, [0x100]    ; Load the value stored at memory address 0x100 into register W1
+LOAD W1, [W2]    ; Load the value stored at memory address in W2 into register W1
 ```
 
 ### STORE (Store to Memory)
@@ -231,12 +231,12 @@ Stores the value from a register into a memory address.
 
 **Syntax:**
 ```
-STORE <Source Reg.>, [<Memory Address>]
+STORE <Source Reg.>, [< Address Reg.>]
 ```
 
 **Example:**
 ```
-STORE W1, [0x200]   ; Store the value from register W1 into memory address 0x200
+STORE W1, [W2]   ; Store the value from register W1 into memory address inside W2
 ```
 
 ## References

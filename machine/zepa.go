@@ -147,11 +147,20 @@ func (m *Machine) bgt(inst Instruction) {
 }
 
 func (m *Machine) load(inst Instruction) {
-	m.registers[inst.rd] = uint32(m.memory[inst.immediate])
+	addr := m.registers[inst.rs2]
+	m.registers[inst.rs1] = 0
+
+	for i := uint32(0); i < 4; i++ {
+		m.registers[inst.rs1] |= (uint32(m.memory[addr+i]) << (i * 8))
+	}
 }
 
 func (m *Machine) store(inst Instruction) {
-	m.memory[inst.immediate] = byte(m.registers[inst.rd])
+	addr := m.registers[inst.rs2]
+
+	for i := uint32(0); i < 4; i++ {
+		m.memory[addr+i] = byte(m.registers[inst.rs1] >> (i * 8))
+	}
 }
 
 func (m *Machine) fetch() {
@@ -233,9 +242,9 @@ func (m *Machine) decode() Instruction {
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
-	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR:
+	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE:
 		return m.decodeRTypeInst(instruction)
-	case MV, JUMP, BEQ, BLT, BGT, LOAD, STORE:
+	case MV, JUMP, BEQ, BLT, BGT:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)

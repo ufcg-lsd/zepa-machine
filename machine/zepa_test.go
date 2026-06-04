@@ -218,7 +218,8 @@ func TestBGT(t *testing.T) {
 func TestLOAD(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.memory[256] = 42 // Definindo um valor na memória para ser carregado
-	inst := Instruction{opcode: (*Machine).load, rd: w1, immediate: 256}
+	machine.registers[w2] = 256
+	inst := Instruction{opcode: (*Machine).load, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.registers[w1] != 42 {
@@ -229,7 +230,8 @@ func TestLOAD(t *testing.T) {
 func TestSTORE(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.registers[w1] = 65
-	inst := Instruction{opcode: (*Machine).store, rd: w1, immediate: 100}
+	machine.registers[w2] = 100
+	inst := Instruction{opcode: (*Machine).store, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.memory[100] != 65 {
