@@ -239,6 +239,45 @@ STORE <Source Reg.>, [< Address Reg.>]
 STORE W1, [W2]   ; Store the value from register W1 into memory address inside W2
 ```
 
+### LDB (Load Byte)
+Loads a single 8-bit unsigned byte from a memory address into a register. The loaded byte is zero-extended to fill the 32-bit register.
+
+**Syntax:**
+```
+LDB <Dest Reg.>, [< Address Reg.>]
+```
+
+**Example:**
+```
+LDB W1, [W2]    ; Load an unsigned byte from the memory address in W2 into register W1
+```
+
+### LDSB (Load Signed Byte)
+Loads a single 8-bit signed byte from a memory address into a register. The loaded byte is sign-extended to fill the 32-bit register, preserving its negative or positive arithmetic value.
+
+**Syntax:**
+```
+LDSB <Dest Reg.>, [< Address Reg.>]
+```
+
+**Example:**
+```
+LDSB W1, [W2]   ; Load a sign-extended byte from the memory address in W2 into register W1
+```
+
+### STRB (Store Byte)
+Stores the lowest 8 bits (one byte) from a register into a specific memory address. The upper 24 bits of the source register are ignored, and adjacent memory blocks are left untouched.
+
+**Syntax:**
+```
+STRB <Source Reg.>, [< Address Reg.>]
+```
+
+**Example:**
+```
+STRB W1, [W2]   ; Store only the lowest byte of register W1 into the memory address inside W2
+```
+
 ## References
 
 - [ARM Assembly](https://armasm.com/)

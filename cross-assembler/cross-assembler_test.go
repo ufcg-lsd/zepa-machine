@@ -283,6 +283,40 @@ func TestSimpleJump(t *testing.T) {
 	}
 }
 
+func TestStoreAndLoadByte(t *testing.T) {
+	assemblyFilePath := "../asm/samples/store_load_byte.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Error reading the assembly file: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
+
+	memory, err := RunAssemblerFromReader(file)
+	if err != nil {
+		t.Fatalf("Error running the assembler: %v", err)
+	}
+
+	expectedMemory := []byte{
+		0b00110000, 0b01110000, 0b00000000, 0b00000000, // MV W3, #-32768
+		0b00110000, 0b00100000, 0b00000100, 0b00000000, // MV W1, #0x020
+		0b01110000, 0b00000011, 0b00001000, 0b00000000, // STRB W3, W1
+		0b01101000, 0b00000010, 0b00001000, 0b00000000, // LDB W2, W1
+		0b01101100, 0b00000100, 0b00001000, 0b00000000, // LDSB W4, W1
+	}
+
+	if len(memory) != len(expectedMemory) {
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
+	}
+
+	for i, byteVal := range memory {
+		if byteVal != expectedMemory[i] {
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
+		}
+	}
+}
+
 func TestStoreAndLoad(t *testing.T) {
 	assemblyFilePath := "../asm/samples/store_load.asm"
 

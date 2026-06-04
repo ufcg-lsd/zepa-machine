@@ -238,3 +238,50 @@ func TestSTORE(t *testing.T) {
 		t.Errorf("Expected memory value to be 65, got %d", machine.memory[100])
 	}
 }
+
+func TestLDB(t *testing.T) {
+	machine := NewMachine(2048)
+	machine.memory[256] = 200
+	machine.registers[w2] = 256
+	inst := Instruction{opcode: (*Machine).ldb, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w1] != 200 {
+		t.Errorf("Expected w1 to be 200, got %d", machine.registers[w1])
+	}
+}
+
+func TestLDSB(t *testing.T) {
+	machine := NewMachine(2048)
+	value := -66
+	machine.memory[256] = byte(value)
+	machine.registers[w2] = 256
+	inst := Instruction{opcode: (*Machine).ldsb, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	// We expect the CPU to sign-extend the byte to a 32-bit integer (-66)
+	expected := uint32(value)
+
+	if machine.registers[w1] != expected {
+		t.Errorf("Expected w1 to be %d (-66 sign-extended), got %d", uint32(expected), machine.registers[w1])
+	}
+}
+
+func TestSTRB(t *testing.T) {
+	machine := NewMachine(2048)
+	// The register contains a 32-bit value.
+	// STRB should only extract and store the lowest byte (0xDD = 221).
+	machine.registers[w1] = 0xAABBCCDD
+	machine.registers[w2] = 100
+	inst := Instruction{opcode: (*Machine).strb, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.memory[100] != 0xDD {
+		t.Errorf("Expected memory value to be 221 (0xDD), got %d", machine.memory[100])
+	}
+
+	// Ensure the CPU didn't accidentally write a full word and overwrite adjacent memory
+	if machine.memory[101] != 0 {
+		t.Errorf("Expected adjacent memory at block 101 to remain 0, got %d", machine.memory[101])
+	}
+}

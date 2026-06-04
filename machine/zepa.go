@@ -32,6 +32,9 @@ const (
 	BGT
 	LOAD
 	STORE
+	LDB
+	LDSB
+	STRB
 	FETCH
 )
 
@@ -69,6 +72,9 @@ var operations = map[byte]Operation{
 	byte(BGT):   (*Machine).bgt,
 	byte(LOAD):  (*Machine).load,
 	byte(STORE): (*Machine).store,
+	byte(LDB):   (*Machine).ldb,
+	byte(LDSB):  (*Machine).ldsb,
+	byte(STRB):  (*Machine).strb,
 }
 
 type Instruction struct {
@@ -161,6 +167,18 @@ func (m *Machine) store(inst Instruction) {
 	for i := uint32(0); i < 4; i++ {
 		m.memory[addr+i] = byte(m.registers[inst.rs1] >> (i * 8))
 	}
+}
+
+func (m *Machine) ldb(inst Instruction) {
+	m.registers[inst.rs1] = uint32(m.memory[m.registers[inst.rs2]])
+}
+
+func (m *Machine) ldsb(inst Instruction) {
+	m.registers[inst.rs1] = uint32(int8(m.memory[m.registers[inst.rs2]]))
+}
+
+func (m *Machine) strb(inst Instruction) {
+	m.memory[m.registers[inst.rs2]] = byte(m.registers[inst.rs1])
 }
 
 func (m *Machine) fetch() {

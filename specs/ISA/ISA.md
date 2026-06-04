@@ -153,24 +153,45 @@ These flags can be used by instructions to make decisions that can change the pr
 ### Load and Store Operations with Addresses
 **LOAD**:
 - **Description**: Loads the content stored at a specific memory address into a specific register.
-- **Syntax**: LOAD \<Destination Reg.>, [\<Address>]
-- **Example**: LOAD W0, 0x68DB00AD
-- **Format**: I-Type
+- **Syntax**: LOAD \<Destination Reg.>, [\<Address Reg.>]
+- **Example**: LOAD W0, W1
+- **Format**: R-Type
 - **Opcode (decimal)**: 24
 
 **STORE**:
 - **Description**: Stores the value of a register to memory.
-- **Syntax**: STORE \<Source Reg.>, [\<Address>]
-- **Example**: STORE W1, 0x68DB00AD
-- **Format**: I-Type
+- **Syntax**: STORE \<Source Reg.>, [\<Address Reg.>]
+- **Example**: STORE W1, W2
+- **Format**: R-Type
 - **Opcode (decimal)**: 25
+
+**LDB**:
+- **Description**: Loads a single 8-bit unsigned byte from a memory address into a register. The loaded byte is zero-extended to fill the 32-bit register.
+- **Syntax**: LDB \<Destination Reg.\>, [\<Address Reg.\>]
+- **Example**: LDB W2, W1
+- **Format**: R-Type
+- **Opcode (decimal)**: 26
+
+**LDSB** (Load Signed Byte):
+- **Description**: Loads a single 8-bit signed byte from a memory address into a register. The loaded byte is sign-extended to fill the 32-bit register, preserving its arithmetic sign.
+- **Syntax**: LDSB <Destination Reg.>, [<Address Reg.>]
+- **Example**: LDSB W4, W1
+- **Format**: R-Type
+- **Opcode (decimal)**: 27
+
+**STRB** (Store Byte):
+- **Description**: Stores the lowest 8 bits (one byte) from a register into a specific memory address. The upper 24 bits of the source register are ignored.
+- **Syntax**: STRB <Source Reg.>, [<Address Reg.>]
+- **Example**: STRB W3, W1
+- **Format**: R-Type
+- **Opcode (decimal)**: 28
 
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).
 - **Syntax and Example**: FETCH
 - **Format**: I-Type
-- **Opcode (decimal)**: 26
+- **Opcode (decimal)**: 29
 
 ### Zepa Machine Instruction Encoding Table
 
@@ -185,6 +206,9 @@ These flags can be used by instructions to make decisions that can change the pr
 | **JMPR**         | R-Type          | 010100    | 00000     | reg     | 00000      | 00000    | 000000    |
 | **LOAD**        | R-Type          | 011000       | 00000     | reg        | reg    | 00000    | 000000    |
 | **STORE**        | R-Type          | 011001       | 00000     | reg        | reg    | 00000    | 000000    |
+| **LDB**          | R-Type          | 011010       | 00000     | reg        | reg    | 00000    | 000000    |
+| **LDSB**         | R-Type          | 011011       | 00000     | reg        | reg    | 00000    | 000000    |
+| **STRB**         | R-Type          | 011100       | 00000     | reg        | reg    | 00000    | 000000    |
 
 
 
@@ -195,7 +219,7 @@ These flags can be used by instructions to make decisions that can change the pr
 | **BEQ**         | I-Type          | 010101       | 00000     | 16bit offset         | 00000    |
 | **BLT**         | I-Type          | 010110       | 00000     | 16bit offset         | 00000    |
 | **BGT**         | I-Type          | 010111       | 00000     | 16bit offset         | 00000    |
-| **FETCH**        | I-Type          | 011010       | 00000     | 0000000000000000        | 00000    |
+| **FETCH**        | I-Type          | 011101       | 00000     | 0000000000000000        | 00000    |
 
 
 ## References

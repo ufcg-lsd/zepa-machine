@@ -42,6 +42,9 @@ const (
 	BGT_OPCODE
 	LOAD_OPCODE
 	STORE_OPCODE
+	LDB_OPCODE
+	LDSB_OPCODE
+	STRB_OPCODE
 )
 
 // Map register names to Register values
@@ -70,6 +73,9 @@ var opcodeMap = map[string]Opcode{
 	"BGT":   BGT_OPCODE,
 	"LOAD":  LOAD_OPCODE,
 	"STORE": STORE_OPCODE,
+	"LDB":   LDB_OPCODE,
+	"LDSB":  LDSB_OPCODE,
+	"STRB":  STRB_OPCODE,
 }
 
 // Define instruction format and function codes for each type
@@ -106,6 +112,9 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 	BGT_OPCODE:   newInstructionSpec("I-Type", BGT_OPCODE),
 	LOAD_OPCODE:  newInstructionSpec("R-Type", LOAD_OPCODE),
 	STORE_OPCODE: newInstructionSpec("R-Type", STORE_OPCODE),
+	LDB_OPCODE:   newInstructionSpec("R-Type", LDB_OPCODE),
+	LDSB_OPCODE:  newInstructionSpec("R-Type", LDSB_OPCODE),
+	STRB_OPCODE:  newInstructionSpec("R-Type", STRB_OPCODE),
 }
 
 // Common fields used across all instruction types
