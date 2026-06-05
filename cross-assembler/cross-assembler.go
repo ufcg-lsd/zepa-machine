@@ -31,10 +31,20 @@ const (
 	MV_OPCODE Opcode = iota
 	ADD_OPCODE
 	SUB_OPCODE
+	MUL_OPCODE
+	UDIV_OPCODE
+	SDIV_OPCODE
 	CMP_OPCODE
 	JUMP_OPCODE
+	JMPR_OPCODE
+	BEQ_OPCODE
+	BLT_OPCODE
+	BGT_OPCODE
 	LOAD_OPCODE
 	STORE_OPCODE
+	LDB_OPCODE
+	LDSB_OPCODE
+	STRB_OPCODE
 )
 
 // Map register names to Register values
@@ -51,11 +61,21 @@ var registerMap = map[string]Register{
 var opcodeMap = map[string]Opcode{
 	"ADD":   ADD_OPCODE,
 	"SUB":   SUB_OPCODE,
+	"MUL":   MUL_OPCODE,
+	"UDIV":  UDIV_OPCODE,
+	"SDIV":  SDIV_OPCODE,
 	"CMP":   CMP_OPCODE,
 	"MV":    MV_OPCODE,
 	"JUMP":  JUMP_OPCODE,
+	"JMPR":  JMPR_OPCODE,
+	"BEQ":   BEQ_OPCODE,
+	"BLT":   BLT_OPCODE,
+	"BGT":   BGT_OPCODE,
 	"LOAD":  LOAD_OPCODE,
 	"STORE": STORE_OPCODE,
+	"LDB":   LDB_OPCODE,
+	"LDSB":  LDSB_OPCODE,
+	"STRB":  STRB_OPCODE,
 }
 
 // Define instruction format and function codes for each type
@@ -80,11 +100,21 @@ func newInstructionSpec(format string, opcode Opcode) InstructionSpec {
 var instructionSpecs = map[Opcode]InstructionSpec{
 	ADD_OPCODE:   newInstructionSpec("R-Type", ADD_OPCODE),
 	SUB_OPCODE:   newInstructionSpec("R-Type", SUB_OPCODE),
+	MUL_OPCODE:   newInstructionSpec("R-Type", MUL_OPCODE),
+	UDIV_OPCODE:  newInstructionSpec("R-Type", UDIV_OPCODE),
+	SDIV_OPCODE:  newInstructionSpec("R-Type", SDIV_OPCODE),
 	CMP_OPCODE:   newInstructionSpec("R-Type", CMP_OPCODE),
 	MV_OPCODE:    newInstructionSpec("I-Type", MV_OPCODE),
 	JUMP_OPCODE:  newInstructionSpec("I-Type", JUMP_OPCODE),
-	LOAD_OPCODE:  newInstructionSpec("I-Type", LOAD_OPCODE),
-	STORE_OPCODE: newInstructionSpec("I-Type", STORE_OPCODE),
+	JMPR_OPCODE:  newInstructionSpec("R-Type", JMPR_OPCODE),
+	BEQ_OPCODE:   newInstructionSpec("I-Type", BEQ_OPCODE),
+	BLT_OPCODE:   newInstructionSpec("I-Type", BLT_OPCODE),
+	BGT_OPCODE:   newInstructionSpec("I-Type", BGT_OPCODE),
+	LOAD_OPCODE:  newInstructionSpec("R-Type", LOAD_OPCODE),
+	STORE_OPCODE: newInstructionSpec("R-Type", STORE_OPCODE),
+	LDB_OPCODE:   newInstructionSpec("R-Type", LDB_OPCODE),
+	LDSB_OPCODE:  newInstructionSpec("R-Type", LDSB_OPCODE),
+	STRB_OPCODE:  newInstructionSpec("R-Type", STRB_OPCODE),
 }
 
 // Common fields used across all instruction types
@@ -172,16 +202,40 @@ func LoadAssemblyFile(filePath string) ([][]string, error) {
 // LoadAssemblyFromReader reads and processes lines of assembly code from a reader
 func LoadAssemblyFromReader(reader io.Reader) ([][]string, error) {
 	var instructions [][]string
+	labels := make(map[string]int)
 	scanner := bufio.NewScanner(reader)
 
 	// Read each line
 	for scanner.Scan() {
-		line := processLine(scanner.Text())
-		if line != "" {
-			// Split the line into components (opcode, registers)
-			parts := strings.Fields(line)
-			if len(parts) > 0 {
-				instructions = append(instructions, parts)
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		// Remove comments
+		if idx := strings.Index(line, ";"); idx != -1 {
+			line = strings.TrimSpace(line[:idx])
+		}
+		// stores instruction position of label
+		if strings.HasSuffix(line, ":") {
+			labelName := line[:len(line)-1]
+			if _, exists := labels[labelName]; exists {
+				return nil, fmt.Errorf("Duplicate label: %v", labelName)
+			}
+			labels[labelName] = len(instructions)
+			continue
+		}
+		line = strings.ReplaceAll(line, ",", "")
+
+		parts := strings.Fields(line)
+		if len(parts) > 0 {
+			instructions = append(instructions, parts)
+		}
+
+	}
+
+	//Resolve labels to relative address
+	for currentAddress, instruction := range instructions {
+		for j, part := range instruction[1:] { // Skip opcode
+			if labelAddress, exists := labels[part]; exists {
+				instructions[currentAddress][j+1] = fmt.Sprint(labelAddress - currentAddress)
 			}
 		}
 	}
@@ -191,21 +245,6 @@ func LoadAssemblyFromReader(reader io.Reader) ([][]string, error) {
 	}
 
 	return instructions, nil
-}
-
-// Processes an individual line of assembly code, removing comments and trimming whitespace
-func processLine(line string) string {
-	line = strings.TrimSpace(line)
-	// Remove comments
-	if idx := strings.Index(line, ";"); idx != -1 {
-		line = strings.TrimSpace(line[:idx])
-	}
-	// Ignore labels
-	if strings.HasSuffix(line, ":") {
-		return ""
-	}
-
-	return strings.ReplaceAll(line, ",", "")
 }
 
 // Takes a single parsed instruction and converts it to binary
@@ -259,7 +298,7 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 	var rd, rs1, rs2 byte
 	var err error
 
-	// Expect either 2 or 3 operands for R-Type instructions
+	// Expect either 1, 2 or 3 operands for R-Type instructions
 	switch len(operands) {
 	case 3:
 		rd, err = parseRegister(operands[0])
@@ -284,8 +323,15 @@ func encodeRType(spec InstructionSpec, operands []string) (uint32, error) {
 		if err != nil {
 			return 0, err
 		}
+	case 1:
+		rd = 0
+		rs2 = 0
+		rs1, err = parseRegister(operands[0])
+		if err != nil {
+			return 0, err
+		}
 	default:
-		return 0, fmt.Errorf("R-Type instruction expects 2 or 3 operands, got %d", len(operands))
+		return 0, fmt.Errorf("R-Type instruction expects from 1 to 3 operands, got %d", len(operands))
 	}
 
 	// Encode the R-Type instruction by combining the opcode, registers, and function fields
@@ -347,19 +393,11 @@ func parseRegister(register string) (byte, error) {
 func parseImmediate(immediate string) (uint16, error) {
 	immediate = strings.TrimPrefix(immediate, "#")
 
-	var uintValue uint64
-	var err error
-
-	// Handle hexadecimal and decimal immediate values
-	if strings.HasPrefix(immediate, "0x") || strings.HasPrefix(immediate, "0X") {
-		uintValue, err = strconv.ParseUint(immediate, 0, 16)
-	} else {
-		uintValue, err = strconv.ParseUint(immediate, 10, 16)
-	}
+	var intValue, err = strconv.ParseInt(immediate, 0, 16)
 
 	if err != nil {
 		return 0, fmt.Errorf("Invalid immediate value: %s", immediate)
 	}
 
-	return uint16(uintValue), nil
+	return uint16(intValue), nil
 }

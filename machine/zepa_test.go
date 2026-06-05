@@ -86,20 +86,140 @@ func TestSUB(t *testing.T) {
 	}
 }
 
+func TestMUL(t *testing.T) {
+	machine := NewMachine(2048)
+	machine.registers[w1] = 12
+	machine.registers[w2] = 4
+	inst := Instruction{opcode: (*Machine).mul, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w0] != 48 {
+		t.Errorf("Expected w0 to be 48, got %d", machine.registers[w0])
+	}
+}
+
+func TestUDIV(t *testing.T) {
+	machine := NewMachine(2048)
+	machine.registers[w1] = 20
+	machine.registers[w2] = 3
+	inst := Instruction{opcode: (*Machine).udiv, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w0] != 6 {
+		t.Errorf("Expected w0 to be 6, got %d", machine.registers[w0])
+	}
+}
+
+func TestSDIV(t *testing.T) {
+	machine := NewMachine(2048)
+
+	var numerator int32 = -15
+	var denominator int32 = -5
+	machine.registers[w1] = uint32(numerator)
+	machine.registers[w2] = 3
+	inst := Instruction{opcode: (*Machine).sdiv, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	expected := uint32(denominator)
+
+	if machine.registers[w0] != expected {
+		t.Errorf("Expected w0 to be %d (-5), got %d", expected, machine.registers[w0])
+	}
+}
+
 func TestJUMP(t *testing.T) {
 	machine := NewMachine(2048)
 	inst := Instruction{opcode: (*Machine).jump, immediate: 0xA}
 	machine.execute(inst)
 
-	if machine.registers[pc] != 0xA {
-		t.Errorf("Expected pc to be 10, got %d", machine.registers[pc])
+	if machine.registers[pc] != 36 {
+		t.Errorf("Expected pc to be 36, got %d", machine.registers[pc])
+	}
+}
+
+func TestJMPR(t *testing.T) {
+	machine := NewMachine(2048)
+
+	expectedAddress := uint32(128)
+	machine.registers[w5] = expectedAddress
+
+	inst := Instruction{opcode: (*Machine).jmpr, rs1: w5}
+	machine.execute(inst)
+
+	if machine.registers[pc] != expectedAddress {
+		t.Errorf("Expected pc to be %d, got %d", expectedAddress, machine.registers[pc])
+	}
+}
+
+func TestBEQ(t *testing.T) {
+	machine := NewMachine(2048)
+	inst := Instruction{opcode: (*Machine).beq, immediate: 5} // Jump offset of 5 ((5-1) * 4 = 16 bytes)
+
+	machine.registers[pc] = 100
+	machine.registers[sr] = 1
+	machine.execute(inst)
+
+	if machine.registers[pc] != 116 {
+		t.Errorf("Branch Taken: Expected pc to be 116, got %d", machine.registers[pc])
+	}
+
+	machine.registers[pc] = 100
+	machine.registers[sr] = 10
+	machine.execute(inst)
+
+	if machine.registers[pc] != 100 {
+		t.Errorf("Branch Not Taken: Expected pc to remain 100, got %d", machine.registers[pc])
+	}
+}
+
+func TestBLT(t *testing.T) {
+	machine := NewMachine(2048)
+	inst := Instruction{opcode: (*Machine).blt, immediate: 3} // Jump offset of 3 ((3-1) * 4 = 8 bytes)
+
+	machine.registers[pc] = 50
+	machine.registers[sr] = 2
+	machine.execute(inst)
+
+	if machine.registers[pc] != 58 {
+		t.Errorf("Branch Taken: Expected pc to be 58, got %d", machine.registers[pc])
+	}
+
+	machine.registers[pc] = 50
+	machine.registers[sr] = 10
+	machine.execute(inst)
+
+	if machine.registers[pc] != 50 {
+		t.Errorf("Branch Not Taken: Expected pc to remain 50, got %d", machine.registers[pc])
+	}
+}
+
+func TestBGT(t *testing.T) {
+	machine := NewMachine(2048)
+	offset := -4
+	inst := Instruction{opcode: (*Machine).bgt, immediate: uint16(offset)} // Offset of -4 ((-4-1) * 4 = -20 bytes)
+
+	machine.registers[pc] = 200
+	machine.registers[sr] = 4
+	machine.execute(inst)
+
+	if machine.registers[pc] != 180 {
+		t.Errorf("Branch Taken: Expected pc to be 180, got %d", machine.registers[pc])
+	}
+
+	machine.registers[pc] = 200
+	machine.registers[sr] = 10
+	machine.execute(inst)
+
+	if machine.registers[pc] != 200 {
+		t.Errorf("Branch Not Taken: Expected pc to remain 200, got %d", machine.registers[pc])
 	}
 }
 
 func TestLOAD(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.memory[256] = 42 // Definindo um valor na memória para ser carregado
-	inst := Instruction{opcode: (*Machine).load, rd: w1, immediate: 256}
+	machine.registers[w2] = 256
+	inst := Instruction{opcode: (*Machine).load, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.registers[w1] != 42 {
@@ -110,10 +230,58 @@ func TestLOAD(t *testing.T) {
 func TestSTORE(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.registers[w1] = 65
-	inst := Instruction{opcode: (*Machine).store, rd: w1, immediate: 100}
+	machine.registers[w2] = 100
+	inst := Instruction{opcode: (*Machine).store, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.memory[100] != 65 {
 		t.Errorf("Expected memory value to be 65, got %d", machine.memory[100])
+	}
+}
+
+func TestLDB(t *testing.T) {
+	machine := NewMachine(2048)
+	machine.memory[256] = 200
+	machine.registers[w2] = 256
+	inst := Instruction{opcode: (*Machine).ldb, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w1] != 200 {
+		t.Errorf("Expected w1 to be 200, got %d", machine.registers[w1])
+	}
+}
+
+func TestLDSB(t *testing.T) {
+	machine := NewMachine(2048)
+	value := -66
+	machine.memory[256] = byte(value)
+	machine.registers[w2] = 256
+	inst := Instruction{opcode: (*Machine).ldsb, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	// We expect the CPU to sign-extend the byte to a 32-bit integer (-66)
+	expected := uint32(value)
+
+	if machine.registers[w1] != expected {
+		t.Errorf("Expected w1 to be %d (-66 sign-extended), got %d", uint32(expected), machine.registers[w1])
+	}
+}
+
+func TestSTRB(t *testing.T) {
+	machine := NewMachine(2048)
+	// The register contains a 32-bit value.
+	// STRB should only extract and store the lowest byte (0xDD = 221).
+	machine.registers[w1] = 0xAABBCCDD
+	machine.registers[w2] = 100
+	inst := Instruction{opcode: (*Machine).strb, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.memory[100] != 0xDD {
+		t.Errorf("Expected memory value to be 221 (0xDD), got %d", machine.memory[100])
+	}
+
+	// Ensure the CPU didn't accidentally write a full word and overwrite adjacent memory
+	if machine.memory[101] != 0 {
+		t.Errorf("Expected adjacent memory at block 101 to remain 0, got %d", machine.memory[101])
 	}
 }

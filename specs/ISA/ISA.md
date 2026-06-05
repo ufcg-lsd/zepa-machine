@@ -76,13 +76,34 @@ For this machine, the word size, instruction size, and register size were define
 - **Format**: R-Type
 - **Opcode (decimal)**: 14
 
+**MUL**:
+- **Description**: Multiplies the value of two registers and stores the result in a third one.
+- **Syntax**: MUL \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
+- **Example**: MUL W0, W1, W0
+- **Format**: R-Type
+- **Opcode (decimal)**: 15
+
+**UDIV**:
+- **Description**: Divides the unsigned value of one register by another and stores the result in a third one, discarding the remainder.
+- **Syntax**: UDIV \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
+- **Example**: UDIV W0, W1, W0
+- **Format**: R-Type
+- **Opcode (decimal)**: 16
+
+**SDIV**:
+- **Description**: Divides the signed value of one register by another and stores the result in a third one, discarding the remainder.
+- **Syntax**: SDIV \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
+- **Example**: SDIV W0, W1, W0
+- **Format**: R-Type
+- **Opcode (decimal)**: 17
+
 ### Test Instructions
 **CMP**:
 - **Description**: Compares the values of two registers and stores the flag in the SR.
 - **Syntax**: CMP \<Input Reg.>, \<Input Reg.>
 - **Example**: CMP W0, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 15
+- **Opcode (decimal)**: 18
 
 #### Z, L and G Test Flags
 When a test instruction, such as CMP, is executed, the SR register is updated, and its value can be used by other instructions to change the program's flow. Each flag is represented by a bit, and the flag being set indicates that the bit value is 1.
@@ -95,33 +116,82 @@ These flags can be used by instructions to make decisions that can change the pr
 
 ### Control Flow Operations
 **JUMP**:
-- **Description**: Change the value of the Program Counter (PC) register, updating the program's execution flow.
-- **Syntax**: JUMP \[<Address>]
+- **Description**: Unconditionally jumps the Program Counter (PC) forward or backward by a specific instruction offset (PC-relative).
+- **Syntax**: JUMP [\<Label/Offset\>]
 - **Example**: JUMP 0x14
 - **Format**: I-Type
-- **Opcode (decimal)**: 16
+- **Opcode (decimal)**: 19
+
+**JMPR**:
+- **Description**: Unconditionally sets the Program Counter (PC) to an absolute memory address currently stored in a register.
+- **Syntax**: JMPR \<Source Reg.\>
+- **Example**: JMPR W5
+- **Format**: R-Type
+- **Opcode (decimal)**: 20
+
+**BEQ**:
+- **Description**: Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) if the Z (Equal) flag in the Status Register is set.
+- **Syntax**: BEQ \<Label/Offset\>
+- **Example**: BEQ 0x05
+- **Format**: I-Type
+- **Opcode (decimal)**: 21
+
+**BLT**:
+- **Description**: Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) if the L (Less Than) flag in the Status Register is set.
+- **Syntax**: BLT \<Label/Offset\>
+- **Example**: BLT 0x03
+- **Format**: I-Type
+- **Opcode (decimal)**: 22
+
+**BGT**:
+- **Description**: Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) if the G (Greater Than) flag in the Status Register is set.
+- **Syntax**: BGT \<Label/Offset\>
+- **Example**: BGT 0x02
+- **Format**: I-Type
+- **Opcode (decimal)**: 23
 
 ### Load and Store Operations with Addresses
 **LOAD**:
 - **Description**: Loads the content stored at a specific memory address into a specific register.
-- **Syntax**: LOAD \<Destination Reg.>, [\<Address>]
-- **Example**: LOAD W0, 0x68DB00AD
-- **Format**: I-Type
-- **Opcode (decimal)**: 17
+- **Syntax**: LOAD \<Destination Reg.>, [\<Address Reg.>]
+- **Example**: LOAD W0, W1
+- **Format**: R-Type
+- **Opcode (decimal)**: 24
 
 **STORE**:
 - **Description**: Stores the value of a register to memory.
-- **Syntax**: STORE \<Source Reg.>, [\<Address>]
-- **Example**: STORE W1, 0x68DB00AD
-- **Format**: I-Type
-- **Opcode (decimal)**: 18
+- **Syntax**: STORE \<Source Reg.>, [\<Address Reg.>]
+- **Example**: STORE W1, W2
+- **Format**: R-Type
+- **Opcode (decimal)**: 25
+
+**LDB**:
+- **Description**: Loads a single 8-bit unsigned byte from a memory address into a register. The loaded byte is zero-extended to fill the 32-bit register.
+- **Syntax**: LDB \<Destination Reg.\>, [\<Address Reg.\>]
+- **Example**: LDB W2, W1
+- **Format**: R-Type
+- **Opcode (decimal)**: 26
+
+**LDSB** (Load Signed Byte):
+- **Description**: Loads a single 8-bit signed byte from a memory address into a register. The loaded byte is sign-extended to fill the 32-bit register, preserving its arithmetic sign.
+- **Syntax**: LDSB <Destination Reg.>, [<Address Reg.>]
+- **Example**: LDSB W4, W1
+- **Format**: R-Type
+- **Opcode (decimal)**: 27
+
+**STRB** (Store Byte):
+- **Description**: Stores the lowest 8 bits (one byte) from a register into a specific memory address. The upper 24 bits of the source register are ignored.
+- **Syntax**: STRB <Source Reg.>, [<Address Reg.>]
+- **Example**: STRB W3, W1
+- **Format**: R-Type
+- **Opcode (decimal)**: 28
 
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).
 - **Syntax and Example**: FETCH
 - **Format**: I-Type
-- **Opcode (decimal)**: 19
+- **Opcode (decimal)**: 29
 
 ### Zepa Machine Instruction Encoding Table
 
@@ -129,17 +199,27 @@ These flags can be used by instructions to make decisions that can change the pr
 |-----------------|------------|------------|---------|---------|------------|--------|------------|
 | **ADD**         | R-Type         | 001101    | reg     | reg     | reg        | 00000    | 000000    |
 | **SUB**         | R-Type          | 001110    | reg     | reg     | reg        | 00000    | 000000    |
-| **CMP**         | R-Type          | 001111    | 00000     | reg     | reg        | 00000    | 000000    |
+| **MUL**         | R-Type          | 001111    | reg     | reg     | reg        | 00000    | 000000    |
+| **UDIV**         | R-Type          | 010000    | reg     | reg     | reg        | 00000    | 000000    |
+| **SDIV**         | R-Type          | 010001    | reg     | reg     | reg        | 00000    | 000000    |
+| **CMP**         | R-Type          | 010010    | 00000     | reg     | reg        | 00000    | 000000    |
+| **JMPR**         | R-Type          | 010100    | 00000     | reg     | 00000      | 00000    | 000000    |
+| **LOAD**        | R-Type          | 011000       | 00000     | reg        | reg    | 00000    | 000000    |
+| **STORE**        | R-Type          | 011001       | 00000     | reg        | reg    | 00000    | 000000    |
+| **LDB**          | R-Type          | 011010       | 00000     | reg        | reg    | 00000    | 000000    |
+| **LDSB**         | R-Type          | 011011       | 00000     | reg        | reg    | 00000    | 000000    |
+| **STRB**         | R-Type          | 011100       | 00000     | reg        | reg    | 00000    | 000000    |
 
 
 
 | **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate** | **funct5** |
 |-----------------|------------|---------------|---------|------------|--------|
 | **MV**          | I-Type          | 001100      | reg     | 16bit constant         | 00000    |
-| **JUMP**        | I-Type          | 010000      | 00000     | 16bit address        | 00000    |
-| **LOAD**        | I-Type          | 010001       | reg     | 16bit address        | 00000    |
-| **STORE**        | I-Type          | 010010       | reg     | 16bit address        | 00000    |
-| **FETCH**        | I-Type          | 010011       | 00000     | 0000000000000000        | 00000    |
+| **JUMP**        | I-Type          | 010011      | 00000     | 16bit address        | 00000    |
+| **BEQ**         | I-Type          | 010101       | 00000     | 16bit offset         | 00000    |
+| **BLT**         | I-Type          | 010110       | 00000     | 16bit offset         | 00000    |
+| **BGT**         | I-Type          | 010111       | 00000     | 16bit offset         | 00000    |
+| **FETCH**        | I-Type          | 011101       | 00000     | 0000000000000000        | 00000    |
 
 
 ## References

@@ -35,7 +35,7 @@ func DebugMemory(m *machine.Machine) {
 			}
 		}
 	}
-	fmt.Println("\n")
+	fmt.Print("\n\n")
 }
 
 func DebugRegisters(m *machine.Machine) {
@@ -46,7 +46,7 @@ func DebugRegisters(m *machine.Machine) {
 		if k == 8 {
 			continue
 		}
-		fmt.Printf("%v: %d\n", getRegisterName(k), v)
+		fmt.Printf("%v: %d\n", getRegisterName(k), int32(v))
 	}
 }
 
@@ -94,7 +94,7 @@ func main() {
 		return
 	}
 
-	machine := machine.NewMachine(64)
+	machine := machine.NewMachine(128)
 	machine.LoadProgram(binaryCode)
 	machine.Boot()
 
