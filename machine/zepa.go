@@ -17,7 +17,9 @@ const (
 	sr
 	mdr
 	mar
+)
 
+const (
 	MV Opcode = iota
 	ADD
 	SUB

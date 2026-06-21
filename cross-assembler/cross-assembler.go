@@ -26,7 +26,9 @@ const (
 	_
 	_
 	_
+)
 
+const (
 	// Define opcodes for different instructions
 	MV_OPCODE Opcode = iota
 	ADD_OPCODE

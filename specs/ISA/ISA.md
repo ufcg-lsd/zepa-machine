@@ -59,7 +59,7 @@ For this machine, the word size, instruction size, and register size were define
 - **Syntax**: MV \<Destination Reg.> \#\<Constant>
 - **Example**: MV W1 #5
 - **Format**: I-Type
-- **Opcode (decimal)**: 12
+- **Opcode (decimal)**: 0
 
 ### Arithmetic and Logical Operations
 **ADD**:
@@ -67,35 +67,35 @@ For this machine, the word size, instruction size, and register size were define
 - **Syntax**: ADD \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
 - **Example**: ADD W0, W1, W0
 - **Format**: R-Type
-- **Opcode (decimal)**: 13
+- **Opcode (decimal)**: 1
 
 **SUB**:
 - **Description**: Subtracts the value of one register from another and stores the result in a third one.
 - **Syntax**: SUB \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
 - **Example**: SUB W0, W1, W0
 - **Format**: R-Type
-- **Opcode (decimal)**: 14
+- **Opcode (decimal)**: 2
 
 **MUL**:
 - **Description**: Multiplies the value of two registers and stores the result in a third one.
 - **Syntax**: MUL \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
 - **Example**: MUL W0, W1, W0
 - **Format**: R-Type
-- **Opcode (decimal)**: 15
+- **Opcode (decimal)**: 3
 
 **UDIV**:
 - **Description**: Divides the unsigned value of one register by another and stores the result in a third one, discarding the remainder.
 - **Syntax**: UDIV \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
 - **Example**: UDIV W0, W1, W0
 - **Format**: R-Type
-- **Opcode (decimal)**: 16
+- **Opcode (decimal)**: 4
 
 **SDIV**:
 - **Description**: Divides the signed value of one register by another and stores the result in a third one, discarding the remainder.
 - **Syntax**: SDIV \<Destination Reg.>, \<Input Reg.>, \<Input Reg.>
 - **Example**: SDIV W0, W1, W0
 - **Format**: R-Type
-- **Opcode (decimal)**: 17
+- **Opcode (decimal)**: 5
 
 ### Test Instructions
 **CMP**:
@@ -103,7 +103,7 @@ For this machine, the word size, instruction size, and register size were define
 - **Syntax**: CMP \<Input Reg.>, \<Input Reg.>
 - **Example**: CMP W0, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 18
+- **Opcode (decimal)**: 6
 
 #### Z, L and G Test Flags
 When a test instruction, such as CMP, is executed, the SR register is updated, and its value can be used by other instructions to change the program's flow. Each flag is represented by a bit, and the flag being set indicates that the bit value is 1.
@@ -120,35 +120,35 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Syntax**: JUMP [\<Label/Offset\>]
 - **Example**: JUMP 0x14
 - **Format**: I-Type
-- **Opcode (decimal)**: 19
+- **Opcode (decimal)**: 7
 
 **JMPR**:
 - **Description**: Unconditionally sets the Program Counter (PC) to an absolute memory address currently stored in a register.
 - **Syntax**: JMPR \<Source Reg.\>
 - **Example**: JMPR W5
 - **Format**: R-Type
-- **Opcode (decimal)**: 20
+- **Opcode (decimal)**: 8
 
 **BEQ**:
 - **Description**: Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) if the Z (Equal) flag in the Status Register is set.
 - **Syntax**: BEQ \<Label/Offset\>
 - **Example**: BEQ 0x05
 - **Format**: I-Type
-- **Opcode (decimal)**: 21
+- **Opcode (decimal)**: 9
 
 **BLT**:
 - **Description**: Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) if the L (Less Than) flag in the Status Register is set.
 - **Syntax**: BLT \<Label/Offset\>
 - **Example**: BLT 0x03
 - **Format**: I-Type
-- **Opcode (decimal)**: 22
+- **Opcode (decimal)**: 10
 
 **BGT**:
 - **Description**: Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) if the G (Greater Than) flag in the Status Register is set.
 - **Syntax**: BGT \<Label/Offset\>
 - **Example**: BGT 0x02
 - **Format**: I-Type
-- **Opcode (decimal)**: 23
+- **Opcode (decimal)**: 11
 
 ### Load and Store Operations with Addresses
 **LOAD**:
@@ -156,70 +156,69 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Syntax**: LOAD \<Destination Reg.>, [\<Address Reg.>]
 - **Example**: LOAD W0, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 24
+- **Opcode (decimal)**: 12
 
 **STORE**:
 - **Description**: Stores the value of a register to memory.
 - **Syntax**: STORE \<Source Reg.>, [\<Address Reg.>]
 - **Example**: STORE W1, W2
 - **Format**: R-Type
-- **Opcode (decimal)**: 25
+- **Opcode (decimal)**: 13
 
 **LDB**:
 - **Description**: Loads a single 8-bit unsigned byte from a memory address into a register. The loaded byte is zero-extended to fill the 32-bit register.
 - **Syntax**: LDB \<Destination Reg.\>, [\<Address Reg.\>]
 - **Example**: LDB W2, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 26
+- **Opcode (decimal)**: 14
 
 **LDSB** (Load Signed Byte):
 - **Description**: Loads a single 8-bit signed byte from a memory address into a register. The loaded byte is sign-extended to fill the 32-bit register, preserving its arithmetic sign.
 - **Syntax**: LDSB <Destination Reg.>, [<Address Reg.>]
 - **Example**: LDSB W4, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 27
+- **Opcode (decimal)**: 15
 
 **STRB** (Store Byte):
 - **Description**: Stores the lowest 8 bits (one byte) from a register into a specific memory address. The upper 24 bits of the source register are ignored.
 - **Syntax**: STRB <Source Reg.>, [<Address Reg.>]
 - **Example**: STRB W3, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 28
+- **Opcode (decimal)**: 16
 
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).
 - **Syntax and Example**: FETCH
 - **Format**: I-Type
-- **Opcode (decimal)**: 29
+- **Opcode (decimal)**: 17
 
 ### Zepa Machine Instruction Encoding Table
 
 | **Instruction** | **Format** | **opcode** | **rd** | **rs1** | **rs2** | **funct5** | **funct6** |
 |-----------------|------------|------------|---------|---------|------------|--------|------------|
-| **ADD**         | R-Type         | 001101    | reg     | reg     | reg        | 00000    | 000000    |
-| **SUB**         | R-Type          | 001110    | reg     | reg     | reg        | 00000    | 000000    |
-| **MUL**         | R-Type          | 001111    | reg     | reg     | reg        | 00000    | 000000    |
-| **UDIV**         | R-Type          | 010000    | reg     | reg     | reg        | 00000    | 000000    |
-| **SDIV**         | R-Type          | 010001    | reg     | reg     | reg        | 00000    | 000000    |
-| **CMP**         | R-Type          | 010010    | 00000     | reg     | reg        | 00000    | 000000    |
-| **JMPR**         | R-Type          | 010100    | 00000     | reg     | 00000      | 00000    | 000000    |
-| **LOAD**        | R-Type          | 011000       | 00000     | reg        | reg    | 00000    | 000000    |
-| **STORE**        | R-Type          | 011001       | 00000     | reg        | reg    | 00000    | 000000    |
-| **LDB**          | R-Type          | 011010       | 00000     | reg        | reg    | 00000    | 000000    |
-| **LDSB**         | R-Type          | 011011       | 00000     | reg        | reg    | 00000    | 000000    |
-| **STRB**         | R-Type          | 011100       | 00000     | reg        | reg    | 00000    | 000000    |
-
+| **ADD** | R-Type     | 000001     | reg     | reg     | reg        | 00000  | 000000     |
+| **SUB** | R-Type     | 000010     | reg     | reg     | reg        | 00000  | 000000     |
+| **MUL** | R-Type     | 000011     | reg     | reg     | reg        | 00000  | 000000     |
+| **UDIV** | R-Type     | 000100     | reg     | reg     | reg        | 00000  | 000000     |
+| **SDIV** | R-Type     | 000101     | reg     | reg     | reg        | 00000  | 000000     |
+| **CMP** | R-Type     | 000110     | 00000   | reg     | reg        | 00000  | 000000     |
+| **JMPR** | R-Type     | 001000     | 00000   | reg     | 00000      | 00000  | 000000     |
+| **LOAD** | R-Type     | 001100     | 00000   | reg     | reg        | 00000  | 000000     |
+| **STORE** | R-Type     | 001101     | 00000   | reg     | reg        | 00000  | 000000     |
+| **LDB** | R-Type     | 001110     | 00000   | reg     | reg        | 00000  | 000000     |
+| **LDSB** | R-Type     | 001111     | 00000   | reg     | reg        | 00000  | 000000     |
+| **STRB** | R-Type     | 010000     | 00000   | reg     | reg        | 00000  | 000000     |
 
 
 | **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate** | **funct5** |
-|-----------------|------------|---------------|---------|------------|--------|
-| **MV**          | I-Type          | 001100      | reg     | 16bit constant         | 00000    |
-| **JUMP**        | I-Type          | 010011      | 00000     | 16bit address        | 00000    |
-| **BEQ**         | I-Type          | 010101       | 00000     | 16bit offset         | 00000    |
-| **BLT**         | I-Type          | 010110       | 00000     | 16bit offset         | 00000    |
-| **BGT**         | I-Type          | 010111       | 00000     | 16bit offset         | 00000    |
-| **FETCH**        | I-Type          | 011101       | 00000     | 0000000000000000        | 00000    |
+|-----------------|------------|------------|------------|---------------|------------|
+| **MV** | I-Type     | 000000     | reg        | 16bit constant| 00000      |
+| **JUMP** | I-Type     | 000111     | 00000      | 16bit address | 00000      |
+| **BEQ** | I-Type     | 001001     | 00000      | 16bit offset  | 00000      |
+| **BLT** | I-Type     | 001010     | 00000      | 16bit offset  | 00000      |
+| **BGT** | I-Type     | 001011     | 00000      | 16bit offset  | 00000      |
+| **FETCH** | I-Type     | 010001     | 00000      | 0000000000000000| 00000      |
 
 
 ## References
