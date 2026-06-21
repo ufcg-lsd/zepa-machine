@@ -18,7 +18,7 @@ For the specific case of this machine, six registers were defined, mainly to ass
 - **Memory Data Register (MDR) [31:0]**: Holds the data being transferred from or to memory.
 - **Stack Pointer (SP) [31:0]**: Points to the top of the stack, used to manage function calls and local variable storage.
 - **Memory Address Register (MAR) [31:0]**: Stores the memory address where reading or writing operations will be executed.
-- **Status Register (SR) [31:0]**: Stores flags that indicate the result of test operations executed. The first bits are reserved for the G, L and Z flags, and the last ones are flexible.
+- **Status Register (SR) [31:0]**: Stores flags that indicate the result of test operations executed and current CPU flags. The first three bits are reserved for the G, L and Z flags, bit 3 indicates whether the CPU is in kernel mode (0) or in user mode (1), and bit 4 indicates if interruptions are disabled (0) or enabled (1).
 
 ## Encoding
 For this machine, the word size, instruction size, and register size were defined to be 32 bits.

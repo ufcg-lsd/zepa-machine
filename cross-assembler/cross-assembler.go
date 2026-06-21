@@ -21,7 +21,7 @@ const (
 	W4
 	W5
 	_
-	_
+	SP
 	_
 	_
 	_
@@ -55,6 +55,7 @@ var registerMap = map[string]Register{
 	"W3": W3,
 	"W4": W4,
 	"W5": W5,
+	"SP": SP,
 }
 
 // Map instruction names to Opcode values

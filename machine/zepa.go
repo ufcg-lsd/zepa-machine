@@ -181,6 +181,14 @@ func (m *Machine) strb(inst Instruction) {
 	m.memory[m.registers[inst.rs2]] = byte(m.registers[inst.rs1])
 }
 
+func (m *Machine) isKernelMode() bool {
+	return m.registers[sr]&0x8 == 0
+}
+
+func (m *Machine) isInterruptEnabled() bool {
+	return m.registers[sr]&0x8 == 1
+}
+
 func (m *Machine) fetch() {
 	var completeInstruction uint32 = 0
 	for i := 0; i < 4; i++ {
