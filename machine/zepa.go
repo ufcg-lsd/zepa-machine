@@ -1,5 +1,7 @@
 package machine
 
+import "slices"
+
 type Register uint32
 type Opcode byte
 type Operation func(m *Machine, inst Instruction)
@@ -17,6 +19,10 @@ const (
 	sr
 	mdr
 	mar
+	ecr
+	esa
+	esr
+	epc
 )
 
 const (
@@ -58,6 +64,15 @@ const (
 	funct5BitMask    = 0b11111
 	funct6BitMask    = 0b111111
 )
+
+const (
+	clockInt uint32 = iota
+	inputInt
+	syscallInt
+	faultInt
+)
+
+const TIMER_INTERVAL = 128
 
 var operations = map[byte]Operation{
 	byte(MV):    (*Machine).mv,
@@ -183,6 +198,21 @@ func (m *Machine) strb(inst Instruction) {
 	m.memory[m.registers[inst.rs2]] = byte(m.registers[inst.rs1])
 }
 
+func (m *Machine) exception(cause uint32) {
+	m.registers[ecr] = cause
+
+	m.registers[esr] = m.registers[sr]
+	m.registers[sr] = 0
+
+	m.registers[epc] = m.registers[pc]
+	m.registers[pc] = m.registers[esa]
+}
+
+func (m *Machine) checkIllegalRegisterAccess(inst Instruction) bool {
+	priviligedRegisters := []Register{ecr, esa, esr, epc}
+	return !m.isKernelMode() && (slices.Contains(priviligedRegisters, inst.rd) || slices.Contains(priviligedRegisters, inst.rs1) || slices.Contains(priviligedRegisters, inst.rs2))
+}
+
 func (m *Machine) isKernelMode() bool {
 	return m.registers[sr]&0x8 == 0
 }
@@ -284,13 +314,30 @@ func (m *Machine) execute(inst Instruction) {
 }
 
 func (m *Machine) Boot() {
+
+	instructionsExcecuted := 0
+
 	for {
+
+		if m.isInterruptEnabled() && instructionsExcecuted%TIMER_INTERVAL == 0 {
+			m.exception(clockInt)
+		}
+
 		m.fetch()
 		if m.isEndOfProgram() {
 			break
 		}
 		decodedInstruction := m.decode()
+
+		if m.isInterruptEnabled() {
+			if m.checkIllegalRegisterAccess(decodedInstruction) {
+				m.exception(faultInt)
+				continue
+			}
+		}
+
 		m.execute(decodedInstruction)
+		instructionsExcecuted++
 	}
 }
 

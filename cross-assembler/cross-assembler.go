@@ -26,6 +26,10 @@ const (
 	_
 	_
 	_
+	ECR
+	ESA
+	ESR
+	EPC
 )
 
 const (
