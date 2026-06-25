@@ -21,10 +21,20 @@ const (
 	MV Opcode = iota
 	ADD
 	SUB
+	MUL
+	UDIV
+	SDIV
 	CMP
 	JUMP
+	JMPR
+	BEQ
+	BLT
+	BGT
 	LOAD
 	STORE
+	LDB
+	LDSB
+	STRB
 	FETCH
 )
 
@@ -51,10 +61,20 @@ var operations = map[byte]Operation{
 	byte(MV):    (*Machine).mv,
 	byte(ADD):   (*Machine).add,
 	byte(SUB):   (*Machine).sub,
+	byte(MUL):   (*Machine).mul,
+	byte(UDIV):  (*Machine).udiv,
+	byte(SDIV):  (*Machine).sdiv,
 	byte(CMP):   (*Machine).cmp,
 	byte(JUMP):  (*Machine).jump,
+	byte(JMPR):  (*Machine).jmpr,
+	byte(BEQ):   (*Machine).beq,
+	byte(BLT):   (*Machine).blt,
+	byte(BGT):   (*Machine).bgt,
 	byte(LOAD):  (*Machine).load,
 	byte(STORE): (*Machine).store,
+	byte(LDB):   (*Machine).ldb,
+	byte(LDSB):  (*Machine).ldsb,
+	byte(STRB):  (*Machine).strb,
 }
 
 type Instruction struct {
@@ -73,7 +93,7 @@ type Machine struct {
 }
 
 func (m *Machine) mv(inst Instruction) {
-	m.registers[inst.rd] = uint32(inst.immediate)
+	m.registers[inst.rd] = uint32(int16(inst.immediate))
 }
 
 func (m *Machine) add(inst Instruction) {
@@ -84,26 +104,81 @@ func (m *Machine) sub(inst Instruction) {
 	m.registers[inst.rd] = m.registers[inst.rs1] - m.registers[inst.rs2]
 }
 
+func (m *Machine) mul(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] * m.registers[inst.rs2]
+}
+
+func (m *Machine) udiv(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] / m.registers[inst.rs2]
+}
+
+func (m *Machine) sdiv(inst Instruction) {
+	m.registers[inst.rd] = uint32(int32(m.registers[inst.rs1]) / int32(m.registers[inst.rs2]))
+}
+
 func (m *Machine) cmp(inst Instruction) {
 	if m.registers[inst.rs1] == m.registers[inst.rs2] {
-		m.registers[sr] = 0
-	} else if m.registers[inst.rs1] > m.registers[inst.rs2] {
-		m.registers[sr] = 2
-	} else {
 		m.registers[sr] = 1
+	} else if m.registers[inst.rs1] > m.registers[inst.rs2] {
+		m.registers[sr] = 4
+	} else {
+		m.registers[sr] = 2
 	}
 }
 
 func (m *Machine) jump(inst Instruction) {
-	m.registers[pc] = uint32(inst.immediate)
+	m.registers[pc] += (uint32(int16(inst.immediate)) - 1) * 4
+}
+
+func (m *Machine) jmpr(inst Instruction) {
+	m.registers[pc] = m.registers[inst.rs1]
+}
+
+func (m *Machine) beq(inst Instruction) {
+	if m.registers[sr] == 1 {
+		m.jump(inst)
+	}
+}
+
+func (m *Machine) blt(inst Instruction) {
+	if m.registers[sr] == 2 {
+		m.jump(inst)
+	}
+}
+
+func (m *Machine) bgt(inst Instruction) {
+	if m.registers[sr] == 4 {
+		m.jump(inst)
+	}
 }
 
 func (m *Machine) load(inst Instruction) {
-	m.registers[inst.rd] = uint32(m.memory[inst.immediate])
+	addr := m.registers[inst.rs2]
+	m.registers[inst.rs1] = 0
+
+	for i := uint32(0); i < 4; i++ {
+		m.registers[inst.rs1] |= (uint32(m.memory[addr+i]) << (i * 8))
+	}
 }
 
 func (m *Machine) store(inst Instruction) {
-	m.memory[inst.immediate] = byte(m.registers[inst.rd])
+	addr := m.registers[inst.rs2]
+
+	for i := uint32(0); i < 4; i++ {
+		m.memory[addr+i] = byte(m.registers[inst.rs1] >> (i * 8))
+	}
+}
+
+func (m *Machine) ldb(inst Instruction) {
+	m.registers[inst.rs1] = uint32(m.memory[m.registers[inst.rs2]])
+}
+
+func (m *Machine) ldsb(inst Instruction) {
+	m.registers[inst.rs1] = uint32(int8(m.memory[m.registers[inst.rs2]]))
+}
+
+func (m *Machine) strb(inst Instruction) {
+	m.memory[m.registers[inst.rs2]] = byte(m.registers[inst.rs1])
 }
 
 func (m *Machine) fetch() {
@@ -185,9 +260,9 @@ func (m *Machine) decode() Instruction {
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
-	case ADD, SUB, CMP:
+	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE:
 		return m.decodeRTypeInst(instruction)
-	case MV, JUMP, LOAD, STORE:
+	case MV, JUMP, BEQ, BLT, BGT:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)
