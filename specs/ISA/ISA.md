@@ -224,6 +224,10 @@ These flags can be used by instructions to make decisions that can change the pr
 | **BGT** | I-Type     | 001011     | 00000      | 16bit offset  | 00000      |
 | **FETCH** | I-Type     | 010001     | 00000      | 0000000000000000| 00000      |
 
+| **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate** | **funct5** |
+|-----------------|------------|------------|------------|---------------|------------|
+| **MRET** | SYSTEM     | 011110     | 00000      | 0000000000000000| 00000      |
+
 
 ## References
 - [Bit by Bit: Processadores Cortex-M0+ - Arquitetura do Conjunto de Instruções (ISA)](https://bit-by-bit.gitbook.io/embedded-systems/processadores-cortex-m0+/arquitetura-do-conjunto-de-instrucoes-isa)

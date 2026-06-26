@@ -54,7 +54,7 @@ func TestDecode(t *testing.T) {
 
 func TestMV(t *testing.T) {
 	machine := NewMachine(2048)
-	inst := Instruction{opcode: (*Machine).mv, rd: w0, immediate: 0xFF}
+	inst := Instruction{operation: (*Machine).mv, rd: w0, immediate: 0xFF}
 	machine.execute(inst)
 
 	if machine.registers[w0] != 0xFF {
@@ -66,7 +66,7 @@ func TestADD(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.registers[w1] = 66
 	machine.registers[w2] = 3000
-	inst := Instruction{opcode: (*Machine).add, rd: w0, rs1: w1, rs2: w2}
+	inst := Instruction{operation: (*Machine).add, rd: w0, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.registers[w0] != 3066 {
@@ -78,7 +78,7 @@ func TestSUB(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.registers[w1] = 30
 	machine.registers[w2] = 10
-	inst := Instruction{opcode: (*Machine).sub, rd: w0, rs1: w1, rs2: w2}
+	inst := Instruction{operation: (*Machine).sub, rd: w0, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.registers[w0] != 20 {
@@ -90,7 +90,7 @@ func TestMUL(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.registers[w1] = 12
 	machine.registers[w2] = 4
-	inst := Instruction{opcode: (*Machine).mul, rd: w0, rs1: w1, rs2: w2}
+	inst := Instruction{operation: (*Machine).mul, rd: w0, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.registers[w0] != 48 {
@@ -102,7 +102,7 @@ func TestUDIV(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.registers[w1] = 20
 	machine.registers[w2] = 3
-	inst := Instruction{opcode: (*Machine).udiv, rd: w0, rs1: w1, rs2: w2}
+	inst := Instruction{operation: (*Machine).udiv, rd: w0, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.registers[w0] != 6 {
@@ -117,7 +117,7 @@ func TestSDIV(t *testing.T) {
 	var denominator int32 = -5
 	machine.registers[w1] = uint32(numerator)
 	machine.registers[w2] = 3
-	inst := Instruction{opcode: (*Machine).sdiv, rd: w0, rs1: w1, rs2: w2}
+	inst := Instruction{operation: (*Machine).sdiv, rd: w0, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	expected := uint32(denominator)
@@ -129,7 +129,7 @@ func TestSDIV(t *testing.T) {
 
 func TestJUMP(t *testing.T) {
 	machine := NewMachine(2048)
-	inst := Instruction{opcode: (*Machine).jump, immediate: 0xA}
+	inst := Instruction{operation: (*Machine).jump, immediate: 0xA}
 	machine.execute(inst)
 
 	if machine.registers[pc] != 36 {
@@ -143,7 +143,7 @@ func TestJMPR(t *testing.T) {
 	expectedAddress := uint32(128)
 	machine.registers[w5] = expectedAddress
 
-	inst := Instruction{opcode: (*Machine).jmpr, rs1: w5}
+	inst := Instruction{operation: (*Machine).jmpr, rs1: w5}
 	machine.execute(inst)
 
 	if machine.registers[pc] != expectedAddress {
@@ -153,7 +153,7 @@ func TestJMPR(t *testing.T) {
 
 func TestBEQ(t *testing.T) {
 	machine := NewMachine(2048)
-	inst := Instruction{opcode: (*Machine).beq, immediate: 5} // Jump offset of 5 ((5-1) * 4 = 16 bytes)
+	inst := Instruction{operation: (*Machine).beq, immediate: 5} // Jump offset of 5 ((5-1) * 4 = 16 bytes)
 
 	machine.registers[pc] = 100
 	machine.registers[sr] = 1
@@ -174,7 +174,7 @@ func TestBEQ(t *testing.T) {
 
 func TestBLT(t *testing.T) {
 	machine := NewMachine(2048)
-	inst := Instruction{opcode: (*Machine).blt, immediate: 3} // Jump offset of 3 ((3-1) * 4 = 8 bytes)
+	inst := Instruction{operation: (*Machine).blt, immediate: 3} // Jump offset of 3 ((3-1) * 4 = 8 bytes)
 
 	machine.registers[pc] = 50
 	machine.registers[sr] = 2
@@ -196,7 +196,7 @@ func TestBLT(t *testing.T) {
 func TestBGT(t *testing.T) {
 	machine := NewMachine(2048)
 	offset := -4
-	inst := Instruction{opcode: (*Machine).bgt, immediate: uint16(offset)} // Offset of -4 ((-4-1) * 4 = -20 bytes)
+	inst := Instruction{operation: (*Machine).bgt, immediate: uint16(offset)} // Offset of -4 ((-4-1) * 4 = -20 bytes)
 
 	machine.registers[pc] = 200
 	machine.registers[sr] = 4
@@ -219,7 +219,7 @@ func TestLOAD(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.memory[256] = 42 // Definindo um valor na memória para ser carregado
 	machine.registers[w2] = 256
-	inst := Instruction{opcode: (*Machine).load, rs1: w1, rs2: w2}
+	inst := Instruction{operation: (*Machine).load, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.registers[w1] != 42 {
@@ -231,7 +231,7 @@ func TestSTORE(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.registers[w1] = 65
 	machine.registers[w2] = 100
-	inst := Instruction{opcode: (*Machine).store, rs1: w1, rs2: w2}
+	inst := Instruction{operation: (*Machine).store, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.memory[100] != 65 {
@@ -243,7 +243,7 @@ func TestLDB(t *testing.T) {
 	machine := NewMachine(2048)
 	machine.memory[256] = 200
 	machine.registers[w2] = 256
-	inst := Instruction{opcode: (*Machine).ldb, rs1: w1, rs2: w2}
+	inst := Instruction{operation: (*Machine).ldb, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.registers[w1] != 200 {
@@ -256,7 +256,7 @@ func TestLDSB(t *testing.T) {
 	value := -66
 	machine.memory[256] = byte(value)
 	machine.registers[w2] = 256
-	inst := Instruction{opcode: (*Machine).ldsb, rs1: w1, rs2: w2}
+	inst := Instruction{operation: (*Machine).ldsb, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	// We expect the CPU to sign-extend the byte to a 32-bit integer (-66)
@@ -273,7 +273,7 @@ func TestSTRB(t *testing.T) {
 	// STRB should only extract and store the lowest byte (0xDD = 221).
 	machine.registers[w1] = 0xAABBCCDD
 	machine.registers[w2] = 100
-	inst := Instruction{opcode: (*Machine).strb, rs1: w1, rs2: w2}
+	inst := Instruction{operation: (*Machine).strb, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
 	if machine.memory[100] != 0xDD {
