@@ -43,8 +43,8 @@ const (
 	LDB
 	LDSB
 	STRB
-	FETCH
 	MRET
+	FETCH
 )
 
 const (
@@ -75,30 +75,29 @@ const (
 
 const TIMER_INTERVAL = 128
 
-var operations = map[byte]Operation{
-	byte(MV):    (*Machine).mv,
-	byte(ADD):   (*Machine).add,
-	byte(SUB):   (*Machine).sub,
-	byte(MUL):   (*Machine).mul,
-	byte(UDIV):  (*Machine).udiv,
-	byte(SDIV):  (*Machine).sdiv,
-	byte(CMP):   (*Machine).cmp,
-	byte(JUMP):  (*Machine).jump,
-	byte(JMPR):  (*Machine).jmpr,
-	byte(BEQ):   (*Machine).beq,
-	byte(BLT):   (*Machine).blt,
-	byte(BGT):   (*Machine).bgt,
-	byte(LOAD):  (*Machine).load,
-	byte(STORE): (*Machine).store,
-	byte(LDB):   (*Machine).ldb,
-	byte(LDSB):  (*Machine).ldsb,
-	byte(STRB):  (*Machine).strb,
-	byte(MRET):  (*Machine).mret,
+var operations = map[Opcode]Operation{
+	MV:    (*Machine).mv,
+	ADD:   (*Machine).add,
+	SUB:   (*Machine).sub,
+	MUL:   (*Machine).mul,
+	UDIV:  (*Machine).udiv,
+	SDIV:  (*Machine).sdiv,
+	CMP:   (*Machine).cmp,
+	JUMP:  (*Machine).jump,
+	JMPR:  (*Machine).jmpr,
+	BEQ:   (*Machine).beq,
+	BLT:   (*Machine).blt,
+	BGT:   (*Machine).bgt,
+	LOAD:  (*Machine).load,
+	STORE: (*Machine).store,
+	LDB:   (*Machine).ldb,
+	LDSB:  (*Machine).ldsb,
+	STRB:  (*Machine).strb,
+	MRET:  (*Machine).mret,
 }
 
 type Instruction struct {
 	opcode    Opcode
-	operation func(m *Machine, inst Instruction)
 	rd        Register
 	rs1       Register
 	rs2       Register
@@ -261,16 +260,13 @@ func (m *Machine) decodeRTypeInst(instruction uint32) Instruction {
 	funct5 := (instruction >> (uint32(offSetFunct5))) & funct5BitMask
 	funct6 := (instruction >> (uint32(offSetFunct6))) & funct6BitMask
 
-	operation := operations[byte(opcode)]
-
 	return Instruction{
-		opcode:    Opcode(opcode),
-		operation: operation,
-		rd:        Register(rd),
-		rs1:       Register(rs1),
-		rs2:       Register(rs2),
-		funct5:    byte(funct5),
-		funct6:    byte(funct6),
+		opcode: Opcode(opcode),
+		rd:     Register(rd),
+		rs1:    Register(rs1),
+		rs2:    Register(rs2),
+		funct5: byte(funct5),
+		funct6: byte(funct6),
 	}
 }
 
@@ -285,11 +281,8 @@ func (m *Machine) decodeITypeInst(instruction uint32) Instruction {
 	immediate := (instruction >> (uint32(offSetImmediate))) & immediateBitMask
 	funct5 := (instruction >> (uint32(offSetFunct5))) & funct5BitMask
 
-	operation := operations[byte(opcode)]
-
 	return Instruction{
 		opcode:    Opcode(opcode),
-		operation: operation,
 		rd:        Register(rdRs1),
 		immediate: uint16(immediate),
 		funct5:    byte(funct5),
@@ -318,7 +311,7 @@ func (m *Machine) decode() Instruction {
 	switch opcode {
 	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE:
 		return m.decodeRTypeInst(instruction)
-	case MV, JUMP, BEQ, BLT, BGT:
+	case MV, JUMP, BEQ, BLT, BGT, LDB, LDSB, STRB, MRET:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)
@@ -326,7 +319,7 @@ func (m *Machine) decode() Instruction {
 }
 
 func (m *Machine) execute(inst Instruction) {
-	inst.operation(m, inst)
+	operations[inst.opcode](m, inst)
 }
 
 func (m *Machine) Boot() {
