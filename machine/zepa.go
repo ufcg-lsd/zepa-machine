@@ -309,9 +309,9 @@ func (m *Machine) decode() Instruction {
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
-	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE:
+	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE, LDB, LDSB, STRB:
 		return m.decodeRTypeInst(instruction)
-	case MV, JUMP, BEQ, BLT, BGT, LDB, LDSB, STRB, MRET:
+	case MV, JUMP, BEQ, BLT, BGT, MRET:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)
