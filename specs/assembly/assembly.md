@@ -288,7 +288,7 @@ MRET
 
 **Example:**
 ```
-MRET   ; Return from an exceotuib / interruption
+MRET   ; Return from an exception / interruption
 ```
 
 ## References
