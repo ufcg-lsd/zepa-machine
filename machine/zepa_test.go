@@ -311,3 +311,45 @@ func TestMRET(t *testing.T) {
 		t.Errorf("Expected pc to be restored to %d, got %d", expectedPC, machine.registers[pc])
 	}
 }
+
+func TestSYSCALL(t *testing.T) {
+	machine := NewMachine(2048)
+
+	// Set up the initial state before the syscall
+	initialPC := uint32(256)
+	initialSR := uint32(1)
+	expectedESA := uint32(512)
+
+	machine.registers[pc] = initialPC
+	machine.registers[sr] = initialSR
+	machine.registers[esa] = expectedESA
+
+	syscallCode := uint16(10)
+	inst := Instruction{opcode: SYSCALL, immediate: syscallCode}
+
+	machine.execute(inst)
+
+	if machine.registers[w5] != uint32(syscallCode) {
+		t.Errorf("Expected w5 to hold syscall code %d, got %d", syscallCode, machine.registers[w5])
+	}
+
+	if machine.registers[ecr] != syscallInt {
+		t.Errorf("Expected ecr to be %d (syscallInt), got %d", syscallInt, machine.registers[ecr])
+	}
+
+	if machine.registers[esr] != initialSR {
+		t.Errorf("Expected esr to back up initial sr %d, got %d", initialSR, machine.registers[esr])
+	}
+
+	if machine.registers[sr] != 0 {
+		t.Errorf("Expected sr to be set to 0, got %d", machine.registers[sr])
+	}
+
+	if machine.registers[epc] != initialPC {
+		t.Errorf("Expected epc to back up initial pc %d, got %d", initialPC, machine.registers[epc])
+	}
+
+	if machine.registers[pc] != expectedESA {
+		t.Errorf("Expected pc to jump to esa %d, got %d", expectedESA, machine.registers[pc])
+	}
+}
