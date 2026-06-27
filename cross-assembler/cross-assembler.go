@@ -51,6 +51,7 @@ const (
 	LDB_OPCODE
 	LDSB_OPCODE
 	STRB_OPCODE
+	MRET_OPCODE
 )
 
 // Map register names to Register values
@@ -83,6 +84,7 @@ var opcodeMap = map[string]Opcode{
 	"LDB":   LDB_OPCODE,
 	"LDSB":  LDSB_OPCODE,
 	"STRB":  STRB_OPCODE,
+	"MRET":  MRET_OPCODE,
 }
 
 // Define instruction format and function codes for each type
@@ -122,6 +124,7 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 	LDB_OPCODE:   newInstructionSpec("R-Type", LDB_OPCODE),
 	LDSB_OPCODE:  newInstructionSpec("R-Type", LDSB_OPCODE),
 	STRB_OPCODE:  newInstructionSpec("R-Type", STRB_OPCODE),
+	MRET_OPCODE:  newInstructionSpec("I-Type", MRET_OPCODE),
 }
 
 // Common fields used across all instruction types
@@ -374,8 +377,11 @@ func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 		if err != nil {
 			return 0, err
 		}
+	case 0:
+		rd_rs1 = 0
+		immediate = 0
 	default:
-		return 0, fmt.Errorf("I-Type instruction expects 1 or 2 operands, got %d", len(operands))
+		return 0, fmt.Errorf("I-Type instruction expects 0, 1 or 2 operands, got %d", len(operands))
 	}
 
 	// Encode the I-Type instruction by combining the opcode, register, and immediate value

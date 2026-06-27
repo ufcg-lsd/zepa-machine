@@ -278,6 +278,19 @@ STRB <Source Reg.>, [< Address Reg.>]
 STRB W1, [W2]   ; Store only the lowest byte of register W1 into the memory address inside W2
 ```
 
+### MRET (Machine Return)
+Return from an exception. Restores the processor to its pre-exception state by copying the Exception Status Register (ESR) back into the Status Register (SR), and the Exception Program Counter (EPC) back into the Program Counter (PC).
+
+**Syntax:**
+```
+MRET
+```
+
+**Example:**
+```
+MRET   ; Return from an exceotuib / interruption
+```
+
 ## References
 
 - [ARM Assembly](https://armasm.com/)

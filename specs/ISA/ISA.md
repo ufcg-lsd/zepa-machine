@@ -190,6 +190,12 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Format**: R-Type
 - **Opcode (decimal)**: 16
 
+**MRET**
+- **Description**: Return from an exception. Restores the processor to its pre-exception state by copying the Exception Status Register (ESR) back into the Status Register (SR), and the Exception Program Counter (EPC) back into the Program Counter (PC).
+- **Syntax and Example**: MRET
+- **Format**: I-Type
+- **Opcode (decimal)**: 17
+
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).

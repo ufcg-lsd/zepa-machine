@@ -390,3 +390,33 @@ func RunAssemblerFromReader(reader *bytes.Buffer) ([]byte, error) {
 	}
 	return ConvertInstructionsToBinary(instrs)
 }
+
+func TestMret(t *testing.T) {
+	assemblyFilePath := "../asm/samples/mret.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Error reading the assembly file: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
+
+	memory, err := RunAssemblerFromReader(file)
+	if err != nil {
+		t.Fatalf("Error running the assembler: %v", err)
+	}
+
+	expectedMemory := []byte{
+		0b01000100, 0b00000000, 0b00000000, 0b00000000, // MRET
+	}
+
+	if len(memory) != len(expectedMemory) {
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
+	}
+
+	for i, byteVal := range memory {
+		if byteVal != expectedMemory[i] {
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
+		}
+	}
+}
