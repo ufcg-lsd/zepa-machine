@@ -196,12 +196,18 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Format**: I-Type
 - **Opcode (decimal)**: 17
 
+**SYSCALL**
+- **Description**: Triggers a synchronous exception to transfer control to the operating system's exception to request privileged services, the immediate code is put into W5.
+- **Syntax and Example**: SYSCALL #2
+- **Format**: I-Type
+- **Opcode (decimal)**: 18
+
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).
 - **Syntax and Example**: FETCH
 - **Format**: I-Type
-- **Opcode (decimal)**: 18
+- **Opcode (decimal)**: 19
 
 ### Zepa Machine Instruction Encoding Table
 
@@ -229,7 +235,8 @@ These flags can be used by instructions to make decisions that can change the pr
 | **BLT** | I-Type     | 001010     | 00000      | 16bit offset  | 00000      |
 | **BGT** | I-Type     | 001011     | 00000      | 16bit offset  | 00000      |
 | **MRET** | I-Type     | 010001     | 00000      | 0000000000000000| 00000      |
-| **FETCH** | I-Type     | 010010     | 00000      | 0000000000000000| 00000      |
+| **SYSCALL** | I-Type     | 010010     | 00000      | code | 00000      |
+| **FETCH** | I-Type     | 010011     | 00000      | 0000000000000000| 00000      |
 
 
 ## References

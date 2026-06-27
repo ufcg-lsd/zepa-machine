@@ -44,6 +44,7 @@ const (
 	LDSB
 	STRB
 	MRET
+	SYSCALL
 	FETCH
 )
 
@@ -76,24 +77,25 @@ const (
 const TIMER_INTERVAL = 128
 
 var operations = map[Opcode]Operation{
-	MV:    (*Machine).mv,
-	ADD:   (*Machine).add,
-	SUB:   (*Machine).sub,
-	MUL:   (*Machine).mul,
-	UDIV:  (*Machine).udiv,
-	SDIV:  (*Machine).sdiv,
-	CMP:   (*Machine).cmp,
-	JUMP:  (*Machine).jump,
-	JMPR:  (*Machine).jmpr,
-	BEQ:   (*Machine).beq,
-	BLT:   (*Machine).blt,
-	BGT:   (*Machine).bgt,
-	LOAD:  (*Machine).load,
-	STORE: (*Machine).store,
-	LDB:   (*Machine).ldb,
-	LDSB:  (*Machine).ldsb,
-	STRB:  (*Machine).strb,
-	MRET:  (*Machine).mret,
+	MV:      (*Machine).mv,
+	ADD:     (*Machine).add,
+	SUB:     (*Machine).sub,
+	MUL:     (*Machine).mul,
+	UDIV:    (*Machine).udiv,
+	SDIV:    (*Machine).sdiv,
+	CMP:     (*Machine).cmp,
+	JUMP:    (*Machine).jump,
+	JMPR:    (*Machine).jmpr,
+	BEQ:     (*Machine).beq,
+	BLT:     (*Machine).blt,
+	BGT:     (*Machine).bgt,
+	LOAD:    (*Machine).load,
+	STORE:   (*Machine).store,
+	LDB:     (*Machine).ldb,
+	LDSB:    (*Machine).ldsb,
+	STRB:    (*Machine).strb,
+	MRET:    (*Machine).mret,
+	SYSCALL: (*Machine).syscall,
 }
 
 type Instruction struct {
@@ -204,6 +206,11 @@ func (m *Machine) mret(inst Instruction) {
 	m.registers[sr] = m.registers[esr]
 
 	m.registers[pc] = m.registers[epc]
+}
+
+func (m *Machine) syscall(inst Instruction) {
+	m.registers[w5] = uint32(inst.immediate)
+	m.exception(syscallInt)
 }
 
 func (m *Machine) exception(cause uint32) {
@@ -340,6 +347,10 @@ func (m *Machine) Boot() {
 
 		if m.isInterruptEnabled() {
 			if m.checkIllegalRegisterAccess(decodedInstruction) {
+				m.exception(faultInt)
+				continue
+			}
+			if m.checkIllegalInstruction(decodedInstruction) {
 				m.exception(faultInt)
 				continue
 			}

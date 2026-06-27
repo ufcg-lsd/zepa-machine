@@ -291,6 +291,19 @@ MRET
 MRET   ; Return from an exception / interruption
 ```
 
+### SYSCALL (System Call)
+Triggers a synchronous exception to transfer control to the operating system's exception to request privileged services, the immediate code is put into W5.
+
+**Syntax:**
+```
+SYSCALL <CODE>
+```
+
+**Example:**
+```
+SYSCALL #2   ; Calls the kernel with the system call of code 2
+```
+
 ## References
 
 - [ARM Assembly](https://armasm.com/)
