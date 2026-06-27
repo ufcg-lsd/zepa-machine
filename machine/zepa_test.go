@@ -285,3 +285,29 @@ func TestSTRB(t *testing.T) {
 		t.Errorf("Expected adjacent memory at block 101 to remain 0, got %d", machine.memory[101])
 	}
 }
+
+func TestMRET(t *testing.T) {
+	machine := NewMachine(2048)
+
+	// Set up the exception state that we expect to be restored
+	expectedSR := uint32(1)    // Example status register state
+	expectedPC := uint32(1024) // Example return address
+
+	machine.registers[esr] = expectedSR
+	machine.registers[epc] = expectedPC
+
+	// Set current state to something different to ensure it gets overwritten
+	machine.registers[sr] = 0
+	machine.registers[pc] = 512
+
+	inst := Instruction{opcode: MRET}
+	machine.execute(inst)
+
+	if machine.registers[sr] != expectedSR {
+		t.Errorf("Expected sr to be restored to %d, got %d", expectedSR, machine.registers[sr])
+	}
+
+	if machine.registers[pc] != expectedPC {
+		t.Errorf("Expected pc to be restored to %d, got %d", expectedPC, machine.registers[pc])
+	}
+}
