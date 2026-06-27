@@ -43,6 +43,7 @@ const (
 	LDB
 	LDSB
 	STRB
+	MRET
 	FETCH
 )
 
@@ -74,28 +75,29 @@ const (
 
 const TIMER_INTERVAL = 128
 
-var operations = map[byte]Operation{
-	byte(MV):    (*Machine).mv,
-	byte(ADD):   (*Machine).add,
-	byte(SUB):   (*Machine).sub,
-	byte(MUL):   (*Machine).mul,
-	byte(UDIV):  (*Machine).udiv,
-	byte(SDIV):  (*Machine).sdiv,
-	byte(CMP):   (*Machine).cmp,
-	byte(JUMP):  (*Machine).jump,
-	byte(JMPR):  (*Machine).jmpr,
-	byte(BEQ):   (*Machine).beq,
-	byte(BLT):   (*Machine).blt,
-	byte(BGT):   (*Machine).bgt,
-	byte(LOAD):  (*Machine).load,
-	byte(STORE): (*Machine).store,
-	byte(LDB):   (*Machine).ldb,
-	byte(LDSB):  (*Machine).ldsb,
-	byte(STRB):  (*Machine).strb,
+var operations = map[Opcode]Operation{
+	MV:    (*Machine).mv,
+	ADD:   (*Machine).add,
+	SUB:   (*Machine).sub,
+	MUL:   (*Machine).mul,
+	UDIV:  (*Machine).udiv,
+	SDIV:  (*Machine).sdiv,
+	CMP:   (*Machine).cmp,
+	JUMP:  (*Machine).jump,
+	JMPR:  (*Machine).jmpr,
+	BEQ:   (*Machine).beq,
+	BLT:   (*Machine).blt,
+	BGT:   (*Machine).bgt,
+	LOAD:  (*Machine).load,
+	STORE: (*Machine).store,
+	LDB:   (*Machine).ldb,
+	LDSB:  (*Machine).ldsb,
+	STRB:  (*Machine).strb,
+	MRET:  (*Machine).mret,
 }
 
 type Instruction struct {
-	opcode    func(m *Machine, inst Instruction)
+	opcode    Opcode
 	rd        Register
 	rs1       Register
 	rs2       Register
@@ -198,6 +200,12 @@ func (m *Machine) strb(inst Instruction) {
 	m.memory[m.registers[inst.rs2]] = byte(m.registers[inst.rs1])
 }
 
+func (m *Machine) mret(inst Instruction) {
+	m.registers[sr] = m.registers[esr]
+
+	m.registers[pc] = m.registers[epc]
+}
+
 func (m *Machine) exception(cause uint32) {
 	m.registers[ecr] = cause
 
@@ -211,6 +219,11 @@ func (m *Machine) exception(cause uint32) {
 func (m *Machine) checkIllegalRegisterAccess(inst Instruction) bool {
 	priviligedRegisters := []Register{ecr, esa, esr, epc}
 	return !m.isKernelMode() && (slices.Contains(priviligedRegisters, inst.rd) || slices.Contains(priviligedRegisters, inst.rs1) || slices.Contains(priviligedRegisters, inst.rs2))
+}
+
+func (m *Machine) checkIllegalInstruction(inst Instruction) bool {
+	priviligedInstructions := []Opcode{MRET}
+	return !m.isKernelMode() && slices.Contains(priviligedInstructions, inst.opcode)
 }
 
 func (m *Machine) isKernelMode() bool {
@@ -247,10 +260,8 @@ func (m *Machine) decodeRTypeInst(instruction uint32) Instruction {
 	funct5 := (instruction >> (uint32(offSetFunct5))) & funct5BitMask
 	funct6 := (instruction >> (uint32(offSetFunct6))) & funct6BitMask
 
-	operation := operations[byte(opcode)]
-
 	return Instruction{
-		opcode: operation,
+		opcode: Opcode(opcode),
 		rd:     Register(rd),
 		rs1:    Register(rs1),
 		rs2:    Register(rs2),
@@ -270,10 +281,8 @@ func (m *Machine) decodeITypeInst(instruction uint32) Instruction {
 	immediate := (instruction >> (uint32(offSetImmediate))) & immediateBitMask
 	funct5 := (instruction >> (uint32(offSetFunct5))) & funct5BitMask
 
-	operation := operations[byte(opcode)]
-
 	return Instruction{
-		opcode:    operation,
+		opcode:    Opcode(opcode),
 		rd:        Register(rdRs1),
 		immediate: uint16(immediate),
 		funct5:    byte(funct5),
@@ -300,9 +309,9 @@ func (m *Machine) decode() Instruction {
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
-	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE:
+	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE, LDB, LDSB, STRB:
 		return m.decodeRTypeInst(instruction)
-	case MV, JUMP, BEQ, BLT, BGT:
+	case MV, JUMP, BEQ, BLT, BGT, MRET:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)
@@ -310,7 +319,7 @@ func (m *Machine) decode() Instruction {
 }
 
 func (m *Machine) execute(inst Instruction) {
-	inst.opcode(m, inst)
+	operations[inst.opcode](m, inst)
 }
 
 func (m *Machine) Boot() {

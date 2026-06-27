@@ -190,12 +190,18 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Format**: R-Type
 - **Opcode (decimal)**: 16
 
+**MRET**
+- **Description**: Return from an exception. Restores the processor to its pre-exception state by copying the Exception Status Register (ESR) back into the Status Register (SR), and the Exception Program Counter (EPC) back into the Program Counter (PC).
+- **Syntax and Example**: MRET
+- **Format**: I-Type
+- **Opcode (decimal)**: 17
+
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).
 - **Syntax and Example**: FETCH
 - **Format**: I-Type
-- **Opcode (decimal)**: 17
+- **Opcode (decimal)**: 18
 
 ### Zepa Machine Instruction Encoding Table
 
@@ -222,7 +228,8 @@ These flags can be used by instructions to make decisions that can change the pr
 | **BEQ** | I-Type     | 001001     | 00000      | 16bit offset  | 00000      |
 | **BLT** | I-Type     | 001010     | 00000      | 16bit offset  | 00000      |
 | **BGT** | I-Type     | 001011     | 00000      | 16bit offset  | 00000      |
-| **FETCH** | I-Type     | 010001     | 00000      | 0000000000000000| 00000      |
+| **MRET** | I-Type     | 010001     | 00000      | 0000000000000000| 00000      |
+| **FETCH** | I-Type     | 010010     | 00000      | 0000000000000000| 00000      |
 
 
 ## References
