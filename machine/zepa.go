@@ -23,6 +23,8 @@ const (
 	esa
 	esr
 	epc
+	base
+	limit
 )
 
 const (
@@ -175,6 +177,14 @@ func (m *Machine) bgt(inst Instruction) {
 
 func (m *Machine) load(inst Instruction) {
 	addr := m.registers[inst.rs2]
+	if !m.isKernelMode() {
+		addr = addr + m.registers[base]
+		if addr+3 >= m.registers[limit] {
+			m.exception(faultInt)
+			return
+		}
+	}
+
 	m.registers[inst.rs1] = 0
 
 	for i := uint32(0); i < 4; i++ {
@@ -184,6 +194,13 @@ func (m *Machine) load(inst Instruction) {
 
 func (m *Machine) store(inst Instruction) {
 	addr := m.registers[inst.rs2]
+	if !m.isKernelMode() {
+		addr = addr + m.registers[base]
+		if addr+3 >= m.registers[limit] {
+			m.exception(faultInt)
+			return
+		}
+	}
 
 	for i := uint32(0); i < 4; i++ {
 		m.memory[addr+i] = byte(m.registers[inst.rs1] >> (i * 8))
@@ -191,15 +208,42 @@ func (m *Machine) store(inst Instruction) {
 }
 
 func (m *Machine) ldb(inst Instruction) {
-	m.registers[inst.rs1] = uint32(m.memory[m.registers[inst.rs2]])
+	addr := m.registers[inst.rs2]
+	if !m.isKernelMode() {
+		addr = addr + m.registers[base]
+		if addr >= m.registers[limit] {
+			m.exception(faultInt)
+			return
+		}
+	}
+
+	m.registers[inst.rs1] = uint32(m.memory[addr])
 }
 
 func (m *Machine) ldsb(inst Instruction) {
-	m.registers[inst.rs1] = uint32(int8(m.memory[m.registers[inst.rs2]]))
+	addr := m.registers[inst.rs2]
+	if !m.isKernelMode() {
+		addr = addr + m.registers[base]
+		if addr >= m.registers[limit] {
+			m.exception(faultInt)
+			return
+		}
+	}
+
+	m.registers[inst.rs1] = uint32(int8(m.memory[addr]))
 }
 
 func (m *Machine) strb(inst Instruction) {
-	m.memory[m.registers[inst.rs2]] = byte(m.registers[inst.rs1])
+	addr := m.registers[inst.rs2]
+	if !m.isKernelMode() {
+		addr = addr + m.registers[base]
+		if addr >= m.registers[limit] {
+			m.exception(faultInt)
+			return
+		}
+	}
+
+	m.memory[addr] = byte(m.registers[inst.rs1])
 }
 
 func (m *Machine) mret(inst Instruction) {
@@ -224,7 +268,7 @@ func (m *Machine) exception(cause uint32) {
 }
 
 func (m *Machine) checkIllegalRegisterAccess(inst Instruction) bool {
-	priviligedRegisters := []Register{ecr, esa, esr, epc}
+	priviligedRegisters := []Register{ecr, esa, esr, epc, base, limit}
 	return !m.isKernelMode() && (slices.Contains(priviligedRegisters, inst.rd) || slices.Contains(priviligedRegisters, inst.rs1) || slices.Contains(priviligedRegisters, inst.rs2))
 }
 
@@ -330,7 +374,7 @@ func (m *Machine) execute(inst Instruction) {
 }
 
 func (m *Machine) Boot() {
-
+	m.registers[limit] = uint32(len(m.memory))
 	instructionsExcecuted := 0
 
 	for {

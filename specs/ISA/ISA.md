@@ -23,6 +23,8 @@ For the specific case of this machine, six registers were defined, mainly to ass
 - **Exception Supervisor Address (ESA) [31:0]**: Stores the base memory address of the exception supervisor routine. When an exception occurs, the CPU automatically jumps to this address so the supervisor can route execution to the appropriate specific handler.
 - **Exception Status Register (ESR) [31:0]**: Backs up the exact state of the Status Register (SR) at the moment the exception occurred.
 - **Exception Program Counter (EPC) [31:0]**: Stores the value of the Program Counter (PC) at the exact instruction where the exception occurred.
+- **Base (BASE) [31:0]**: Stores the starting physical address position of the running user process, to me managed by the MMU.
+- **Limit (LIMIT) [31:0]**: Stores the final physical address position of the running user process, to me managed by the MMU.
 
 ## Encoding
 For this machine, the word size, instruction size, and register size were defined to be 32 bits.

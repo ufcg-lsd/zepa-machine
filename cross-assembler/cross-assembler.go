@@ -30,6 +30,8 @@ const (
 	ESA
 	ESR
 	EPC
+	BASE
+	LIMIT
 )
 
 const (
