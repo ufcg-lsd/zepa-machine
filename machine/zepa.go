@@ -285,7 +285,7 @@ func (m *Machine) isInterruptEnabled() bool {
 	return m.registers[sr]&0x8 == 1
 }
 
-func (m *Machine) fetch() {
+func (m *Machine) fetch() bool {
 	var completeInstruction uint32 = 0
 
 	addr := m.registers[pc]
@@ -293,7 +293,7 @@ func (m *Machine) fetch() {
 		addr = addr + m.registers[base]
 		if addr+3 >= m.registers[limit] {
 			m.exception(faultInt)
-			return
+			return false
 		}
 	}
 
@@ -304,6 +304,7 @@ func (m *Machine) fetch() {
 		m.registers[pc] += 1
 	}
 	m.registers[ir] = completeInstruction
+	return true
 }
 
 func (m *Machine) decodeRTypeInst(instruction uint32) Instruction {
@@ -393,7 +394,10 @@ func (m *Machine) Boot() {
 			m.exception(clockInt)
 		}
 
-		m.fetch()
+		if !m.fetch() {
+			continue
+		}
+
 		if m.isEndOfProgram() {
 			break
 		}
