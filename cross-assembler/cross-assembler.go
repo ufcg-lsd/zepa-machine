@@ -20,7 +20,7 @@ const (
 	W3
 	W4
 	W5
-	_
+	PC
 	SP
 	_
 	_
@@ -59,13 +59,20 @@ const (
 
 // Map register names to Register values
 var registerMap = map[string]Register{
-	"W0": W0,
-	"W1": W1,
-	"W2": W2,
-	"W3": W3,
-	"W4": W4,
-	"W5": W5,
-	"SP": SP,
+	"W0":    W0,
+	"W1":    W1,
+	"W2":    W2,
+	"W3":    W3,
+	"W4":    W4,
+	"W5":    W5,
+	"PC":    PC,
+	"SP":    SP,
+	"ECR":   ECR,
+	"ESA":   ESA,
+	"ESR":   ESR,
+	"EPC":   EPC,
+	"BASE":  BASE,
+	"LIMIT": LIMIT,
 }
 
 // Map instruction names to Opcode values

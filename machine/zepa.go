@@ -287,10 +287,20 @@ func (m *Machine) isInterruptEnabled() bool {
 
 func (m *Machine) fetch() {
 	var completeInstruction uint32 = 0
+
+	addr := m.registers[pc]
+	if !m.isKernelMode() {
+		addr = addr + m.registers[base]
+		if addr+3 >= m.registers[limit] {
+			m.exception(faultInt)
+			return
+		}
+	}
+
 	for i := 0; i < 4; i++ {
-		currentInstructionAddress := m.registers[pc]
-		currentInstruction := m.memory[currentInstructionAddress]
+		currentInstruction := m.memory[addr]
 		completeInstruction = completeInstruction | uint32(currentInstruction)<<(24-8*i)
+		addr += 1
 		m.registers[pc] += 1
 	}
 	m.registers[ir] = completeInstruction
