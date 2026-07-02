@@ -23,11 +23,38 @@ For the specific case of this machine, six registers were defined, mainly to ass
 - **Exception Supervisor Address (ESA) [31:0]**: Stores the base memory address of the exception supervisor routine. When an exception occurs, the CPU automatically jumps to this address so the supervisor can route execution to the appropriate specific handler.
 - **Exception Status Register (ESR) [31:0]**: Backs up the exact state of the Status Register (SR) at the moment the exception occurred.
 - **Exception Program Counter (EPC) [31:0]**: Stores the value of the Program Counter (PC) at the exact instruction where the exception occurred.
-- **Base (BASE) [31:0]**: Stores the starting physical address position of the running user process, to me managed by the MMU.
-- **Limit (LIMIT) [31:0]**: Stores the final physical address position of the running user process, to me managed by the MMU.
+- **Base (BASE) [31:0]**: Stores the starting physical address position of the running user process, to be managed by the MMU.
+- **Limit (LIMIT) [31:0]**: Stores the final physical address position of the running user process, to be managed by the MMU.
+
+## Interruptions
+
+For this machine, when interruptions occur, the cause of the interruption is saved in the ecr, the status is saved in the esr, the pc is saved in the epc and is set as the esa. This machine contains 4 types of interruptions implemented:
+
+#### Clock - ID 0
+
+Triggered by an internal instruction counter. When the counter reaches a predefined number, the CPU triggers a clock interruption.
+
+#### Input - ID 1
+Triggered by a inputFlag. This interruption expects data from the buffer.
+
+#### Kill - ID 2 
+Triggered by a killFlag. This interruption expects a process identifier from the buffer.
+
+#### System Call - ID 3
+
+Triggered by the syscall instruction, its id is expected to be at w5.
+
+#### Fault - ID 4
+
+Triggered by access outside base limit, empty instruction decode, use of privileged instruction/register when in user mode.
+
+## Buffer
+Buffer is a part of the memory designed to receive outside data. Buffer is defined as the last 64KB of the memory.
+
 
 ## Encoding
 For this machine, the word size, instruction size, and register size were defined to be 32 bits.
+
 ### R-Type (Register type) format
 
 | opcode  | rd  | rs1  | rs2  | funct5  | funct6  |

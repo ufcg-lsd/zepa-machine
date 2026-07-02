@@ -79,9 +79,9 @@ const (
 const (
 	clockInt uint32 = iota
 	inputInt
+	killInt
 	syscallInt
 	faultInt
-	killInt
 )
 
 const TIMER_INTERVAL = 128
