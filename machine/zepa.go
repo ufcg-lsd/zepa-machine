@@ -188,13 +188,9 @@ func (m *Machine) bgt(inst Instruction) {
 }
 
 func (m *Machine) load(inst Instruction) {
-	addr := m.registers[inst.rs2]
-	if !m.isKernelMode() {
-		addr = addr + m.registers[base]
-		if addr+3 >= m.registers[limit] {
-			m.exception(faultInt)
-			return
-		}
+	addr, ok := m.translate(m.registers[inst.rs2], 3)
+	if !ok {
+		return
 	}
 
 	m.registers[inst.rs1] = 0
@@ -205,13 +201,9 @@ func (m *Machine) load(inst Instruction) {
 }
 
 func (m *Machine) store(inst Instruction) {
-	addr := m.registers[inst.rs2]
-	if !m.isKernelMode() {
-		addr = addr + m.registers[base]
-		if addr+3 >= m.registers[limit] {
-			m.exception(faultInt)
-			return
-		}
+	addr, ok := m.translate(m.registers[inst.rs2], 3)
+	if !ok {
+		return
 	}
 
 	for i := uint32(0); i < 4; i++ {
@@ -220,39 +212,27 @@ func (m *Machine) store(inst Instruction) {
 }
 
 func (m *Machine) ldb(inst Instruction) {
-	addr := m.registers[inst.rs2]
-	if !m.isKernelMode() {
-		addr = addr + m.registers[base]
-		if addr >= m.registers[limit] {
-			m.exception(faultInt)
-			return
-		}
+	addr, ok := m.translate(m.registers[inst.rs2], 0)
+	if !ok {
+		return
 	}
 
 	m.registers[inst.rs1] = uint32(m.memory[addr])
 }
 
 func (m *Machine) ldsb(inst Instruction) {
-	addr := m.registers[inst.rs2]
-	if !m.isKernelMode() {
-		addr = addr + m.registers[base]
-		if addr >= m.registers[limit] {
-			m.exception(faultInt)
-			return
-		}
+	addr, ok := m.translate(m.registers[inst.rs2], 0)
+	if !ok {
+		return
 	}
 
 	m.registers[inst.rs1] = uint32(int8(m.memory[addr]))
 }
 
 func (m *Machine) strb(inst Instruction) {
-	addr := m.registers[inst.rs2]
-	if !m.isKernelMode() {
-		addr = addr + m.registers[base]
-		if addr >= m.registers[limit] {
-			m.exception(faultInt)
-			return
-		}
+	addr, ok := m.translate(m.registers[inst.rs2], 0)
+	if !ok {
+		return
 	}
 
 	m.memory[addr] = byte(m.registers[inst.rs1])
@@ -267,6 +247,18 @@ func (m *Machine) mret(inst Instruction) {
 func (m *Machine) syscall(inst Instruction) {
 	m.registers[w5] = uint32(inst.immediate)
 	m.exception(syscallInt)
+}
+
+func (m *Machine) translate(virtualAddr uint32, addrOffset uint32) (uint32, bool) {
+	if !m.isKernelMode() {
+		virtualAddr = virtualAddr + m.registers[base]
+		if virtualAddr+addrOffset >= m.registers[limit] {
+			m.exception(faultInt)
+			return virtualAddr, false
+		}
+	}
+
+	return virtualAddr, true
 }
 
 func (m *Machine) exception(cause uint32) {
@@ -298,16 +290,12 @@ func (m *Machine) isInterruptEnabled() bool {
 }
 
 func (m *Machine) fetch() bool {
-	var completeInstruction uint32 = 0
-
-	addr := m.registers[pc]
-	if !m.isKernelMode() {
-		addr = addr + m.registers[base]
-		if addr+3 >= m.registers[limit] {
-			m.exception(faultInt)
-			return false
-		}
+	addr, ok := m.translate(m.registers[pc], 3)
+	if !ok {
+		return false
 	}
+
+	var completeInstruction uint32 = 0
 
 	for i := 0; i < 4; i++ {
 		currentInstruction := m.memory[addr]
