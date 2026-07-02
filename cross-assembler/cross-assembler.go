@@ -20,13 +20,21 @@ const (
 	W3
 	W4
 	W5
+	PC
+	SP
 	_
 	_
 	_
 	_
-	_
-	_
+	ECR
+	ESA
+	ESR
+	EPC
+	BASE
+	LIMIT
+)
 
+const (
 	// Define opcodes for different instructions
 	MV_OPCODE Opcode = iota
 	ADD_OPCODE
@@ -45,37 +53,49 @@ const (
 	LDB_OPCODE
 	LDSB_OPCODE
 	STRB_OPCODE
+	MRET_OPCODE
+	SYSCALL_OPCODE
 )
 
 // Map register names to Register values
 var registerMap = map[string]Register{
-	"W0": W0,
-	"W1": W1,
-	"W2": W2,
-	"W3": W3,
-	"W4": W4,
-	"W5": W5,
+	"W0":    W0,
+	"W1":    W1,
+	"W2":    W2,
+	"W3":    W3,
+	"W4":    W4,
+	"W5":    W5,
+	"PC":    PC,
+	"SP":    SP,
+	"ECR":   ECR,
+	"ESA":   ESA,
+	"ESR":   ESR,
+	"EPC":   EPC,
+	"BASE":  BASE,
+	"LIMIT": LIMIT,
 }
 
 // Map instruction names to Opcode values
 var opcodeMap = map[string]Opcode{
-	"ADD":   ADD_OPCODE,
-	"SUB":   SUB_OPCODE,
-	"MUL":   MUL_OPCODE,
-	"UDIV":  UDIV_OPCODE,
-	"SDIV":  SDIV_OPCODE,
-	"CMP":   CMP_OPCODE,
-	"MV":    MV_OPCODE,
-	"JUMP":  JUMP_OPCODE,
-	"JMPR":  JMPR_OPCODE,
-	"BEQ":   BEQ_OPCODE,
-	"BLT":   BLT_OPCODE,
-	"BGT":   BGT_OPCODE,
-	"LOAD":  LOAD_OPCODE,
-	"STORE": STORE_OPCODE,
-	"LDB":   LDB_OPCODE,
-	"LDSB":  LDSB_OPCODE,
-	"STRB":  STRB_OPCODE,
+	"ADD":     ADD_OPCODE,
+	"SUB":     SUB_OPCODE,
+	"MUL":     MUL_OPCODE,
+	"UDIV":    UDIV_OPCODE,
+	"SDIV":    SDIV_OPCODE,
+	"CMP":     CMP_OPCODE,
+	"MV":      MV_OPCODE,
+	"JUMP":    JUMP_OPCODE,
+	"JMPR":    JMPR_OPCODE,
+	"BEQ":     BEQ_OPCODE,
+	"BLT":     BLT_OPCODE,
+	"BGT":     BGT_OPCODE,
+	"LOAD":    LOAD_OPCODE,
+	"STORE":   STORE_OPCODE,
+	"LDB":     LDB_OPCODE,
+	"LDSB":    LDSB_OPCODE,
+	"STRB":    STRB_OPCODE,
+	"MRET":    MRET_OPCODE,
+	"SYSCALL": SYSCALL_OPCODE,
 }
 
 // Define instruction format and function codes for each type
@@ -98,23 +118,25 @@ func newInstructionSpec(format string, opcode Opcode) InstructionSpec {
 
 // Define the specifications for different instructions (R-Type and I-Type)
 var instructionSpecs = map[Opcode]InstructionSpec{
-	ADD_OPCODE:   newInstructionSpec("R-Type", ADD_OPCODE),
-	SUB_OPCODE:   newInstructionSpec("R-Type", SUB_OPCODE),
-	MUL_OPCODE:   newInstructionSpec("R-Type", MUL_OPCODE),
-	UDIV_OPCODE:  newInstructionSpec("R-Type", UDIV_OPCODE),
-	SDIV_OPCODE:  newInstructionSpec("R-Type", SDIV_OPCODE),
-	CMP_OPCODE:   newInstructionSpec("R-Type", CMP_OPCODE),
-	MV_OPCODE:    newInstructionSpec("I-Type", MV_OPCODE),
-	JUMP_OPCODE:  newInstructionSpec("I-Type", JUMP_OPCODE),
-	JMPR_OPCODE:  newInstructionSpec("R-Type", JMPR_OPCODE),
-	BEQ_OPCODE:   newInstructionSpec("I-Type", BEQ_OPCODE),
-	BLT_OPCODE:   newInstructionSpec("I-Type", BLT_OPCODE),
-	BGT_OPCODE:   newInstructionSpec("I-Type", BGT_OPCODE),
-	LOAD_OPCODE:  newInstructionSpec("R-Type", LOAD_OPCODE),
-	STORE_OPCODE: newInstructionSpec("R-Type", STORE_OPCODE),
-	LDB_OPCODE:   newInstructionSpec("R-Type", LDB_OPCODE),
-	LDSB_OPCODE:  newInstructionSpec("R-Type", LDSB_OPCODE),
-	STRB_OPCODE:  newInstructionSpec("R-Type", STRB_OPCODE),
+	ADD_OPCODE:     newInstructionSpec("R-Type", ADD_OPCODE),
+	SUB_OPCODE:     newInstructionSpec("R-Type", SUB_OPCODE),
+	MUL_OPCODE:     newInstructionSpec("R-Type", MUL_OPCODE),
+	UDIV_OPCODE:    newInstructionSpec("R-Type", UDIV_OPCODE),
+	SDIV_OPCODE:    newInstructionSpec("R-Type", SDIV_OPCODE),
+	CMP_OPCODE:     newInstructionSpec("R-Type", CMP_OPCODE),
+	MV_OPCODE:      newInstructionSpec("I-Type", MV_OPCODE),
+	JUMP_OPCODE:    newInstructionSpec("I-Type", JUMP_OPCODE),
+	JMPR_OPCODE:    newInstructionSpec("R-Type", JMPR_OPCODE),
+	BEQ_OPCODE:     newInstructionSpec("I-Type", BEQ_OPCODE),
+	BLT_OPCODE:     newInstructionSpec("I-Type", BLT_OPCODE),
+	BGT_OPCODE:     newInstructionSpec("I-Type", BGT_OPCODE),
+	LOAD_OPCODE:    newInstructionSpec("R-Type", LOAD_OPCODE),
+	STORE_OPCODE:   newInstructionSpec("R-Type", STORE_OPCODE),
+	LDB_OPCODE:     newInstructionSpec("R-Type", LDB_OPCODE),
+	LDSB_OPCODE:    newInstructionSpec("R-Type", LDSB_OPCODE),
+	STRB_OPCODE:    newInstructionSpec("R-Type", STRB_OPCODE),
+	MRET_OPCODE:    newInstructionSpec("I-Type", MRET_OPCODE),
+	SYSCALL_OPCODE: newInstructionSpec("I-Type", SYSCALL_OPCODE),
 }
 
 // Common fields used across all instruction types
@@ -367,8 +389,11 @@ func encodeIType(spec InstructionSpec, operands []string) (uint32, error) {
 		if err != nil {
 			return 0, err
 		}
+	case 0:
+		rd_rs1 = 0
+		immediate = 0
 	default:
-		return 0, fmt.Errorf("I-Type instruction expects 1 or 2 operands, got %d", len(operands))
+		return 0, fmt.Errorf("I-Type instruction expects 0, 1 or 2 operands, got %d", len(operands))
 	}
 
 	// Encode the I-Type instruction by combining the opcode, register, and immediate value
