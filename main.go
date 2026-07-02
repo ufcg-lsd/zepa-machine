@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	assembler "zepa-machine/cross-assembler"
 	"zepa-machine/machine"
 )
@@ -96,8 +99,37 @@ func main() {
 
 	machine := machine.NewMachine(128)
 	machine.LoadProgram(binaryCode)
-	machine.Boot()
+	go machine.Boot()
 
 	DebugRegisters(machine)
 	DebugMemory(machine)
+
+	// IO loop
+	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Println("ZEPA Machine — digite 'kill <pid>' ou 'exit'")
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		parts := strings.Fields(line)
+		if len(parts) == 0 {
+			continue
+		}
+		switch parts[0] {
+		case "kill":
+			if len(parts) < 2 {
+				fmt.Println("uso: kill <pid>")
+				continue
+			}
+			pid, err := strconv.Atoi(parts[1])
+			if err != nil {
+				fmt.Println("PID inválido")
+				continue
+			}
+			fmt.Printf("kill %d enviado\n", pid)
+
+		case "exit", "quit":
+			fmt.Println("saindo...")
+			return
+		}
+	}
+
 }

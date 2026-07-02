@@ -74,6 +74,7 @@ const (
 	inputInt
 	syscallInt
 	faultInt
+	killInt
 )
 
 const TIMER_INTERVAL = 128
@@ -113,6 +114,7 @@ type Instruction struct {
 type Machine struct {
 	memory    []byte
 	registers map[Register]uint32
+	killFlag  bool
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -390,8 +392,14 @@ func (m *Machine) Boot() {
 
 	for {
 
-		if m.isInterruptEnabled() && instructionsExcecuted%TIMER_INTERVAL == 0 {
-			m.exception(clockInt)
+		if m.isInterruptEnabled() {
+			if instructionsExcecuted%TIMER_INTERVAL == 0 {
+				m.exception(clockInt)
+			}
+
+			if m.killFlag {
+				m.exception(killInt)
+			}
 		}
 
 		if !m.fetch() {
