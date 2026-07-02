@@ -111,13 +111,15 @@ func main() {
 		return
 	}
 
-	machine := machine.NewMachine(1073741824, true)
+	debugMode := os.Args[2] == "true"
+
+	machine := machine.NewMachine(1073741824, debugMode)
 	machine.LoadProgram(binaryCode)
 	go machine.Boot()
 
 	// IO loop
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("ZEPA Machine — digite 'kill <pid>', 'input <path>' ou 'd'")
+	fmt.Println("ZEPA Machine — digite 'kill <pid>', 'input <path>' ou 'd' (debug)")
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		parts := strings.Fields(line)
@@ -156,6 +158,10 @@ func main() {
 			fmt.Printf("input enviado\n")
 
 		case "d":
+			if !machine.IsDebugMode() {
+				fmt.Printf("Máquina não está em debug mode!\n")
+				continue
+			}
 			DebugRegisters(machine)
 			DebugMemory(machine)
 			machine.Mutex.Unlock()

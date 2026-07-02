@@ -470,6 +470,10 @@ func (m *Machine) SetInputFlag() {
 	m.inputFlag = true
 }
 
+func (m *Machine) IsDebugMode() bool {
+	return m.debugFlag
+}
+
 func (m *Machine) GetRegisters() map[Register]uint32 {
 
 	return m.registers
