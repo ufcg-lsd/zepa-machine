@@ -111,7 +111,7 @@ func main() {
 		return
 	}
 
-	debugMode := os.Args[2] == "true"
+	debugMode := len(os.Args) >= 3 && os.Args[2] == "debug"
 
 	machine := machine.NewMachine(1073741824, debugMode)
 	machine.LoadProgram(binaryCode)

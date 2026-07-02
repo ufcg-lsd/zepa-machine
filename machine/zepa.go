@@ -290,11 +290,11 @@ func (m *Machine) checkIllegalInstruction(inst Instruction) bool {
 }
 
 func (m *Machine) isKernelMode() bool {
-	return m.registers[sr]&0x8 == 0
+	return m.registers[sr]&8 == 0
 }
 
 func (m *Machine) isInterruptEnabled() bool {
-	return m.registers[sr]&0x8 == 1
+	return m.registers[sr]&16 != 0
 }
 
 func (m *Machine) fetch() bool {
