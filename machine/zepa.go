@@ -1,6 +1,9 @@
 package machine
 
-import "slices"
+import (
+	"slices"
+	"sync"
+)
 
 type Register uint32
 type Opcode byte
@@ -70,6 +73,10 @@ const (
 )
 
 const (
+	bufferSize = 65536 // 64 x 1024
+)
+
+const (
 	clockInt uint32 = iota
 	inputInt
 	syscallInt
@@ -115,6 +122,9 @@ type Machine struct {
 	memory    []byte
 	registers map[Register]uint32
 	killFlag  bool
+	inputFlag bool
+	debugFlag bool
+	Mutex     sync.Mutex
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -280,11 +290,11 @@ func (m *Machine) checkIllegalInstruction(inst Instruction) bool {
 }
 
 func (m *Machine) isKernelMode() bool {
-	return m.registers[sr]&0x8 == 0
+	return m.registers[sr]&8 == 0
 }
 
 func (m *Machine) isInterruptEnabled() bool {
-	return m.registers[sr]&0x8 == 1
+	return m.registers[sr]&16 != 0
 }
 
 func (m *Machine) fetch() bool {
@@ -392,13 +402,19 @@ func (m *Machine) Boot() {
 
 	for {
 
+		if m.debugFlag {
+			m.Mutex.Lock()
+		}
+
 		if m.isInterruptEnabled() {
 			if instructionsExcecuted%TIMER_INTERVAL == 0 {
 				m.exception(clockInt)
-			}
-
-			if m.killFlag {
+			} else if m.killFlag {
 				m.exception(killInt)
+				m.killFlag = false
+			} else if m.inputFlag {
+				m.exception(inputInt)
+				m.inputFlag = false
 			}
 		}
 
@@ -407,7 +423,7 @@ func (m *Machine) Boot() {
 		}
 
 		if m.isEndOfProgram() {
-			break
+			m.exception(faultInt)
 		}
 		decodedInstruction := m.decode()
 
@@ -435,14 +451,40 @@ func (m *Machine) GetMemory() []byte {
 	return m.memory
 }
 
+func (m *Machine) LoadBuffer(buffer []byte) bool {
+	if len(buffer) > bufferSize {
+		return false
+	}
+	bufferIndex := len(m.memory) - bufferSize
+	clear(m.memory[bufferIndex:])
+	copy(m.memory[bufferIndex:], buffer)
+
+	return true
+}
+
+func (m *Machine) SetKillFlag() {
+	m.killFlag = true
+}
+
+func (m *Machine) SetInputFlag() {
+	m.inputFlag = true
+}
+
+func (m *Machine) IsDebugMode() bool {
+	return m.debugFlag
+}
+
 func (m *Machine) GetRegisters() map[Register]uint32 {
+
 	return m.registers
 }
 
-func NewMachine(memoryBytes int) *Machine {
+func NewMachine(memoryBytes int, debugFlag bool) *Machine {
 	machine := &Machine{
 		memory:    make([]byte, memoryBytes),
 		registers: make(map[Register]uint32),
+		debugFlag: debugFlag,
+		Mutex:     sync.Mutex{},
 	}
 
 	return machine

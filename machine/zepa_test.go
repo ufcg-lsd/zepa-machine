@@ -8,7 +8,7 @@ import (
 
 func TestFetch(t *testing.T) {
 
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	machine.memory[0] = 0b00110100
 	machine.memory[1] = 0b01000011
 	machine.memory[2] = 0b00001000
@@ -26,7 +26,7 @@ func TestFetch(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	machine.memory[0] = 0b00110100
 	machine.memory[1] = 0b01000011
 	machine.memory[2] = 0b00001000
@@ -53,7 +53,7 @@ func TestDecode(t *testing.T) {
 }
 
 func TestMV(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	inst := Instruction{opcode: MV, rd: w0, immediate: 0xFF}
 	machine.execute(inst)
 
@@ -63,7 +63,7 @@ func TestMV(t *testing.T) {
 }
 
 func TestADD(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	machine.registers[w1] = 66
 	machine.registers[w2] = 3000
 	inst := Instruction{opcode: ADD, rd: w0, rs1: w1, rs2: w2}
@@ -75,7 +75,7 @@ func TestADD(t *testing.T) {
 }
 
 func TestSUB(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	machine.registers[w1] = 30
 	machine.registers[w2] = 10
 	inst := Instruction{opcode: SUB, rd: w0, rs1: w1, rs2: w2}
@@ -87,7 +87,7 @@ func TestSUB(t *testing.T) {
 }
 
 func TestMUL(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	machine.registers[w1] = 12
 	machine.registers[w2] = 4
 	inst := Instruction{opcode: MUL, rd: w0, rs1: w1, rs2: w2}
@@ -99,7 +99,7 @@ func TestMUL(t *testing.T) {
 }
 
 func TestUDIV(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	machine.registers[w1] = 20
 	machine.registers[w2] = 3
 	inst := Instruction{opcode: UDIV, rd: w0, rs1: w1, rs2: w2}
@@ -111,7 +111,7 @@ func TestUDIV(t *testing.T) {
 }
 
 func TestSDIV(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 
 	var numerator int32 = -15
 	var denominator int32 = -5
@@ -128,7 +128,7 @@ func TestSDIV(t *testing.T) {
 }
 
 func TestJUMP(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	inst := Instruction{opcode: JUMP, immediate: 0xA}
 	machine.execute(inst)
 
@@ -138,7 +138,7 @@ func TestJUMP(t *testing.T) {
 }
 
 func TestJMPR(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 
 	expectedAddress := uint32(128)
 	machine.registers[w5] = expectedAddress
@@ -152,7 +152,7 @@ func TestJMPR(t *testing.T) {
 }
 
 func TestBEQ(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	inst := Instruction{opcode: BEQ, immediate: 5} // Jump offset of 5 ((5-1) * 4 = 16 bytes)
 
 	machine.registers[pc] = 100
@@ -173,7 +173,7 @@ func TestBEQ(t *testing.T) {
 }
 
 func TestBLT(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	inst := Instruction{opcode: BLT, immediate: 3} // Jump offset of 3 ((3-1) * 4 = 8 bytes)
 
 	machine.registers[pc] = 50
@@ -194,7 +194,7 @@ func TestBLT(t *testing.T) {
 }
 
 func TestBGT(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	offset := -4
 	inst := Instruction{opcode: BGT, immediate: uint16(offset)} // Offset of -4 ((-4-1) * 4 = -20 bytes)
 
@@ -216,7 +216,7 @@ func TestBGT(t *testing.T) {
 }
 
 func TestLOAD(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	machine.memory[256] = 42 // Definindo um valor na memória para ser carregado
 	machine.registers[w2] = 256
 	inst := Instruction{opcode: LOAD, rs1: w1, rs2: w2}
@@ -228,7 +228,7 @@ func TestLOAD(t *testing.T) {
 }
 
 func TestSTORE(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	machine.registers[w1] = 65
 	machine.registers[w2] = 100
 	inst := Instruction{opcode: STORE, rs1: w1, rs2: w2}
@@ -240,7 +240,7 @@ func TestSTORE(t *testing.T) {
 }
 
 func TestLDB(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	machine.memory[256] = 200
 	machine.registers[w2] = 256
 	inst := Instruction{opcode: LDB, rs1: w1, rs2: w2}
@@ -252,7 +252,7 @@ func TestLDB(t *testing.T) {
 }
 
 func TestLDSB(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	value := -66
 	machine.memory[256] = byte(value)
 	machine.registers[w2] = 256
@@ -268,7 +268,7 @@ func TestLDSB(t *testing.T) {
 }
 
 func TestSTRB(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 	// The register contains a 32-bit value.
 	// STRB should only extract and store the lowest byte (0xDD = 221).
 	machine.registers[w1] = 0xAABBCCDD
@@ -287,7 +287,7 @@ func TestSTRB(t *testing.T) {
 }
 
 func TestMRET(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 
 	// Set up the exception state that we expect to be restored
 	expectedSR := uint32(1)    // Example status register state
@@ -313,7 +313,7 @@ func TestMRET(t *testing.T) {
 }
 
 func TestSYSCALL(t *testing.T) {
-	machine := NewMachine(2048)
+	machine := NewMachine(2048, false)
 
 	// Set up the initial state before the syscall
 	initialPC := uint32(256)

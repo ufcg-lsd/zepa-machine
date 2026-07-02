@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"strconv"
@@ -44,6 +45,7 @@ func DebugMemory(m *machine.Machine) {
 func DebugRegisters(m *machine.Machine) {
 	registers := m.GetRegisters()
 	fmt.Println("\n----------Registers----------")
+
 	for k, v := range registers {
 		// ignore IR
 		if k == 8 {
@@ -79,6 +81,18 @@ func getRegisterName(reg machine.Register) string {
 		return "mdr"
 	case 11:
 		return "mar"
+	case 12:
+		return "ecr"
+	case 13:
+		return "esa"
+	case 14:
+		return "esr"
+	case 15:
+		return "epc"
+	case 16:
+		return "base"
+	case 17:
+		return "limit"
 	default:
 		return "invalid"
 	}
@@ -97,16 +111,15 @@ func main() {
 		return
 	}
 
-	machine := machine.NewMachine(128)
+	debugMode := len(os.Args) >= 3 && os.Args[2] == "debug"
+
+	machine := machine.NewMachine(1073741824, debugMode)
 	machine.LoadProgram(binaryCode)
 	go machine.Boot()
 
-	DebugRegisters(machine)
-	DebugMemory(machine)
-
 	// IO loop
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("ZEPA Machine — digite 'kill <pid>' ou 'exit'")
+	fmt.Println("ZEPA Machine — digite 'kill <pid>', 'input <path>' ou 'd' (debug)")
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		parts := strings.Fields(line)
@@ -124,11 +137,34 @@ func main() {
 				fmt.Println("PID inválido")
 				continue
 			}
+			buffer := make([]byte, 4)
+			binary.LittleEndian.PutUint32(buffer, uint32(pid))
+			machine.LoadBuffer(buffer)
+			machine.SetKillFlag()
 			fmt.Printf("kill %d enviado\n", pid)
 
-		case "exit", "quit":
-			fmt.Println("saindo...")
-			return
+		case "input":
+			if len(parts) < 2 {
+				fmt.Println("uso: input <path>")
+				continue
+			}
+			binaryCode, err := assembler.RunAssembler(parts[1])
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				continue
+			}
+			machine.LoadBuffer(binaryCode)
+			machine.SetInputFlag()
+			fmt.Printf("input enviado\n")
+
+		case "d":
+			if !machine.IsDebugMode() {
+				fmt.Printf("Máquina não está em debug mode!\n")
+				continue
+			}
+			DebugRegisters(machine)
+			DebugMemory(machine)
+			machine.Mutex.Unlock()
 		}
 	}
 
