@@ -3,11 +3,11 @@
 ## setup
 ```
 user_memory = LIMIT - (KERNEL_MAX_MEMORY + BUFFER)
-partition_number = USER_MEMORY / PARTICION_SIZE
+partition_number = USER_MEMORY / PARTITION_SIZE
 
 for pid in range(0, partition_number):
-  pcb_v[pid].BASE = KERNEL_MAX_MEMORY + pid * PARTICION_SIZE
-  pcb_v[pid].LIMIT = BASE + PARTICION_SIZE
+  pcb_v[pid].BASE = KERNEL_MAX_MEMORY + pid * PARTITION_SIZE
+  pcb_v[pid].LIMIT = BASE + PARTITION_SIZE
 
 SP = SP_ADDRESS
 ESA = EXCEPTION_SUPERVISOR_ADDRESS
@@ -52,7 +52,7 @@ for pid in range(0, partition_number):
     is_waited = 0
     scheduler_state = ready
     parent_pid = 0xFFFFFFFF
-    SP = PARTICION_SIZE
+    SP = PARTITION_SIZE
     //All other registers are 0, except BASE and LIMIT
     Copy the buffer to the user memory, starting at BASE
     break
