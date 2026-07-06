@@ -217,25 +217,79 @@ func TestBGT(t *testing.T) {
 
 func TestLOAD(t *testing.T) {
 	machine := NewMachine(2048, false)
-	machine.memory[256] = 42 // Definindo um valor na memória para ser carregado
+
+	machine.memory[256] = 0x78
+	machine.memory[257] = 0x56
+	machine.memory[258] = 0x34
+	machine.memory[259] = 0x12
+
 	machine.registers[w2] = 256
 	inst := Instruction{opcode: LOAD, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
-	if machine.registers[w1] != 42 {
-		t.Errorf("Expected w1 to be 42, got %d", machine.registers[w1])
+	if machine.registers[w1] != 0x12345678 {
+		t.Errorf("Expected w1 to be 0x12345678, got 0x%x", machine.registers[w1])
 	}
 }
 
 func TestSTORE(t *testing.T) {
 	machine := NewMachine(2048, false)
-	machine.registers[w1] = 65
+
+	machine.registers[w1] = 0x12345678
 	machine.registers[w2] = 100
+
 	inst := Instruction{opcode: STORE, rs1: w1, rs2: w2}
 	machine.execute(inst)
 
-	if machine.memory[100] != 65 {
-		t.Errorf("Expected memory value to be 65, got %d", machine.memory[100])
+	if machine.memory[100] != 0x78 {
+		t.Errorf("Expected memory[100] to be 0x78, got 0x%x", machine.memory[100])
+	}
+	if machine.memory[101] != 0x56 {
+		t.Errorf("Expected memory[101] to be 0x56, got 0x%x", machine.memory[101])
+	}
+	if machine.memory[102] != 0x34 {
+		t.Errorf("Expected memory[102] to be 0x34, got 0x%x", machine.memory[102])
+	}
+	if machine.memory[103] != 0x12 {
+		t.Errorf("Expected memory[103] to be 0x12, got 0x%x", machine.memory[103])
+	}
+}
+
+func TestLDD(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	machine.memory[256] = 0x78
+	machine.memory[257] = 0x56
+	machine.memory[258] = 0x34
+	machine.memory[259] = 0x12
+
+	inst := Instruction{opcode: LDD, rs1: w1, immediate: 256}
+	machine.execute(inst)
+
+	if machine.registers[w1] != 0x12345678 {
+		t.Errorf("Expected w1 to be 0x12345678, got 0x%x", machine.registers[w1])
+	}
+}
+
+func TestSTRD(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	machine.registers[w1] = 0x12345678
+
+	inst := Instruction{opcode: STRD, rs1: w1, immediate: 100}
+	machine.execute(inst)
+
+	if machine.memory[100] != 0x78 {
+		t.Errorf("Expected memory[100] to be 0x78, got 0x%x", machine.memory[100])
+	}
+	if machine.memory[101] != 0x56 {
+		t.Errorf("Expected memory[101] to be 0x56, got 0x%x", machine.memory[101])
+	}
+	if machine.memory[102] != 0x34 {
+		t.Errorf("Expected memory[102] to be 0x34, got 0x%x", machine.memory[102])
+	}
+	if machine.memory[103] != 0x12 {
+		t.Errorf("Expected memory[103] to be 0x12, got 0x%x", machine.memory[103])
 	}
 }
 

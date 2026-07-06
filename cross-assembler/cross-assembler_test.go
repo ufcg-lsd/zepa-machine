@@ -193,7 +193,7 @@ func TestMret(t *testing.T) {
 	}
 
 	expectedMemory := []byte{
-		0b01000100, 0b00000000, 0b00000000, 0b00000000, // MRET
+		0b01001100, 0b00000000, 0b00000000, 0b00000000, // MRET
 	}
 
 	if len(memory) != len(expectedMemory) {
@@ -330,9 +330,42 @@ func TestStoreAndLoadByte(t *testing.T) {
 	expectedMemory := []byte{
 		0b00000000, 0b01110000, 0b00000000, 0b00000000, // MV W3, #-32768
 		0b00000000, 0b00100000, 0b00000100, 0b00000000, // MV W1, #0x020
-		0b01000000, 0b00000011, 0b00001000, 0b00000000, // STRB W3, W1
-		0b00111000, 0b00000010, 0b00001000, 0b00000000, // LDB W2, W1
-		0b00111100, 0b00000100, 0b00001000, 0b00000000, // LDSB W4, W1
+		0b01001000, 0b00000011, 0b00001000, 0b00000000, // STRB W3, W1
+		0b01000000, 0b00000010, 0b00001000, 0b00000000, // LDB W2, W1
+		0b01000100, 0b00000100, 0b00001000, 0b00000000, // LDSB W4, W1
+	}
+
+	if len(memory) != len(expectedMemory) {
+		t.Fatalf("Incorrect memory size. Expected: %d, Got: %d", len(expectedMemory), len(memory))
+	}
+
+	for i, byteVal := range memory {
+		if byteVal != expectedMemory[i] {
+			t.Errorf("Incorrect memory at block %d. Expected: 0b%08b, Got: 0b%08b", i, expectedMemory[i], byteVal)
+		}
+	}
+}
+
+func TestStoreAndLoadDWord(t *testing.T) {
+	assemblyFilePath := "../asm/samples/store_load_direct.asm"
+
+	assemblyCode, err := os.ReadFile(assemblyFilePath)
+	if err != nil {
+		t.Fatalf("Error reading the assembly file: %v", err)
+	}
+
+	file := bytes.NewBuffer(assemblyCode)
+
+	memory, err := RunAssemblerFromReader(file)
+	if err != nil {
+		t.Fatalf("Error running the assembler: %v", err)
+	}
+
+	expectedMemory := []byte{
+		0b00000000, 0b01100000, 0b00001000, 0b01000000, // MV W3, #66
+		0b00000000, 0b00100000, 0b00000100, 0b00000000, // MV W1, #0x020
+		0b00111100, 0b01100000, 0b00000100, 0b00000000, // STRD W3, #0x020
+		0b00111000, 0b01000000, 0b00000100, 0b00000000, // LDD W2, #0x020
 	}
 
 	if len(memory) != len(expectedMemory) {
@@ -437,7 +470,7 @@ func TestSyscall(t *testing.T) {
 	}
 
 	expectedMemory := []byte{
-		0b01001000, 0b00000000, 0b00000000, 0b01000000, // SYSCALL #2
+		0b01010000, 0b00000000, 0b00000000, 0b01000000, // SYSCALL #2
 	}
 
 	if len(memory) != len(expectedMemory) {
