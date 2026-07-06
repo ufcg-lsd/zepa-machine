@@ -240,7 +240,7 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Opcode (decimal)**: 19
 
 **SYSCALL**
-- **Description**: Triggers a synchronous exception to transfer control to the operating system's exception to request privileged services, the immediate code is put into W5.
+- **Description**: Triggers a synchronous exception to transfer control to the operating system's exception to request privileged services, the immediate code is put into W5 and the syscall return is put back into w5.
 - **Syntax and Example**: SYSCALL #2
 - **Format**: I-Type
 - **Opcode (decimal)**: 20
