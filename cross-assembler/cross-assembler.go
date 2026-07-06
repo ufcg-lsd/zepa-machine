@@ -50,6 +50,8 @@ const (
 	BGT_OPCODE
 	LOAD_OPCODE
 	STORE_OPCODE
+	LDD_OPCODE
+	STRD_OPCODE
 	LDB_OPCODE
 	LDSB_OPCODE
 	STRB_OPCODE
@@ -91,6 +93,8 @@ var opcodeMap = map[string]Opcode{
 	"BGT":     BGT_OPCODE,
 	"LOAD":    LOAD_OPCODE,
 	"STORE":   STORE_OPCODE,
+	"LDD":    LDD_OPCODE,
+	"STRD":   STRD_OPCODE,
 	"LDB":     LDB_OPCODE,
 	"LDSB":    LDSB_OPCODE,
 	"STRB":    STRB_OPCODE,
@@ -132,6 +136,8 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 	BGT_OPCODE:     newInstructionSpec("I-Type", BGT_OPCODE),
 	LOAD_OPCODE:    newInstructionSpec("R-Type", LOAD_OPCODE),
 	STORE_OPCODE:   newInstructionSpec("R-Type", STORE_OPCODE),
+	LDD_OPCODE:    newInstructionSpec("I-Type", LDD_OPCODE),
+	STRD_OPCODE:   newInstructionSpec("I-Type", STRD_OPCODE),
 	LDB_OPCODE:     newInstructionSpec("R-Type", LDB_OPCODE),
 	LDSB_OPCODE:    newInstructionSpec("R-Type", LDSB_OPCODE),
 	STRB_OPCODE:    newInstructionSpec("R-Type", STRB_OPCODE),

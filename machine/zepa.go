@@ -45,6 +45,8 @@ const (
 	BGT
 	LOAD
 	STORE
+	LDD
+	STRD
 	LDB
 	LDSB
 	STRB
@@ -101,6 +103,8 @@ var operations = map[Opcode]Operation{
 	BGT:     (*Machine).bgt,
 	LOAD:    (*Machine).load,
 	STORE:   (*Machine).store,
+	LDD:     (*Machine).ldd,
+	STRD:    (*Machine).strd,
 	LDB:     (*Machine).ldb,
 	LDSB:    (*Machine).ldsb,
 	STRB:    (*Machine).strb,
@@ -211,6 +215,30 @@ func (m *Machine) store(inst Instruction) {
 	}
 }
 
+func (m *Machine) ldd(inst Instruction) {
+	addr, ok := m.translate(uint32(inst.immediate), 3)
+	if !ok {
+		return
+	}
+
+	m.registers[inst.rs1] = 0
+
+	for i := uint32(0); i < 4; i++ {
+		m.registers[inst.rs1] |= (uint32(m.memory[addr+i]) << (i * 8))
+	}
+}
+
+func (m *Machine) strd(inst Instruction) {
+	addr, ok := m.translate(uint32(inst.immediate), 3)
+	if !ok {
+		return
+	}
+
+	for i := uint32(0); i < 4; i++ {
+		m.memory[addr+i] = byte(m.registers[inst.rs1] >> (i * 8))
+	}
+}
+
 func (m *Machine) ldb(inst Instruction) {
 	addr, ok := m.translate(m.registers[inst.rs2], 0)
 	if !ok {
@@ -249,16 +277,16 @@ func (m *Machine) syscall(inst Instruction) {
 	m.exception(syscallInt)
 }
 
-func (m *Machine) translate(virtualAddr uint32, addrOffset uint32) (uint32, bool) {
+func (m *Machine) translate(addr uint32, addrOffset uint32) (uint32, bool) {
 	if !m.isKernelMode() {
-		virtualAddr = virtualAddr + m.registers[base]
-		if virtualAddr+addrOffset >= m.registers[limit] {
+		addr = addr + m.registers[base]
+		if addr+addrOffset >= m.registers[limit] {
 			m.exception(faultInt)
-			return virtualAddr, false
+			return addr, false
 		}
 	}
 
-	return virtualAddr, true
+	return addr, true
 }
 
 func (m *Machine) exception(cause uint32) {
@@ -373,7 +401,7 @@ func (m *Machine) decode() Instruction {
 	switch opcode {
 	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE, LDB, LDSB, STRB:
 		return m.decodeRTypeInst(instruction)
-	case MV, JUMP, BEQ, BLT, BGT, MRET:
+	case MV, JUMP, BEQ, BLT, BGT, LDD, STRD, MRET:
 		fallthrough
 	default:
 		return m.decodeITypeInst(instruction)
@@ -392,18 +420,6 @@ func (m *Machine) Boot() {
 
 		if m.debugFlag {
 			m.Mutex.Lock()
-		}
-
-		if m.isInterruptEnabled() {
-			if instructionsExcecuted%TIMER_INTERVAL == 0 {
-				m.exception(clockInt)
-			} else if m.killFlag {
-				m.exception(killInt)
-				m.killFlag = false
-			} else if m.inputFlag {
-				m.exception(inputInt)
-				m.inputFlag = false
-			}
 		}
 
 		if !m.fetch() {
@@ -427,7 +443,23 @@ func (m *Machine) Boot() {
 		}
 
 		m.execute(decodedInstruction)
-		instructionsExcecuted++
+
+		if !m.isInterruptEnabled() {
+			instructionsExcecuted++
+		}
+
+		if m.isInterruptEnabled() {
+			if instructionsExcecuted%TIMER_INTERVAL == 0 {
+				m.exception(clockInt)
+			} else if m.killFlag {
+				m.exception(killInt)
+				m.killFlag = false
+			} else if m.inputFlag {
+				m.exception(inputInt)
+				m.inputFlag = false
+			}
+		}
+
 	}
 }
 
