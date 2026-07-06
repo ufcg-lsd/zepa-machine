@@ -198,74 +198,90 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Format**: R-Type
 - **Opcode (decimal)**: 13
 
+**LDD**:
+- **Description**: Loads the content stored at a specific memory address into a specific register.
+- **Syntax**: LDD \<Destination Reg.>, [\<Address>]
+- **Example**: LDD W0, #0x123
+- **Format**: I-Type
+- **Opcode (decimal)**: 14
+
+**STRD**:
+- **Description**: Stores the value of a register to memory.
+- **Syntax**: STRD \<Source Reg.>, [\<Address>]
+- **Example**: STRD W1, #0x123
+- **Format**: I-Type
+- **Opcode (decimal)**: 15
+
 **LDB**:
 - **Description**: Loads a single 8-bit unsigned byte from a memory address into a register. The loaded byte is zero-extended to fill the 32-bit register.
 - **Syntax**: LDB \<Destination Reg.\>, [\<Address Reg.\>]
 - **Example**: LDB W2, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 14
+- **Opcode (decimal)**: 16
 
 **LDSB** (Load Signed Byte):
 - **Description**: Loads a single 8-bit signed byte from a memory address into a register. The loaded byte is sign-extended to fill the 32-bit register, preserving its arithmetic sign.
 - **Syntax**: LDSB <Destination Reg.>, [<Address Reg.>]
 - **Example**: LDSB W4, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 15
+- **Opcode (decimal)**: 17
 
 **STRB** (Store Byte):
 - **Description**: Stores the lowest 8 bits (one byte) from a register into a specific memory address. The upper 24 bits of the source register are ignored.
 - **Syntax**: STRB <Source Reg.>, [<Address Reg.>]
 - **Example**: STRB W3, W1
 - **Format**: R-Type
-- **Opcode (decimal)**: 16
+- **Opcode (decimal)**: 18
 
 **MRET**
 - **Description**: Return from an exception. Restores the processor to its pre-exception state by copying the Exception Status Register (ESR) back into the Status Register (SR), and the Exception Program Counter (EPC) back into the Program Counter (PC).
 - **Syntax and Example**: MRET
 - **Format**: I-Type
-- **Opcode (decimal)**: 17
+- **Opcode (decimal)**: 19
 
 **SYSCALL**
 - **Description**: Triggers a synchronous exception to transfer control to the operating system's exception to request privileged services, the immediate code is put into W5.
 - **Syntax and Example**: SYSCALL #2
 - **Format**: I-Type
-- **Opcode (decimal)**: 18
+- **Opcode (decimal)**: 20
 
 ### Processor Execution Cycle
 **FETCH**
 - **Description**: Get the next instruction from memory using the address stored in the Program Counter (PC) and load it into the Instruction Register (IR).
 - **Syntax and Example**: FETCH
 - **Format**: I-Type
-- **Opcode (decimal)**: 19
+- **Opcode (decimal)**: 21
 
 ### Zepa Machine Instruction Encoding Table
 
 | **Instruction** | **Format** | **opcode** | **rd** | **rs1** | **rs2** | **funct5** | **funct6** |
-|-----------------|------------|------------|---------|---------|------------|--------|------------|
-| **ADD** | R-Type     | 000001     | reg     | reg     | reg        | 00000  | 000000     |
-| **SUB** | R-Type     | 000010     | reg     | reg     | reg        | 00000  | 000000     |
-| **MUL** | R-Type     | 000011     | reg     | reg     | reg        | 00000  | 000000     |
-| **UDIV** | R-Type     | 000100     | reg     | reg     | reg        | 00000  | 000000     |
-| **SDIV** | R-Type     | 000101     | reg     | reg     | reg        | 00000  | 000000     |
-| **CMP** | R-Type     | 000110     | 00000   | reg     | reg        | 00000  | 000000     |
-| **JMPR** | R-Type     | 001000     | 00000   | reg     | 00000      | 00000  | 000000     |
-| **LOAD** | R-Type     | 001100     | 00000   | reg     | reg        | 00000  | 000000     |
-| **STORE** | R-Type     | 001101     | 00000   | reg     | reg        | 00000  | 000000     |
-| **LDB** | R-Type     | 001110     | 00000   | reg     | reg        | 00000  | 000000     |
-| **LDSB** | R-Type     | 001111     | 00000   | reg     | reg        | 00000  | 000000     |
-| **STRB** | R-Type     | 010000     | 00000   | reg     | reg        | 00000  | 000000     |
+|-----------------|------------|------------|--------|---------|---------|------------|------------|
+| **ADD**         | R-Type     | 000001     | reg    | reg     | reg     | 00000      | 000000     |
+| **SUB**         | R-Type     | 000010     | reg    | reg     | reg     | 00000      | 000000     |
+| **MUL**         | R-Type     | 000011     | reg    | reg     | reg     | 00000      | 000000     |
+| **UDIV**        | R-Type     | 000100     | reg    | reg     | reg     | 00000      | 000000     |
+| **SDIV**        | R-Type     | 000101     | reg    | reg     | reg     | 00000      | 000000     |
+| **CMP**         | R-Type     | 000110     | 00000  | reg     | reg     | 00000      | 000000     |
+| **JMPR**        | R-Type     | 001000     | 00000  | reg     | 00000   | 00000      | 000000     |
+| **LOAD**        | R-Type     | 001100     | 00000  | reg     | reg     | 00000      | 000000     |
+| **STORE**       | R-Type     | 001101     | 00000  | reg     | reg     | 00000      | 000000     |
+| **LDB**         | R-Type     | 010000     | 00000  | reg     | reg     | 00000      | 000000     |
+| **LDSB**        | R-Type     | 010001     | 00000  | reg     | reg     | 00000      | 000000     |
+| **STRB**        | R-Type     | 010010     | 00000  | reg     | reg     | 00000      | 000000     |
 
 
-| **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate** | **funct5** |
-|-----------------|------------|------------|------------|---------------|------------|
-| **MV** | I-Type     | 000000     | reg        | 16bit constant| 00000      |
-| **JUMP** | I-Type     | 000111     | 00000      | 16bit address | 00000      |
-| **BEQ** | I-Type     | 001001     | 00000      | 16bit offset  | 00000      |
-| **BLT** | I-Type     | 001010     | 00000      | 16bit offset  | 00000      |
-| **BGT** | I-Type     | 001011     | 00000      | 16bit offset  | 00000      |
-| **MRET** | I-Type     | 010001     | 00000      | 0000000000000000| 00000      |
-| **SYSCALL** | I-Type     | 010010     | 00000      | code | 00000      |
-| **FETCH** | I-Type     | 010011     | 00000      | 0000000000000000| 00000      |
+| **Instruction** | **Format** | **opcode** | **rs1/rd** | **immediate**    | **funct5** |
+|-----------------|------------|------------|------------|------------------|------------|
+| **MV**          | I-Type     | 000000     | reg        | 16bit constant   | 00000      |
+| **JUMP**        | I-Type     | 000111     | 00000      | 16bit address    | 00000      |
+| **BEQ**         | I-Type     | 001001     | 00000      | 16bit offset     | 00000      |
+| **BLT**         | I-Type     | 001010     | 00000      | 16bit offset     | 00000      |
+| **BGT**         | I-Type     | 001011     | 00000      | 16bit offset     | 00000      |
+| **LDD**         | I-Type     | 001110     | reg        | 16bit address    | 00000      |
+| **STRD**        | I-Type     | 001111     | reg        | 16bit address    | 00000      |
+| **MRET**        | I-Type     | 010011     | 00000      | 0000000000000000 | 00000      |
+| **SYSCALL**     | I-Type     | 010100     | 00000      | code             | 00000      |
+| **FETCH**       | I-Type     | 010101     | 00000      | 0000000000000000 | 00000      |
 
 
 ## References

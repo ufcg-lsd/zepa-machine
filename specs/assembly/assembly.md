@@ -239,6 +239,32 @@ STORE <Source Reg.>, [< Address Reg.>]
 STORE W1, [W2]   ; Store the value from register W1 into memory address inside W2
 ```
 
+### LDD (Load Direct)
+Loads a value from a memory address into a register.
+
+**Syntax:**
+```
+LDD <Dest Reg.>, [< Address >]
+```
+
+**Example:**
+```
+LOAD W1, [0x123]    ; Load the value stored at memory address 0x123 into register W1
+```
+
+### STRD (Store Direct)
+Stores the value from a register into a memory address.
+
+**Syntax:**
+```
+STORE <Source Reg.>, [< Address >]
+```
+
+**Example:**
+```
+STORE W1, [0x123]   ; Store the value from register W1 into memory address 0x123
+```
+
 ### LDB (Load Byte)
 Loads a single 8-bit unsigned byte from a memory address into a register. The loaded byte is zero-extended to fill the 32-bit register.
 
