@@ -158,9 +158,9 @@ else:
   schedule()
 ```
 
-## exit() - ID 2
+## exit(status_code) - ID 2
 ```
-pcb_v[running_pid].w5 = 0
+pcb_v[running_pid].w5 = status_code
 kill(running_pid)
 ```
 
