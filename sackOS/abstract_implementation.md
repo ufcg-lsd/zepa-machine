@@ -225,11 +225,11 @@ if running_pid >= partition_number:
 if pcb_v[running_pid].scheduler_state = running:
   pcb_v[running_pid].scheduler_state = ready
 
-limit_pid = running_pid
+limit_pid = running_pid+1
+if limit_pid = partition_number:
+  limit_pid = 0
 
-curr_pid = running_pid+1
-if curr_pid = partition_number:
-  curr_pid = 0
+curr_pid = limit_pid
 
 do:
   if pcb_v[curr_pid].is_mapped = 1 and pcb_v[curr_pid].is_zombie = 0 and pcb_v[curr_pid].scheduler_state = ready:
