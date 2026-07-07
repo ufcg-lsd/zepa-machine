@@ -268,33 +268,33 @@ MRET //go to infinite loop, waiting for exceptions
 - **BUFFER**: size of the buffer in
 
 ### PCB
-- **flags**: (1 byte)
+- **parent_pid**: 4 bytes [0]
+- **child**: 4 bytes [4]
+- **prev_sibling**: 4 bytes [8]
+- **next_sibling**: 4 bytes [12]
+- **status_addr**: 4 bytes [16]
+- **registers**: 15 registers, 4 bytes each, 60 bytes total
+  - **W0** [20]
+  - **W1** [24]
+  - **W2** [28]
+  - **W3** [32]
+  - **W4** [36]
+  - **W5** [40]
+  - **W6** [44]
+  - **W7** [48]
+  - **W8** [52]
+  - **W9** [56]
+  - **PC** [60]
+  - **SP** [64]
+  - **SR** [68]
+  - **BASE** [72]
+  - **LIMIT** [76]
+- **flags**: (1 byte) [80]
   - **is_mapped**: 1 bit [0] (informs if this position in the PCB vector correspond to a process)
   - **is_zombie**: 1 bit [1]
   - **is_waiting**: 1 bit [2]
   - **scheduler_state (running, ready, blocked)**: 2 bits [3:4]
-- **parent_pid**: 4 bytes
-- **child**: 4 bytes
-- **prev_sibling**: 4 bytes
-- **next_sibling**: 4 bytes
-- **status_addr**: 4 bytes
-- **registers**: 15 registers, 4 bytes each, 60 bytes total
-  - **W0**
-  - **W1**
-  - **W2**
-  - **W3**
-  - **W4**
-  - **W5**
-  - **W6**
-  - **W7**
-  - **W8**
-  - **W9**
-  - **PC**
-  - **SP**
-  - **SR**
-  - **BASE**
-  - **LIMIT**
-- **total_size**: 1 + 5*4(bytes) + 60 + 3(padding) = 84 bytes
+- **total_size**: 5*4(bytes) + 60 + 1 + 3(padding) = 84 bytes
 
 ### Queue
 
