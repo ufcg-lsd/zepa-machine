@@ -46,7 +46,7 @@ schedule()
 ## input_int()
 ```
 for pid in range(0, partition_number):
-  if !pcb_v[pid].is_mapped:
+  if pcb_v[pid].is_mapped = 0:
     //initialize the PCB
     pcb_v[pid].is_mapped = 1
     pcb_v[pid].is_zombie = 0
@@ -69,7 +69,7 @@ schedule()
 ## kill_int()
 ```
 pid = buffer
-if pid >= partition_number or !pcb_v[pid].is_mapped:
+if pid >= partition_number or pcb_v[pid].is_mapped = 0 or pcb_v[pid].is_zombie = 1:
   schedule()
 
 pcb_v[pid].w5 = 2
@@ -92,7 +92,7 @@ kill(running_pid)
 ## fork() - ID 0
 ```
 for pid in range(0, partition_number):
-  if !pcb_v[pid].is_mapped:
+  if pcb_v[pid].is_mapped = 0:
     //initialize the PCB
     pcb_v[pid].is_mapped = 1
     pcb_v[pid].is_zombie = 0
@@ -132,7 +132,6 @@ else:
   curr_child = pcb_v[running_pid].child
   do:
     if pcb_v[curr_child].is_zombie:
-      pcb_v[curr_child].is_zombie = 0
       pcb_v[curr_child].is_mapped = 0
       pcb_v[running_pid].w5 = curr_child
       memory[pcb_v[running_pid].BASE+status_addr] = pcb_v[curr_child].w5
@@ -233,7 +232,7 @@ if curr_pid = partition_number:
   curr_pid = 0
 
 do:
-  if pcb_v[curr_pid].is_mapped and pcb_v[curr_pid].scheduler_state = ready:
+  if pcb_v[curr_pid].is_mapped = 1 and pcb_v[curr_pid].is_zombie = 0 and pcb_v[curr_pid].scheduler_state = ready:
     pcb_v[curr_pid].scheduler_state = running
     running_pid = curr_pid
     load every register of pcb_v[running_pid] into the cpu
