@@ -24,7 +24,7 @@ Save W1 and W2 into scratch space
 if ecr == clock_int:
   clock_int()
 
-if running_pid != 0xFFFFFFFF
+if running_pid != -1
   Save the 11 registers on pcb_v[running_pid] //remember W1 and W2 in scratch space
 Jump to the specific handler based on the ECR
 ```
@@ -36,8 +36,8 @@ if clock_interrupt_count < TIME_SLICE:
   load W1 and W2 back from scratch space
   MRET
 
-clock_interrupt = 0
-if running_pid != 0xFFFFFFFF
+clock_interrupt_count = 0
+if running_pid != -1
   Save the 11 registers on pcb_v[running_pid] //remember W1 and W2 in scratch space
 
 schedule()
@@ -48,10 +48,16 @@ schedule()
 for pid in range(0, partition_number):
   if !pcb_v[pid].is_mapped:
     //initialize the PCB
-    is_mapped = 1
-    is_waited = 0
-    scheduler_state = ready
-    parent_pid = 0xFFFFFFFF
+    pcb_v[pid].is_mapped = 1
+    pcb_v[pid].is_zombie = 0
+    pcb_v[pid].is_waiting = 0
+    pcb_v[pid].scheduler_state = ready
+    pcb_v[pid].parent_pid = -1
+    pcb_v[pid].child = -1
+    pcb_v[pid].next_sibling = -1
+    pcb_v[pid].prev_sibling = -1
+    pcb_v[pid].status_addr = -1
+
     SP = PARTITION_SIZE
     //All other registers are 0, except BASE and LIMIT
     Copy the buffer to the user memory, starting at BASE
@@ -66,6 +72,7 @@ pid = buffer
 if pid >= partition_number or !pcb_v[pid].is_mapped:
   schedule()
 
+pcb_v[pid].w5 = 2
 kill(pid)
 ```
 
@@ -76,6 +83,7 @@ Jumps to specific handler based on W5
 
 ## fault_int()
 ```
+pcb_v[running_pid].w5 = 1
 kill(running_pid)
 ```
 
@@ -86,40 +94,81 @@ kill(running_pid)
 for pid in range(0, partition_number):
   if !pcb_v[pid].is_mapped:
     //initialize the PCB
-    is_mapped = 1
-    is_waited = 0
-    scheduler_state = ready
-    parent_pid = running_pid
-    w5 of running_pid = pid
-    w5 of pid = 0
+    pcb_v[pid].is_mapped = 1
+    pcb_v[pid].is_zombie = 0
+    pcb_v[pid].is_waiting = 0
+    pcb_v[pid].scheduler_state = ready
+    pcb_v[pid].parent_pid = running_pid
+    pcb_v[pid].child = -1
+    pcb_v[pid].next_sibling = -1
+    pcb_v[pid].prev_sibling = -1
+    pcb_v[pid].status_addr = -1
+    
+    pcb_v[running_pid].w5 = pid
+    pcb_v[pid].w5 = 0
+
+    pcb_v[pid].next_sibling = pcb_v[running_pid].child
+    if pcb_v[running_pid].child != -1:
+      pcb_v[pcb_v[running_pid].child].prev_sibling = pid
+    pcb_v[running_pid].child = pid
+
     //All other registers except BASE and LIMIT are copied from pcb_v[running_pid]
     Copy the running_pid memory to the pid memory, starting at BASE
-    break
+    schedule()
 
+pcb_v[running_pid].w5 = -1
 schedule()
 ```
 
-## wait(pid)
+## wait(status_addr)
 ```
-if pid >= partition_number or !pcb_v[pid].is_mapped or pcb_v[pid].parent_pid != running_pid:
-  pcb_v[running_pid].w5 = 1
+if pcb_v[running_pid].BASE + status_addr + 4 > pcb_v[running_pid].LIMIT:
+  fault_int()
+
+if pcb_v[running_pid].child == -1:
+  pcb_v[running_pid].w5 = -1
   schedule()
+else:
+  curr_child = pcb_v[running_pid].child
+  do:
+    if pcb_v[curr_child].is_zombie:
+      pcb_v[curr_child].is_zombie = 0
+      pcb_v[curr_child].is_mapped = 0
+      pcb_v[running_pid].w5 = curr_child
+      memory[pcb_v[running_pid].BASE+status_addr] = pcb_v[curr_child].w5
 
-pcb_v[running_pid].w5 = 0
-pcb_v[pid].is_waited = 1
-pcb_v[running_pid].scheduler_state = blocked
-schedule()
+      if pcb_v[running_pid].child = curr_child:
+        pcb_v[running_pid].child = pcb_v[curr_child].next_sibling
+
+      if pcb_v[curr_child].prev_sibling != -1:
+        pcb_v[pcb_v[curr_child].prev_sibling].next_sibling = pcb_v[curr_child].next_sibling
+
+      if pcb_v[curr_child].next_sibling != -1:
+        pcb_v[pcb_v[curr_child].next_sibling].prev_sibling = pcb_v[curr_child].prev_sibling
+      
+      schedule()
+
+    else:
+      curr_child = pcb_v[curr_child].next_sibling
+
+  while curr_child != -1
+
+  pcb_v[running_pid].status_addr = status_addr
+  pcb_v[running_pid].scheduler_state = blocked
+  pcb_v[running_pid].is_waiting = 1
+  schedule()
 ```
 
 ## exit()
 ```
+pcb_v[running_pid].w5 = 0
 kill(running_pid)
 ```
 
 ## getPID()
 ```
 pcb[running_pid].w5 = running_pid
-schedule()
+schedule() 
 ```
 
 ## rele()
@@ -131,11 +180,40 @@ schedule()
 
 ## kill(pid)
 ```
-pcb_v[pid].is_mapped = 0
+parent = pcb_v[pid].parent_pid
+if parent != -1:
+  if pcb_v[parent].is_waiting:
+    pcb_v[parent].is_waiting = 0
+    pcb_v[parent].scheduler_state = ready
+    pcb_v[parent].w5 = pid
+    memory[pcb_v[parent].BASE + pcb_v[parent].status_addr] = pcb_v[pid].w5
 
-if pcb_v[pid].is_waited:
-  parent_pid = pcb_v[pid].parent_pid
-  pcb_v[parent_pid].scheduler_state = ready
+    if pcb_v[parent].child = pid:
+      pcb_v[parent].child = pcb_v[pid].next_sibling
+
+    if pcb_v[pid].prev_sibling != -1:
+      pcb_v[pcb_v[pid].prev_sibling].next_sibling = pcb_v[pid].next_sibling
+
+    if pcb_v[pid].next_sibling != -1:
+      pcb_v[pcb_v[pid].next_sibling].prev_sibling = pcb_v[pid].prev_sibling
+
+    pcb_v[pid].is_mapped = 0
+    goto orphanize
+  
+  else:
+    pcb_v[pid].is_zombie = 1
+
+else:
+  pcb_v[pid].is_mapped = 0
+  orphanize:
+
+  curr_child = pcb_v[pid].child
+  while curr_child != -1:
+    pcb_v[curr_child].parent_pid = -1
+    pcb_v[curr_child].prev_sibling = -1
+    next = pcb_v[curr_child].next_sibling
+    pcb_v[curr_child].next_sibling = -1
+    curr_child = next
 
 schedule()
 ```
@@ -167,7 +245,7 @@ do:
 
 while curr_pid != limit_pid
 
-running_pid = 0xFFFFFFFF
+running_pid = -1
 EPC = LOOP ADDRESS
 ESR = 16 //will enable interruptions
 MRET //go to infinite loop, waiting for exceptions
@@ -180,7 +258,7 @@ MRET //go to infinite loop, waiting for exceptions
 
 ### Singular values (32 bits)
 - **partition_number**: how many partitions there will be
-- **running_pid**: PID of the current running process, or 0xFFFFFFFF if no process is running
+- **running_pid**: PID of the current running process, or -1 if no process is running
 - **clock_interrupt_count**: number of clock interruptions since last scheduler call
 - **kernel_stack_pointer**: the address of the kernel stackpointer
 
@@ -193,9 +271,14 @@ MRET //go to infinite loop, waiting for exceptions
 ### PCB
 - **flags**: (1 byte)
   - **is_mapped**: 1 bit [0] (informs if this position in the PCB vector correspond to a process)
-  - **is_waited**: 1 bit [1]
-  - **scheduler_state (running, ready, blocked)**: 2 bits [2:3]
+  - **is_zombie**: 1 bit [1]
+  - **is_waiting**: 1 bit [2]
+  - **scheduler_state (running, ready, blocked)**: 2 bits [3:4]
 - **parent_pid**: 4 bytes
+- **child**: 4 bytes
+- **prev_sibling**: 4 bytes
+- **next_sibling**: 4 bytes
+- **status_addr**: 4 bytes
 - **registers**: 11 registers, 4 bytes each, 44 bytes total
   - **W0**
   - **W1**
@@ -208,7 +291,7 @@ MRET //go to infinite loop, waiting for exceptions
   - **SR**
   - **BASE**
   - **LIMIT**
-- **total_size**: 4 + 1 + 44 + 3 (padding) = 52 bytes
+- **total_size**: 1 + 4*4 + 44 + 3(padding) = 64 bytes
 
 ### Queue
 
