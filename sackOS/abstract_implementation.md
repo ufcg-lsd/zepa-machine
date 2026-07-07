@@ -294,7 +294,7 @@ MRET //go to infinite loop, waiting for exceptions
   - **SR**
   - **BASE**
   - **LIMIT**
-- **total_size**: 1 + 4*4 + 60 + 3(padding) = 80 bytes
+- **total_size**: 1 + 5*4(bytes) + 60 + 3(padding) = 84 bytes
 
 ### Queue
 
