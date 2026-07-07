@@ -20,6 +20,10 @@ const (
 	W3
 	W4
 	W5
+	W6
+	W7
+	W8
+	W9
 	PC
 	SP
 	_
@@ -67,6 +71,10 @@ var registerMap = map[string]Register{
 	"W3":    W3,
 	"W4":    W4,
 	"W5":    W5,
+	"W6":    W6,
+	"W7":    W7,
+	"W8":    W8,
+	"W9":    W9,
 	"PC":    PC,
 	"SP":    SP,
 	"ECR":   ECR,

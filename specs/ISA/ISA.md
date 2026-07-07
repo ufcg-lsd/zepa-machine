@@ -5,9 +5,9 @@ The objective of this Instruction Set Architecture (ISA) is to define the regist
 ### General Purpose Registers
 The general-purpose registers are flexible and can be used in different situations, as temporarily storing values, used to assist in operations, and storing memory addresses.
 
-Initially, this machine has 6 registers, which are named W0 to W5, each of them capable of storing 32 bits.
+Initially, this machine has 10 registers, which are named W0 to W9, each of them capable of storing 32 bits.
 
-- **W0, W1, W2, W3, W4, and W5 [31:0]**
+- **W0, W1, W2, W3, W4, W5, W6, W7, W8 and W9 [31:0]**
 
 ### Special Registers
 The special registers have specific purposes and exist to handle essential functions for the machine's operation.

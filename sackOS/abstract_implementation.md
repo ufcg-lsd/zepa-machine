@@ -72,7 +72,7 @@ pid = buffer
 if pid >= partition_number or pcb_v[pid].is_mapped = 0 or pcb_v[pid].is_zombie = 1:
   schedule()
 
-pcb_v[pid].w5 = 2
+pcb_v[pid].w9 = 2
 kill(pid)
 ```
 
@@ -83,7 +83,7 @@ Jumps to specific handler based on W5
 
 ## fault_int()
 ```
-pcb_v[running_pid].w5 = 1
+pcb_v[running_pid].w9 = 1
 kill(running_pid)
 ```
 
@@ -104,8 +104,8 @@ for pid in range(0, partition_number):
     pcb_v[pid].prev_sibling = -1
     pcb_v[pid].status_addr = -1
     
-    pcb_v[running_pid].w5 = pid
-    pcb_v[pid].w5 = 0
+    pcb_v[running_pid].w9 = pid
+    pcb_v[pid].w9 = 0
 
     pcb_v[pid].next_sibling = pcb_v[running_pid].child
     if pcb_v[running_pid].child != -1:
@@ -116,7 +116,7 @@ for pid in range(0, partition_number):
     Copy the running_pid memory to the pid memory, starting at BASE
     schedule()
 
-pcb_v[running_pid].w5 = -1
+pcb_v[running_pid].w9 = -1
 schedule()
 ```
 
@@ -126,15 +126,15 @@ if pcb_v[running_pid].BASE + status_addr + 4 > pcb_v[running_pid].LIMIT:
   fault_int()
 
 if pcb_v[running_pid].child == -1:
-  pcb_v[running_pid].w5 = -1
+  pcb_v[running_pid].w9 = -1
   schedule()
 else:
   curr_child = pcb_v[running_pid].child
   do:
     if pcb_v[curr_child].is_zombie:
       pcb_v[curr_child].is_mapped = 0
-      pcb_v[running_pid].w5 = curr_child
-      memory[pcb_v[running_pid].BASE+status_addr] = pcb_v[curr_child].w5
+      pcb_v[running_pid].w9 = curr_child
+      memory[pcb_v[running_pid].BASE+status_addr] = pcb_v[curr_child].w9
 
       if pcb_v[running_pid].child = curr_child:
         pcb_v[running_pid].child = pcb_v[curr_child].next_sibling
@@ -160,13 +160,13 @@ else:
 
 ## exit(status_code) - ID 2
 ```
-pcb_v[running_pid].w5 = status_code
+pcb_v[running_pid].w9 = status_code
 kill(running_pid)
 ```
 
 ## getPID() - ID 3
 ```
-pcb[running_pid].w5 = running_pid
+pcb[running_pid].w9 = running_pid
 schedule() 
 ```
 
@@ -184,8 +184,8 @@ if parent != -1:
   if pcb_v[parent].is_waiting:
     pcb_v[parent].is_waiting = 0
     pcb_v[parent].scheduler_state = ready
-    pcb_v[parent].w5 = pid
-    memory[pcb_v[parent].BASE + pcb_v[parent].status_addr] = pcb_v[pid].w5
+    pcb_v[parent].w9 = pid
+    memory[pcb_v[parent].BASE + pcb_v[parent].status_addr] = pcb_v[pid].w9
 
     if pcb_v[parent].child = pid:
       pcb_v[parent].child = pcb_v[pid].next_sibling
