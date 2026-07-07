@@ -78,7 +78,7 @@ kill(pid)
 
 ## syscall_int()
 ```
-Jumps to specific handler based on W5
+Jumps to specific handler based on W9
 ```
 
 ## fault_int()
@@ -278,19 +278,23 @@ MRET //go to infinite loop, waiting for exceptions
 - **prev_sibling**: 4 bytes
 - **next_sibling**: 4 bytes
 - **status_addr**: 4 bytes
-- **registers**: 11 registers, 4 bytes each, 44 bytes total
+- **registers**: 15 registers, 4 bytes each, 60 bytes total
   - **W0**
   - **W1**
   - **W2**
   - **W3**
   - **W4**
   - **W5**
+  - **W6**
+  - **W7**
+  - **W8**
+  - **W9**
   - **PC**
   - **SP**
   - **SR**
   - **BASE**
   - **LIMIT**
-- **total_size**: 1 + 4*4 + 44 + 3(padding) = 64 bytes
+- **total_size**: 1 + 4*4 + 60 + 3(padding) = 80 bytes
 
 ### Queue
 
