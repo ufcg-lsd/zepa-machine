@@ -89,7 +89,7 @@ kill(running_pid)
 
 # Syscall handlers
 
-## fork()
+## fork() - ID 0
 ```
 for pid in range(0, partition_number):
   if !pcb_v[pid].is_mapped:
@@ -120,7 +120,7 @@ pcb_v[running_pid].w5 = -1
 schedule()
 ```
 
-## wait(status_addr)
+## wait(status_addr) - ID 1
 ```
 if pcb_v[running_pid].BASE + status_addr + 4 > pcb_v[running_pid].LIMIT:
   fault_int()
@@ -159,19 +159,19 @@ else:
   schedule()
 ```
 
-## exit()
+## exit() - ID 2
 ```
 pcb_v[running_pid].w5 = 0
 kill(running_pid)
 ```
 
-## getPID()
+## getPID() - ID 3
 ```
 pcb[running_pid].w5 = running_pid
 schedule() 
 ```
 
-## rele()
+## rele() - ID 4
 ```
 schedule()
 ```
