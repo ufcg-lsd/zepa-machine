@@ -1,0 +1,5 @@
+MV W0, #7
+MV W1, #5
+AND W2, W0, W1
+OR W3, W0, W1
+XOR W4, W0, W1

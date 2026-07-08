@@ -27,7 +27,7 @@ func TestFetch(t *testing.T) {
 
 func TestDecode(t *testing.T) {
 	machine := NewMachine(2048, false)
-	machine.memory[0] = 0b00110100
+	machine.memory[0] = 0b01000000
 	machine.memory[1] = 0b01000011
 	machine.memory[2] = 0b00001000
 	machine.memory[3] = 0b00000000
@@ -59,6 +59,48 @@ func TestMV(t *testing.T) {
 
 	if machine.registers[w0] != 0xFF {
 		t.Errorf("Expected w0 to be 255, got %d", machine.registers[w0])
+	}
+}
+
+func TestAND(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	machine.registers[w1] = 12
+	machine.registers[w2] = 10
+
+	inst := Instruction{opcode: AND, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w0] != 8 {
+		t.Errorf("Expected w0 to be 8, got %d", machine.registers[w0])
+	}
+}
+
+func TestOR(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	machine.registers[w1] = 12
+	machine.registers[w2] = 10
+
+	inst := Instruction{opcode: OR, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w0] != 14 {
+		t.Errorf("Expected w0 to be 14, got %d", machine.registers[w0])
+	}
+}
+
+func TestXOR(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	machine.registers[w1] = 12
+	machine.registers[w2] = 10
+
+	inst := Instruction{opcode: XOR, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w0] != 6 {
+		t.Errorf("Expected w0 to be 6, got %d", machine.registers[w0])
 	}
 }
 

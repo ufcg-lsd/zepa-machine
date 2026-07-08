@@ -49,6 +49,51 @@ MV W2, W1    ; Move the value from W1 into W2
 
 ## Arithmetic and Logical Operations
 
+### AND (And)
+Does bitwise AND to the values of two registers and stores the result in a destination register.
+
+**Syntax:**
+```
+AND <Dest Reg.>, <Op1>, <Op2>
+```
+
+**Example:**
+```
+MV W1, #3
+MV W2, #2
+AND W0, W1, W2    ; W0 = 3 & 2
+```
+
+### OR (Or)
+Does bitwise OR to the values of two registers and stores the result in a destination register.
+
+**Syntax:**
+```
+OR <Dest Reg.>, <Op1>, <Op2>
+```
+
+**Example:**
+```
+MV W1, #3
+MV W2, #2
+OR W0, W1, W2    ; W0 = 3 | 2
+```
+
+### XOR (Xor)
+Does bitwise XOR to the values of two registers and stores the result in a destination register.
+
+**Syntax:**
+```
+XOR <Dest Reg.>, <Op1>, <Op2>
+```
+
+**Example:**
+```
+MV W1, #3
+MV W2, #2
+XOR W0, W1, W2    ; W0 = 3 ^ 2
+```
+
 ### ADD (Add)
 Adds the values of two registers and stores the result in a destination register.
 

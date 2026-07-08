@@ -41,6 +41,9 @@ const (
 const (
 	// Define opcodes for different instructions
 	MV_OPCODE Opcode = iota
+	AND_OPCODE
+	OR_OPCODE
+	XOR_OPCODE
 	ADD_OPCODE
 	SUB_OPCODE
 	MUL_OPCODE
@@ -87,6 +90,9 @@ var registerMap = map[string]Register{
 
 // Map instruction names to Opcode values
 var opcodeMap = map[string]Opcode{
+	"AND":     AND_OPCODE,
+	"OR":      OR_OPCODE,
+	"XOR":     XOR_OPCODE,
 	"ADD":     ADD_OPCODE,
 	"SUB":     SUB_OPCODE,
 	"MUL":     MUL_OPCODE,
@@ -101,8 +107,8 @@ var opcodeMap = map[string]Opcode{
 	"BGT":     BGT_OPCODE,
 	"LOAD":    LOAD_OPCODE,
 	"STORE":   STORE_OPCODE,
-	"LDD":    LDD_OPCODE,
-	"STRD":   STRD_OPCODE,
+	"LDD":     LDD_OPCODE,
+	"STRD":    STRD_OPCODE,
 	"LDB":     LDB_OPCODE,
 	"LDSB":    LDSB_OPCODE,
 	"STRB":    STRB_OPCODE,
@@ -130,6 +136,9 @@ func newInstructionSpec(format string, opcode Opcode) InstructionSpec {
 
 // Define the specifications for different instructions (R-Type and I-Type)
 var instructionSpecs = map[Opcode]InstructionSpec{
+	AND_OPCODE:     newInstructionSpec("R-Type", AND_OPCODE),
+	OR_OPCODE:      newInstructionSpec("R-Type", OR_OPCODE),
+	XOR_OPCODE:     newInstructionSpec("R-Type", XOR_OPCODE),
 	ADD_OPCODE:     newInstructionSpec("R-Type", ADD_OPCODE),
 	SUB_OPCODE:     newInstructionSpec("R-Type", SUB_OPCODE),
 	MUL_OPCODE:     newInstructionSpec("R-Type", MUL_OPCODE),
@@ -144,8 +153,8 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 	BGT_OPCODE:     newInstructionSpec("I-Type", BGT_OPCODE),
 	LOAD_OPCODE:    newInstructionSpec("R-Type", LOAD_OPCODE),
 	STORE_OPCODE:   newInstructionSpec("R-Type", STORE_OPCODE),
-	LDD_OPCODE:    newInstructionSpec("I-Type", LDD_OPCODE),
-	STRD_OPCODE:   newInstructionSpec("I-Type", STRD_OPCODE),
+	LDD_OPCODE:     newInstructionSpec("I-Type", LDD_OPCODE),
+	STRD_OPCODE:    newInstructionSpec("I-Type", STRD_OPCODE),
 	LDB_OPCODE:     newInstructionSpec("R-Type", LDB_OPCODE),
 	LDSB_OPCODE:    newInstructionSpec("R-Type", LDSB_OPCODE),
 	STRB_OPCODE:    newInstructionSpec("R-Type", STRB_OPCODE),

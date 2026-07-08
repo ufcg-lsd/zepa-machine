@@ -36,6 +36,9 @@ const (
 
 const (
 	MV Opcode = iota
+	AND
+	OR
+	XOR
 	ADD
 	SUB
 	MUL
@@ -94,6 +97,9 @@ const TIMER_INTERVAL = 128
 
 var operations = map[Opcode]Operation{
 	MV:      (*Machine).mv,
+	AND:     (*Machine).and,
+	OR:      (*Machine).or,
+	XOR:     (*Machine).xor,
 	ADD:     (*Machine).add,
 	SUB:     (*Machine).sub,
 	MUL:     (*Machine).mul,
@@ -137,6 +143,18 @@ type Machine struct {
 
 func (m *Machine) mv(inst Instruction) {
 	m.registers[inst.rd] = uint32(int16(inst.immediate))
+}
+
+func (m *Machine) and(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] & m.registers[inst.rs2]
+}
+
+func (m *Machine) or(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] | m.registers[inst.rs2]
+}
+
+func (m *Machine) xor(inst Instruction) {
+	m.registers[inst.rd] = m.registers[inst.rs1] ^ m.registers[inst.rs2]
 }
 
 func (m *Machine) add(inst Instruction) {
@@ -403,7 +421,7 @@ func (m *Machine) decode() Instruction {
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
-	case ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE, LDB, LDSB, STRB:
+	case AND, OR, XOR, ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE, LDB, LDSB, STRB:
 		return m.decodeRTypeInst(instruction)
 	case MV, JUMP, BEQ, BLT, BGT, LDD, STRD, MRET:
 		fallthrough
