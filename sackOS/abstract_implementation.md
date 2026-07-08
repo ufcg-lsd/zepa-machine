@@ -160,7 +160,6 @@ else:
 
 ## exit(status_code) - ID 2
 ```
-pcb_v[running_pid].w9 = status_code
 kill(running_pid)
 ```
 
