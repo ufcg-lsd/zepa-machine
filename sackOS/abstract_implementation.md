@@ -20,12 +20,12 @@ MRET //go to infinite loop, waiting for exceptions
 
 ## exception_supervisor()
 ```
-Save W1 and W2 into scratch space
+Save W0 and W1 into scratch space
 if ecr == clock_int:
   clock_int()
 
 if running_pid != -1
-  Save the 11 registers on pcb_v[running_pid] //remember W1 and W2 in scratch space
+  Save the 11 registers on pcb_v[running_pid] //remember W0 and W1 in scratch space
 Jump to the specific handler based on the ECR
 ```
 
@@ -33,12 +33,12 @@ Jump to the specific handler based on the ECR
 ```
 clock_interrupt_count++
 if clock_interrupt_count < TIME_SLICE:
-  load W1 and W2 back from scratch space
+  load W0 and W1 back from scratch space
   MRET
 
 clock_interrupt_count = 0
 if running_pid != -1
-  Save the 11 registers on pcb_v[running_pid] //remember W1 and W2 in scratch space
+  Save the 11 registers on pcb_v[running_pid] //remember W0 and W1 in scratch space
 
 schedule()
 ```
