@@ -25,7 +25,7 @@ if ecr == clock_int:
   clock_int()
 
 if running_pid != -1
-  Save the 11 registers on pcb_v[running_pid] //remember W0 and W1 in scratch space
+  Save the 15 registers on pcb_v[running_pid] //remember W0 and W1 in scratch space
 Jump to the specific handler based on the ECR
 ```
 
@@ -38,7 +38,7 @@ if clock_interrupt_count < TIME_SLICE:
 
 clock_interrupt_count = 0
 if running_pid != -1
-  Save the 11 registers on pcb_v[running_pid] //remember W0 and W1 in scratch space
+  Save the 15 registers on pcb_v[running_pid] //remember W0 and W1 in scratch space
 
 schedule()
 ```
