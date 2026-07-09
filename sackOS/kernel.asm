@@ -77,9 +77,19 @@ _exception_supervisor:
     ADD W0 W1 ; W0 = pcb[RUNNING_PID] address
 
     MV W8 #20
-    ADD W0 W8 ;  W0 = pcb[RUNNING_PID].w0 
+    ADD W0 W0 W8 ;  W0 = pcb[RUNNING_PID].w0 address
 
+    MV W8 #72
+    ADD W7 W0 W8 ; W7 = pcb[RUNNING_PID].BASE address
     MV W8 #4 ; w8 = address jump on each iteration, to reach next register 
+
+    ; for (int i = pcb[RUNNING_PID].w0 address, i < pcb[RUNNING_PID].BASE, i += 4 )
+    ; or for (int i = W0, W0 < W7, W0 += W8)
+
+    CMP W0 W7
+    BEQ _jumpToHandler
+
+    
 
 
 
