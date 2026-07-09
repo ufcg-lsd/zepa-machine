@@ -1,10 +1,14 @@
 _getPID:
     LDD W0 #RUNNING_PID_CNST
     LDD W1 #PCBADRESS_CNST
-    MUL W2 W0 #84 ; get the offset of bytes to acess pcb[RUNNING_PID]
+
+    MV W8 #84
+    MUL W2 W0 W8 ; RUNNING_PID * 84 get the offset of bytes to acess pcb[RUNNING_PID]
     
     ADD W1 W1 W2 ; stores on W1 the first address of pcb[RUNNING_PID]
-    ADD W1 W1 #56 ; W1 = pcb[RUNNING_PID].w9 address bytes
+
+    MV W8 #56
+    ADD W1 W1 W8 ; W1 = pcb[RUNNING_PID].w9 address bytes
 
     STORE W0 W1 ; stores RUNNING_PID on pcb[RUNNING_PID].w9
 
@@ -21,20 +25,24 @@ _setup:
     DIV W3 W0 W2 ; W3 -> NUM_PARTITIONS = user_memory / PARTITION_SIZE
 
     LDD W4 #PCBADRESS_CNST
-    ADD W4 W4 #72 ; gets W4 to pcb_v[0].BASE address
+
+    MV W8 #72
+    ADD W4 W4 W8 ; gets W4 to pcb_v[0].BASE address
 
    ; W1 will acumulate PARTITION_SIZE * i through the loop
 
     MV W6 #0 ; W6 -> pid = 0
     ; for (int pid = 0, pid < NUM_PARTITIONS; pid++)
 
-    ADD W6 W6 1
+    MV W8 #1
+    ADD W6 W6 W8 
     CMP W6 W3 
     BEQ _setup_registers ; loop conditions
 
     STORE W1 W4 ; pcb_v[pid].BASE = KERNEL_MAX_MEMORY + pid * PARTITION_SIZE
     
-    ADD W4 W4 #4 ; W4 = pcb_v[pid].LIMIT address
+    MV W8 #4
+    ADD W4 W4 W8 ; W4 = pcb_v[pid].LIMIT address
 
     ADD W7 W1 W2 ; W7 = BASE + PARTITION_SIZE
 
@@ -44,7 +52,8 @@ _setup:
 
     ; setup variables to next Iteration
 
-    ADD W4 W4 #80 ; W4 = pcb_v[pid+1].BASE address
+    MV W8 #80
+    ADD W4 W4 W8 ; W4 = pcb_v[pid+1].BASE address
     ADD W1 W1 W2 ; W1 += PARTITION_SIZE
 
 
@@ -79,8 +88,8 @@ _exception_supervisor:
     MV W8 #28
     ADD W0 W0 W8 ;  W0 = pcb[RUNNING_PID].w2 address
 
-    ; save registers
     MV W1 #4 ; uses W1 to jump to next register address
+    ; save registers
 
     STORE W2 W0
     ADD W0 W1 W0
