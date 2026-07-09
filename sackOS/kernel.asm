@@ -76,22 +76,56 @@ _exception_supervisor:
     MUL W1 W1 W2 ; W1 = RUNNING_PID * PARTITION_SIZE
     ADD W0 W1 ; W0 = pcb[RUNNING_PID] address
 
-    MV W8 #20
-    ADD W0 W0 W8 ;  W0 = pcb[RUNNING_PID].w0 address
+    MV W8 #28
+    ADD W0 W0 W8 ;  W0 = pcb[RUNNING_PID].w2 address
 
-    MV W8 #72
-    ADD W7 W0 W8 ; W7 = pcb[RUNNING_PID].BASE address
-    MV W8 #4 ; w8 = address jump on each iteration, to reach next register 
+    ; save registers
+    MV W1 #4 ; uses W1 to jump to next register address
 
-    ; for (int i = pcb[RUNNING_PID].w0 address, i < pcb[RUNNING_PID].BASE, i += 4 )
-    ; or for (int i = W0, W0 < W7, W0 += W8)
+    STORE W2 W0
+    ADD W0 W1 W0
 
-    CMP W0 W7
-    BEQ _jumpToHandler
+    STORE W3 W0
+    ADD W0 W1 W0
 
-    
+    STORE W4 W0
+    ADD W0 W1 W0
 
+    STORE W5 W0
+    ADD W0 W1 W0
 
+    STORE W6 W0
+    ADD W0 W1 W0
+
+    STORE W7 W0
+    ADD W0 W1 W0
+
+    STORE W8 W0
+    ADD W0 W1 W0
+
+    STORE W9 W0
+    ADD W0 W1 W0
+
+    STORE EPC W0
+    ADD W0 W1 W0
+
+    STORE SP W0
+    ADD W0 W1 W0
+
+    STORE ESR W0
+  
+    MV W3 #48
+    SUB W0 W0 W3 ; w0 points to pcb[RUNNING_PID].w0
+
+    LDD W2 #SCRATCH_SPACE_0_CNST
+
+    STORE W2 W0
+    ADD W0 W1 W ; w0 points to pcb[RUNNING_PID].w1
+
+    LDD W2 #SCRATCH_SPACE_1_CNST
+    STORE W2 W0
+
+    JUMP _jumpToHandler
 
 _jumpToHandler:
     MV W0 #1
