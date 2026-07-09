@@ -70,28 +70,36 @@ func getRegisterName(reg machine.Register) string {
 	case 5:
 		return "w5"
 	case 6:
-		return "pc"
+		return "w6"
 	case 7:
-		return "sp"
+		return "w7"
 	case 8:
-		return "ir"
+		return "w8"
 	case 9:
-		return "sr"
+		return "w9"
 	case 10:
-		return "mdr"
+		return "pc"
 	case 11:
-		return "mar"
+		return "sp"
 	case 12:
-		return "ecr"
+		return "ir"
 	case 13:
-		return "esa"
+		return "sr"
 	case 14:
-		return "esr"
+		return "mdr"
 	case 15:
-		return "epc"
+		return "mar"
 	case 16:
-		return "base"
+		return "ecr"
 	case 17:
+		return "esa"
+	case 18:
+		return "esr"
+	case 19:
+		return "epc"
+	case 20:
+		return "base"
+	case 21:
 		return "limit"
 	default:
 		return "invalid"
