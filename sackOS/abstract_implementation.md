@@ -260,6 +260,8 @@ MRET //go to infinite loop, waiting for exceptions
 - **running_pid**: PID of the current running process, or -1 if no process is running
 - **clock_interrupt_count**: number of clock interruptions since last scheduler call
 - **kernel_stack_pointer**: the address of the kernel stackpointer
+- **scratch_space_0**: aux address to temporarily save W0 on interruptions
+- **scratch_space_1**: aux address to temporarily save W1 on interruptions
 
 ### Constants (set by the OS developer) (32 bits)
 - **PARTITION_SIZE**: how large a partition is
