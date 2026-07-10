@@ -163,6 +163,83 @@ _jumpToHandler:
     ADD W0 W0 W1 
     
 
+_wait:
+    LDD W0 #PCBADRESS_CNST+72 ; w0 points to pcb_v[0].BASE
+    LDD W1 #RUNNING_PID_CNST
+    MV W8 #84 ; bytes size of each pcb
+
+    MUL W1 W1 W8 ; W1 = RUNNING_PID * 84 bytes
+    ADD W0 W0 W1 ; w0 points to pcb_v[RUNNING_PID].BASE
+
+    LOAD W2 W0 ; w2 = pcb_v[RUNNING_PID].BASE
+    
+    MV W8 #4
+    ADD W0 W0 W8 ; w0 points to pcb_v[RUNNING_PID].LIMIT
+    
+    LOAD W3 W0 ; w3 = pcb_v[RUNNING_PID].LIMIT
+
+    ADD W2 W2 W9 ; w2 = pcb_v[running_pid].BASE + status_addr
+    
+    MV W8 #4
+    ADD W2 W2 W8 ; w2 = pcb_v[running_pid].BASE + status_addr + 4
+
+
+    ; if  pcb_v[running_pid].BASE + status_addr + 4 <  pcb_v[RUNNING_PID].LIMIT
+    ; fault_int()
+
+
+    CMP W2 W2 
+    BGT _falt_int 
+
+
+    MV W8 #68
+    SUB W2 W3 #72 ; w2 points to pcb_v[RUNNING_PID].child 
+
+    MV W8 #-1 
+    CMP W2 W8 ; if pcb_v[RUNNING_PID].child  == -1:
+    BEQ #2
+
+    JUMP #5
+
+    MV W8 #20
+    SUB W3 W3 W8 ; w3 points to pcb_v[RUNNING_PID].w9
+    STRD #-1 W3
+    JUMP _schedule
+
+    LOAD W3 W2 ; w3 = curr_child = pcb_v[running_pid].childPID
+    LDD W0 #PCBADRESS_CNST ;  w0 points to pcb_v[0] first byte
+    ; 
+    ; do
+
+    ;calculate pcb_v[curr_child]
+
+    MV W8 #84
+    MUL W1 W3 W8
+
+    ADD W1 W0 W1 ;W1 points to pcb_v[curr_child] first byte
+
+    MV W8 #80
+    ADD W1 W1 W8 ; w1 points to pcb_v[curr_child].flags first byte
+
+    MV W8 #0b01000000000000000000000000000000
+    AND W8 W8 W1 
+    CMP W1 W8
+    
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
 
 
 

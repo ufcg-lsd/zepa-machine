@@ -1,4 +1,5 @@
 _start:
-    MV 0 #8
-
-_end
+    MV W0 #-1
+    
+    STRD W0 #2
+_end:
