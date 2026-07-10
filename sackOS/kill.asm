@@ -16,7 +16,7 @@ kill:
     MV W4, #80
     ADD W3, W3, W4        ; W3 = pcb_v[parent].flags address
 
-    LOAD W4, W3           ; W4 = pcb_v[parent].flags
+    LDB W4, W3           ; W4 = pcb_v[parent].flags
     MV W5, #4
     AND W4, W4, W5        ; W4 = pcb_v[parent].is_waiting
 
@@ -25,7 +25,7 @@ kill:
     JUMP kill_not_waiting
 
       MV W4, #9           ; mapped = 1, zombie = 0, waiting = 0, state = ready
-      STORE W4, W3
+      STRB W4, W3
 
       MV W4, #8
       SUB W3, W3, W4      ; W3 = pcb_v[parent].BASE address
@@ -93,11 +93,11 @@ kill:
       
       MV W3, #68
       ADD W2, W2, W3      ; W2 = pcb_v[pid].flags address
-      LOAD W3, W2         ; W3 = pcb_v[pid].flags
+      LDB W3, W2         ; W3 = pcb_v[pid].flags
 
       MV W4, #-2          ; everything 1 except the LSB
       AND W3, W3, W4      ; is_mapped = 0
-      STORE W3, W2        ; pcb_v[pid].is_mapped = 0
+      STRB W3, W2        ; pcb_v[pid].is_mapped = 0
 
       JUMP kill_orphanize ; execution after the elses
 
@@ -105,11 +105,11 @@ kill:
       ; here W2 = pcb_v[pid].parent_pid address
       MV W3, #80
       ADD W2, W2, W3      ; W2 = pcb_v[pid].flags address
-      LOAD W3, W2         ; W3 = pcb_v[pid].flags
+      LDB W3, W2         ; W3 = pcb_v[pid].flags
 
       MV W4, #2
       OR W3, W3, W4       ; is_zombie = 1
-      STORE W3, W2        ; pcb_v[pid].is_zombie = 1
+      STRB W3, W2        ; pcb_v[pid].is_zombie = 1
       JUMP kill_orphanize ; execution after the elses
 
 
@@ -117,11 +117,11 @@ kill:
     ; here W2 = pcb_v[pid].parent_pid address
     MV W3, #80
     ADD W2, W2, W3      ; W2 = pcb_v[pid].flags address
-    LOAD W3, W2         ; W3 = pcb_v[pid].flags
+    LDB W3, W2         ; W3 = pcb_v[pid].flags
 
     MV W4, #-2          ; everything 1 except the LSB
     AND W3, W3, W4      ; is_mapped = 0
-    STORE W3, W2        ; pcb_v[pid].is_mapped = 0
+    STRB W3, W2        ; pcb_v[pid].is_mapped = 0
 
   
   kill_orphanize:
