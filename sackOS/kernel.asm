@@ -1,4 +1,4 @@
-_getPID:
+getPID:
     LDD W0 #RUNNING_PID_CNST
     LDD W1 #PCBADRESS_CNST
 
@@ -14,7 +14,7 @@ _getPID:
 
     JUMP _schedule
 
-_setup:
+setup:
     LDD W1 #KERNEL_MAX_MEMORY_CNST
     LDD W2 #BUFFER_CNST
     ADD W3 W1 W2 ; W3 -> KERNEL_MAX_MEMORY + BUFFER
@@ -35,7 +35,7 @@ _setup:
     ; for (int pid = 0, pid < NUM_PARTITIONS; pid++)
 
     CMP W6 W3 
-    BEQ _setup_registers ; loop conditions
+    BEQ setup_registers ; loop conditions
 
     STORE W1 W4 ; pcb_v[pid].BASE = KERNEL_MAX_MEMORY + pid * PARTITION_SIZE
     
@@ -59,7 +59,7 @@ _setup:
     JUMP #-12
 
 
-_setup_registers:
+setup_registers:
     MV SP #SP_ADDRESS_CNST
     MV ESA #EXCEPTION_SUPERVISOR_ADDRESS_CNST
     MV EPC #LOOP_ADDRESS_CNST
@@ -67,7 +67,7 @@ _setup_registers:
     
     MRET ; go to infinite loop, waiting for program inputs
 
-_exception_supervisor:
+exception_supervisor:
     STRD W0 #SCRATCH_SPACE_0_CNST
     STRD W1 #SCRATCH_SPACE_1_CNST
 
@@ -79,7 +79,7 @@ _exception_supervisor:
     LDD W1 #RUNNING_PID_CNST
 
     CMP W0 W1
-    BEQ _jumpToHandler
+    BEQ jumpToHandler
 
     LDD W0 #PCBADRESS_CNST
     LDD W2 #PARTITION_SIZE_CNST
@@ -138,9 +138,9 @@ _exception_supervisor:
     LDD W2 #SCRATCH_SPACE_1_CNST
     STORE W2 W0
 
-    JUMP _jumpToHandler
+    JUMP jumpToHandler
 
-_jumpToHandler:
+jumpToHandler:
     MV W0 #1
     MV W1 #1 
 
@@ -167,7 +167,7 @@ _jumpToHandler:
     ADD W0 W0 W1 
     
 
-_wait:
+wait:
     LDD W0 #PCBADRESS_CNST+72 ; w0 points to pcb_v[0].BASE
     LDD W1 #RUNNING_PID_CNST
     MV W8 #84 ; bytes size of each pcb
@@ -198,7 +198,7 @@ _wait:
 
 
     MV W8 #68
-    SUB W2 W3 #72 ; w2 points to pcb_v[RUNNING_PID].child 
+    SUB W2 W0 W8 ; w2 points to pcb_v[RUNNING_PID].child 
     LOAD W6 W2 ; w6 = pcb_v[RUNNING_PID].child 
 
     MV W8 #-1 
@@ -216,10 +216,11 @@ _wait:
     LDD W0 #PCBADRESS_CNST ;  w0 points to pcb_v[0] first byte
     ; 
     ; starts loop
-    JUMP _waitLoop
+    JUMP waitLoop
 
-_waitLoop:
+waitLoop:
     ;calculate pcb_v[curr_child]
+    ; w3 = curr_child
 
     MV W8 #84
     MUL W1 W3 W8
@@ -230,10 +231,10 @@ _waitLoop:
     ADD W1 W1 W8 ; w1 points to pcb_v[curr_child].flags
     LOAD W6 W1 ; w6 = pcb_v[curr_child].flags
 
-    MV W8 #0b01000000000000000000000000000000
+    MV W8 #1073741824 ;0b01000000000000000000000000000000
     OR W8 W8 W6
     CMP W6 W8
-    BEQ #4 ;
+    BEQ curr_child_is_zombie 
 
     ;if !pcb_v[curr_child].is_zombie:
     ; curr_child = pcb_v[curr_child].next_sibling
@@ -245,12 +246,16 @@ _waitLoop:
     MV W8 #-1
     CMP W6 W8 ; if pcb_v[curr_child].next_siblingPID == -1
     BEQ _setWaitingStatus
-    JUMP _waitLoop ; goes to next Iteration
+
+    LOAD W3 W3 ; w3 = curr_child = pcb_v[curr_child].next_siblingPID
+    JUMP waitLoop ; goes to next Iteration
 
     ; else (pcb_v[curr_child].is_zombie)
 
-    MV W8 #0b01111111111111111111111111111111
-    AND W8 W8 W1 
+curr_child_is_zombie:
+    MV W8  #2147483647 ;0b01111111111111111111111111111111
+    LOAD W6 W1
+    AND W8 W8 W6 
     STORE W8 W1 ; sets pcb_v[curr_child].is_mapped = 0
 
 
@@ -265,21 +270,30 @@ _waitLoop:
     ADD W4 W2 W8 ; w4 points to pcb_v[running_pid].w9
     STORE W3 W4 ; pcb_v[running_pid].w9 = curr_child
 
-    MV W8 #26 
+    MV W8 #24 
     SUB W1 W1 W8 ; w1 points to pcb_v[curr_child].w9
+    LOAD W6 W1 ; w1 = pcb_v[curr_child].w9
 
-    STORE W1 W7
+    STORE W6 W7
 
     MV W8 #44
     SUB W1 W1 W8 ; w1 points to pcb_v[curr_child].next_sibling
 
-    CMP W2 W3 ; if curr_child == pcb_v[running_pid].child
+    LOAD W6 W2 ; w6 = pcb_v[running_pid].child
+    CMP W6 W3 ; if curr_child == pcb_v[running_pid].child
     BEQ #2
 
     JUMP #2
 
     STORE W1 W2 ; pcb_v[running_pid].child = pcb_v[curr_child].next_sibling
 
+    MV W8 #-1
+    CMP W1 W8 ; if pcb_v[curr_child].next_sibling == -1 
+    BEQ _schedule
+
+    ; else: link next sibling
+    JUMP link_next_sibling
+    
     ; else 
 
     MV W8 #4
@@ -294,11 +308,12 @@ _waitLoop:
 
     STORE W1 W5 ; pcb_v[pcb_v[running_pid].prev_sibling].next_sibling = pcb_v[curr_child].next_sibling
 
-    MV W8 #0b01111111111111111111111111111111
+    MV W8 #-1 
     CMP W1 W8 ; if pcb_v[curr_child].next_sibling == -1 
     BEQ _schedule
 
     ; else
+link_next_sibling:
 
     MUL W5 W1 W6 
     ADD W5 W0 W5 ; w5 points to pcb_v[pcb_v[running_pid].next_sibling] first byte
@@ -331,12 +346,12 @@ _waitLoop:
 
     
     ; set 1's 
-    MV W8 #0b00110000
+    MV W8 #48 ; 0b00110000
     OR W4 W4 W8
 
-    MV W8 #0b11110111
+    MV W8 #-9 ; 0b11110111
     AND W4 W4 W8
 
-    STORE W4 W2 ;
+    STRB W4 W2 ;
 
     JUMP _schedule
