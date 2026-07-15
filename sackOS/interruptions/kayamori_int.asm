@@ -19,8 +19,6 @@ syscall_int:
     CMP W9, W1
     BEQ syscall_rele
 
-    JUMP schedule
-    
     MV W0, #pcb_v               ; set pcb_v adress
     LDD W1, running_pid         ; current running pid
     MV W2, #84                  ; size of pcb
@@ -33,6 +31,8 @@ syscall_int:
     MV W3, #-1                  ; value -1
     STORE W3, W0                ; pcb[running_pid].w9 = -1
 
+    JUMP schedule
+
   
 syscall_fork:
     MV W4, #0                   ; W4 = pid = 0 (contador do loop)
@@ -44,9 +44,8 @@ syscall_fork:
         BEQ fork_end            ; Se pid == limite, sai do loop
 
         MV W0, #pcb_v           ; W0 = endereço base do vetor pcb_v
-        MV W1, W4               ; W1 = pid atual (copia W4)
         MV W3, #84              ; W3 = tamanho de cada PCB (84 bytes)
-        MUL W1, W1, W3          ; W1 = pid * 84
+        MUL W1, W4, W3          ; W1 = pid * 84
         ADD W0, W0, W1          ; W0 = endereço de pcb_v[pid]
         
         ; 1. LER as flags primeiro (offset 80 do PCB)
@@ -239,15 +238,11 @@ syscall_fork:
         ADD W8, W0, W3
         LOAD W3, W8              ; W3 = BASE_filho
 
-        ; Obter LIMIT do pai para calcular o tamanho (LIMIT - BASE)
-        MV W8, #76              ; offset do LIMIT
-        ADD W8, W7, W8
-        LOAD W6, W8              ; W6 = LIMIT_pai
-        SUB W6, W6, W1          ; W6 = size = LIMIT_pai - BASE_pai
+        LDD W6, PARTITION_SIZE  ; W6 = size = PARTITION_SIZE
 
         ; Loop de cópia de memória
         MV W8, #0               ; W8 = index = 0
-        MV W2, #1               ; W2 = 1 (passo)
+        MV W2, #4               ; W2 = 4 (passo)
         
     mem_copy_loop:
         CMP W8, W6              ; compara index com size (W6)
@@ -293,9 +288,8 @@ input_int:
         BEQ input_end           ; Se pid == limite, sai do loop
 
         MV W0, #pcb_v           ; W0 = endereço base do vetor pcb_v
-        MV W1, W4               ; W1 = pid atual
         MV W3, #84              ; W3 = tamanho de cada PCB (84 bytes)
-        MUL W1, W1, W3          ; W1 = pid * 84
+        MUL W1, W4, W3          ; W1 = pid * 84
         ADD W0, W0, W1          ; W0 = endereço de pcb_v[pid]
         
         ; 1. LER as flags primeiro (offset 80 do PCB)
@@ -414,8 +408,7 @@ input_int:
 
         ; d. Copiar o buffer e limpar o restante da memória
         ; Obter BUFFER_START em W3 (BUFFER_START = LIMIT - BUFFER)
-        MV W7, #0
-        ADD W3, LIMIT, W7       ; W3 = total memory size (from LIMIT register)
+        LDD W3, MEMORY_SIZE     ; W3 = total memory size
         LDD W2, BUFFER          ; W2 = BUFFER size constant
         SUB W3, W3, W2          ; W3 = BUFFER_START
 
@@ -424,13 +417,7 @@ input_int:
         ADD W8, W0, W2
         LOAD W1, W8             ; W1 = BASE do processo
 
-        ; Obter LIMIT do processo em W6
-        MV W2, #76              ; offset de LIMIT
-        ADD W8, W0, W2
-        LOAD W6, W8             ; W6 = LIMIT do processo
-        
-        ; Calcular o tamanho total da partição (LIMIT - BASE) em W6
-        SUB W6, W6, W1          ; W6 = tamanho_particao = LIMIT - BASE
+        LDD W6, PARTITION_SIZE  ; W6 = partition size
 
         ; Etapa 1: Copiar exatamente o tamanho do BUFFER
         LDD W4, BUFFER          ; W4 = tamanho do BUFFER
