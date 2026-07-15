@@ -17,12 +17,12 @@ _schedule:
     JUMP _schedule_check_current_process
 
 
-schedule_reset_running_pid:
+_schedule_reset_running_pid:
 
     MV W9, #0
 
 
-schedule_check_current_process:
+_schedule_check_current_process:
 
     ; verifica se processo atual esta running
     ; W1 = pcb_v[running_pid]
@@ -50,7 +50,7 @@ schedule_check_current_process:
     JUMP schedule_calculate_limit_pid
 
 
-schedule_set_current_ready:
+_schedule_set_current_ready:
 
     ; marca como ready
 
