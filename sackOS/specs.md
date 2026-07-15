@@ -40,7 +40,7 @@ Processes can be terminated in three ways. The system uses specific exit codes (
 
 ## 3. System Calls (Syscalls)
 
-System calls are invoked by placing the specific Syscall ID into the `W9` register and issuing the software interrupt/syscall instruction. Return values are also placed in `W9`. When making any syscall, the process is preempted by the scheduler, so users must not expect to resume execution immediately after a syscall.
+System calls are invoked by placing the specific Syscall ID into the `W9` register and issuing the software interrupt/syscall instruction, any syscall with an additional argument expects this argument to be in the `W8` register. Return values are also placed in `W9`. When making any syscall, the process is preempted by the scheduler, so users must not expect to resume execution immediately after a syscall.
 
 ### `fork()` - ID 0
 Creates a new process by duplicating the calling process. The child process receives an exact copy of the parent's memory and registers at the moment of the call.
