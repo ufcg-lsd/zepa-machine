@@ -60,7 +60,8 @@ for pid in range(0, partition_number):
 
     SP = PARTITION_SIZE
     //All other registers are 0, except BASE and LIMIT
-    Copy the buffer to the user memory, starting at BASE
+    Copy the buffer (BUFFER bytes) to the user memory, starting at BASE
+    Fill the remaining partition memory (from BASE + BUFFER to LIMIT) with zeros
     break
 
 schedule()
