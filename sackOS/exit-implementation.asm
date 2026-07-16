@@ -9,7 +9,7 @@ ADD W0, W0, W1           ; W0 = pcb_v[running_pid] initial address
 
 MV W1, #52
 ADD W0, W0, W1           ; W0 = pcb_v[running_pid].W8 address
-LOAD W2, W0              ; W2 = pcb_v[running_pid].W8 (status_addr)
+LOAD W2, W0              ; W2 = pcb_v[running_pid].W8 (status_code)
 
 MV W1, #4
 ADD W0, W0, W1           ; W0 = pcb_v[running_pid].W9 address
