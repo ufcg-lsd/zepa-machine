@@ -2,6 +2,8 @@ _schedule:
 
     ; valida running_pid
 
+    LDD W9, #running_pid
+
     MV W0, #-1
     CMP W9, W0
     BEQ _schedule_reset_running_pid
@@ -92,7 +94,8 @@ _schedule_limit_pid_ready:
 
     ; curr_pid = limit_pid
 
-    MV W4, W3
+    MV W4, #0
+    ADD W4, W4, W3
 
 _schedule_search_loop:
 
@@ -166,11 +169,13 @@ _schedule_process_found:
 
     ; W9 = curr_pid
 
-    MV W9, W4
+    MV W9, #0
+    ADD W9, W9, W4
 
     ; W6 = &pcb_v[running_pid]
 
-    MV W6, W1
+    MV W6, #0
+    ADD W6, W6, W1
 
     JUMP _schedule_restore_context
 
@@ -214,11 +219,9 @@ _schedule_no_ready_process:
 
     MV W9, #-1
 
-    MV W0, #LOOP_ADDRESS
-    MV EPC, W0
+    MV EPC, #LOOP_ADDRESS
 
-    MV W0, #16
-    MV ESR, W0
+    MV ESR, #16
 
     MRET
 
@@ -242,40 +245,35 @@ _schedule_restore_context:
     MV W0, #60
     ADD W8, W6, W0
 
-    LOAD W0, [W8]
-    MV EPC, W0
+    LOAD EPC, [W8]
 
     ; SP (64)
 
     MV W0, #64
     ADD W8, W6, W0
 
-    LOAD W0, [W8]
-    MV SP, W0
+    LOAD SP, [W8]
 
     ; SR (68)
 
     MV W0, #68
     ADD W8, W6, W0
 
-    LOAD W0, [W8]
-    MV ESR, W0
+    LOAD ESR, [W8]
 
     ; BASE (72)
 
     MV W0, #72
     ADD W8, W6, W0
 
-    LOAD W0, [W8]
-    MV BASE, W0
+    LOAD BASE, [W8]
 
     ; LIMIT (76)
 
     MV W0, #76
     ADD W8, W6, W0
 
-    LOAD W0, [W8]
-    MV LIMIT, W0
+    LOAD LIMIT, [W8]
 
     ; W1 (24)
 
@@ -319,6 +317,13 @@ _schedule_restore_context:
 
     LOAD W7, [W8]
 
+    ; W9 (56) -- restaura antes de W8 (W8 ainda tem endereco do registrador)
+
+    MV W0, #56
+    ADD W8, W6, W0
+
+    LOAD W9, [W8]
+
     ; W8 (52) -- usa W0 como temporario para nao perder o endereco
 
     MV W0, #52
@@ -326,7 +331,7 @@ _schedule_restore_context:
 
     LOAD W8, [W0]
 
-    ; W6 (44) -- restaurado por ultimo entre W1-W8
+    ; W6 (44) -- restaurado por ultimo entre W1-W9
 
     MV W0, #44
     ADD W0, W6, W0
