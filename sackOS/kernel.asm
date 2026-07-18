@@ -81,8 +81,8 @@ exception_supervisor:
     CMP W0 W1
     BEQ jumpToHandler
 
-    LDD W0 #PARTITION_SIZE_CNST
-    MUL W1 W1 W0 ; W1 = RUNNING_PID * PARTITION_SIZE
+    LDD W0 #84 ; pcb_size
+    MUL W1 W1 W0 ; W1 = RUNNING_PID * pcb_size
 
     LDD W0 #PCBADRESS_CNST
     ADD W0 W0 W1 ; W0 = pcb[RUNNING_PID] address
@@ -177,7 +177,7 @@ wait:
     LOAD W9 W0 ; w9 = status_addr
 
     MV W8 #20
-    ADD W0 W8 ; w0 points to pcb_v[0].BASE
+    ADD W0 W8 ; w0 points to pcb_v[running_pid].BASE
 
     LOAD W2 W0 ; w2 = pcb_v[RUNNING_PID].BASE
     
@@ -193,15 +193,15 @@ wait:
     ADD W2 W2 W8 ; w2 = pcb_v[running_pid].BASE + status_addr + 4
 
 
-    ; if  pcb_v[running_pid].BASE + status_addr + 4 <  pcb_v[RUNNING_PID].LIMIT
+    ; if  pcb_v[running_pid].BASE + status_addr + 4 > pcb_v[RUNNING_PID].LIMIT
     ; fault_int()
 
 
     CMP W2 W3
-    BGT _falt_int 
+    BGT _fault_int 
 
 
-    MV W8 #68
+    MV W8 #72
     SUB W2 W0 W8 ; w2 points to pcb_v[RUNNING_PID].child 
     LOAD W6 W2 ; w6 = pcb_v[RUNNING_PID].child 
 
@@ -209,11 +209,12 @@ wait:
     CMP W6 W8 ; if pcb_v[RUNNING_PID].child  == -1:
     BEQ #2
 
-    JUMP #5
+    JUMP #6
 
     MV W8 #20
-    SUB W3 W3 W8 ; w3 points to pcb_v[RUNNING_PID].w9
-    STRD #-1 W3
+    SUB W3 W0 W8 ; w3 points to pcb_v[RUNNING_PID].w9
+    MV W8 #-1
+    STORE W8 W3
     JUMP schedule
 
     LOAD W3 W2 ; w3 = curr_child = pcb_v[running_pid].childPID
@@ -258,9 +259,9 @@ waitLoop:
 
 curr_child_is_zombie:
     MV W8  #-2 ;0b11111111111111111111111111111110
-    LOAD W6 W1
+    LDB W6 W1
     AND W8 W8 W6 
-    STORE W8 W1 ; sets pcb_v[curr_child].is_mapped = 0
+    STRB W8 W1 ; sets pcb_v[curr_child].is_mapped = 0
 
 
     
@@ -270,7 +271,7 @@ curr_child_is_zombie:
     ; w3 = curr_child
     ; w7 = pcb_v[running_pid].BASE + status_addr
 
-    MV W8 #56
+    MV W8 #52
     ADD W4 W2 W8 ; w4 points to pcb_v[running_pid].w9
     STORE W3 W4 ; pcb_v[running_pid].w9 = curr_child
 
@@ -289,8 +290,8 @@ curr_child_is_zombie:
 
     JUMP curr_child_is_not_first_children
 
-    LOAD W7 W1 ; w7 = pcb_v[curr_child].next_sibling
-    STORE W1 W2 ; pcb_v[running_pid].child = pcb_v[curr_child].next_sibling
+    LOAD W6 W1 ; w6 = pcb_v[curr_child].next_sibling
+    STORE W6 W2 ; pcb_v[running_pid].child = pcb_v[curr_child].next_sibling
 
     JUMP link_next_sibling
     
@@ -299,9 +300,10 @@ curr_child_is_zombie:
 curr_child_is_not_first_children:
     MV W8 #4
     SUB W4 W1 W8 ; w4 points to pcb_v[curr_child].prev_sibling
+    LOAD W7 W4   ; w7 = pcb_v[curr_child].prev_sibling
 
     MV W6 #84 ; 84 bytes each pcb
-    MUL W5 W4 W6 ; 
+    MUL W5 W7 W6 ; 
     ADD W5 W0 W5 ; w5 points to pcb_v[pcb_v[running_pid].prev_sibling] first byte
 
     MV W8 #12
@@ -316,12 +318,12 @@ link_next_sibling:
 
 
     ; w1 points to pcb_v[curr_child].next_sibling
-    ; w7 = pcb_v[curr_child].next_sibling
-
+    LOAD W7 W1 ; w7 = pcb_v[curr_child].next_sibling
     MV W8 #-1
     CMP W7 W8 ; if pcb_v[curr_child].next_sibling == -1 
     BEQ schedule
 
+    MV W6 #84 ; 84 bytes each pcb
     MUL W5 W7 W6 
     ADD W5 W0 W5 ; w5 points to pcb_v[pcb_v[running_pid].next_sibling] first byte
 
@@ -330,8 +332,8 @@ link_next_sibling:
 
     MV W8 #4
     SUB W1 W1 W8 ; w1 = pcb_v[curr_child].prev_sibling
-
-    STORE W1 W5 ; pcb_v[pcb_v[running_pid].next_sibling].prev_sibling = pcb_v[curr_child].prev_sibling
+    LOAD W8 W1
+    STORE W8 W5 ; pcb_v[pcb_v[running_pid].next_sibling].prev_sibling = pcb_v[curr_child].prev_sibling
 
     JUMP schedule
 
@@ -345,7 +347,7 @@ setWaitingStatus:
     MV W8 #64
     ADD W2 W2 W8 ; w2 points to pcb_v[running_pid].flags
 
-    LOAD W4 W2 ; w4 = pcb_v[running_pid].flags
+    LDB W4 W2 ; w4 = pcb_v[running_pid].flags
 
     ; pcb_v[running_pid].scheduler_state = blocked
     ; pcb_v[running_pid].is_waiting = 1
@@ -353,7 +355,7 @@ setWaitingStatus:
 
     
     ; set 1's 
-    MV W8 #48 ; 0b00010100
+    MV W8 #20 ; 0b00010100
     OR W4 W4 W8
 
     ; set 0
