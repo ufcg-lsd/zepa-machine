@@ -125,15 +125,15 @@ syscall_fork:
         CMP W1, W3              ; compara child com -1
         BEQ skip_prev_sibling   ; se for -1, pula
         
-        ; pcb_v[pcb_v[running_pid].child].prev_sibling = pid
-        MV W3, #84
-        MUL W1, W1, W3          ; W1 = anterior_child * 84
-        MV W3, #pcb_v
-        ADD W1, W1, W3          ; W1 = endereço de pcb_v[anterior_child]
-        
-        MV W3, #8               ; offset de prev_sibling
-        ADD W1, W1, W3          ; W1 = endereço de pcb_v[anterior_child].prev_sibling
-        STORE W4, W1            ; pcb_v[anterior_child].prev_sibling = pid
+            ; pcb_v[pcb_v[running_pid].child].prev_sibling = pid
+            MV W3, #84
+            MUL W1, W1, W3          ; W1 = anterior_child * 84
+            MV W3, #pcb_v
+            ADD W1, W1, W3          ; W1 = endereço de pcb_v[anterior_child]
+            
+            MV W3, #8               ; offset de prev_sibling
+            ADD W1, W1, W3          ; W1 = endereço de pcb_v[anterior_child].prev_sibling
+            STORE W4, W1            ; pcb_v[anterior_child].prev_sibling = pid
 
     skip_prev_sibling:
         ; pcb_v[running_pid].child = pid (W4)
@@ -462,5 +462,5 @@ input_int:
         ADD W4, W4, W2          ; pid++
         JUMP input_loop
 
-input_end:
-    JUMP schedule
+    input_end:
+        JUMP schedule

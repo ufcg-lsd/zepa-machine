@@ -38,5 +38,5 @@ kill_int:
 
     JUMP kill
 
-not_valid:
-    JUMP schedule
+    not_valid:
+        JUMP schedule
