@@ -290,11 +290,12 @@ Loads a value from a memory address into a register.
 **Syntax:**
 ```
 LDD <Dest Reg.>, [< Address >]
+or LDD <Dest Reg.>, #<ADRESS>
 ```
 
 **Example:**
 ```
-LOAD W1, [0x123]    ; Load the value stored at memory address 0x123 into register W1
+LDD W1, [0x123]    ; Load the value stored at memory address 0x123 into register W1
 ```
 
 ### STRD (Store Direct)
@@ -302,12 +303,13 @@ Stores the value from a register into a memory address.
 
 **Syntax:**
 ```
-STORE <Source Reg.>, [< Address >]
+STRD <Source Reg.>, [< Address >]
+or STRD <Source Reg.>, #< Address >
 ```
 
 **Example:**
 ```
-STORE W1, [0x123]   ; Store the value from register W1 into memory address 0x123
+STRD W1, [0x123]   ; Store the value from register W1 into memory address 0x123
 ```
 
 ### LDB (Load Byte)

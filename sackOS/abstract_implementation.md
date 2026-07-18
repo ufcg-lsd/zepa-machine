@@ -139,8 +139,7 @@ else:
 
       if pcb_v[running_pid].child = curr_child:
         pcb_v[running_pid].child = pcb_v[curr_child].next_sibling
-
-      if pcb_v[curr_child].prev_sibling != -1:
+      else:
         pcb_v[pcb_v[curr_child].prev_sibling].next_sibling = pcb_v[curr_child].next_sibling
 
       if pcb_v[curr_child].next_sibling != -1:
