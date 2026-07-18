@@ -197,22 +197,20 @@ if parent != -1:
       pcb_v[pcb_v[pid].next_sibling].prev_sibling = pcb_v[pid].prev_sibling
 
     pcb_v[pid].is_mapped = 0
-    goto orphanize
   
   else:
     pcb_v[pid].is_zombie = 1
 
 else:
   pcb_v[pid].is_mapped = 0
-  orphanize:
 
-  curr_child = pcb_v[pid].child
-  while curr_child != -1:
-    pcb_v[curr_child].parent_pid = -1
-    pcb_v[curr_child].prev_sibling = -1
-    next = pcb_v[curr_child].next_sibling
-    pcb_v[curr_child].next_sibling = -1
-    curr_child = next
+curr_child = pcb_v[pid].child
+while curr_child != -1:
+  pcb_v[curr_child].parent_pid = -1
+  pcb_v[curr_child].prev_sibling = -1
+  next = pcb_v[curr_child].next_sibling
+  pcb_v[curr_child].next_sibling = -1
+  curr_child = next
 
 schedule()
 ```
