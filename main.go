@@ -11,101 +11,6 @@ import (
 	"zepa-machine/machine"
 )
 
-func DebugMemory(m *machine.Machine) {
-	const bytesPerRow = 4
-	memory := m.GetMemory()
-
-	fmt.Print("\n----------Memory----------")
-	for i := 0; i < len(memory); i += bytesPerRow {
-		allZero := true
-		for j := 0; j < bytesPerRow; j++ {
-			if i+j < len(memory) && memory[i+j] != 0 {
-				allZero = false
-				break
-			}
-		}
-
-		if allZero {
-			continue
-		}
-
-		fmt.Printf("\nInitial Address: 0x%04X -- Instruction: ", i)
-
-		for j := 0; j < bytesPerRow; j++ {
-			if i+j < len(memory) {
-				fmt.Printf("%08b ", memory[i+j])
-			} else {
-				fmt.Print("   ")
-			}
-		}
-	}
-	fmt.Print("\n\n")
-}
-
-func DebugRegisters(m *machine.Machine) {
-	registers := m.GetRegisters()
-	fmt.Println("\n----------Registers----------")
-
-	for k, v := range registers {
-		// ignore IR
-		if k == 8 {
-			continue
-		}
-		fmt.Printf("%v: %d\n", getRegisterName(k), int32(v))
-	}
-}
-
-func getRegisterName(reg machine.Register) string {
-	switch reg {
-	case 0:
-		return "w0"
-	case 1:
-		return "w1"
-	case 2:
-		return "w2"
-	case 3:
-		return "w3"
-	case 4:
-		return "w4"
-	case 5:
-		return "w5"
-	case 6:
-		return "w6"
-	case 7:
-		return "w7"
-	case 8:
-		return "w8"
-	case 9:
-		return "w9"
-	case 10:
-		return "pc"
-	case 11:
-		return "sp"
-	case 12:
-		return "ir"
-	case 13:
-		return "sr"
-	case 14:
-		return "mdr"
-	case 15:
-		return "mar"
-	case 16:
-		return "ecr"
-	case 17:
-		return "esa"
-	case 18:
-		return "esr"
-	case 19:
-		return "epc"
-	case 20:
-		return "base"
-	case 21:
-		return "limit"
-	default:
-		return "invalid"
-	}
-}
-
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run ./main.go <asm/file/path>")
@@ -127,7 +32,7 @@ func main() {
 
 	// IO loop
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("ZEPA Machine — digite 'kill <pid>', 'input <path>' ou 'd' (debug)")
+	fmt.Println("Comandos: d (step), reg (registradores), pcb (processos), kill <pid>, input <path>")
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		parts := strings.Fields(line)
@@ -170,9 +75,22 @@ func main() {
 				fmt.Printf("Máquina não está em debug mode!\n")
 				continue
 			}
-			DebugRegisters(machine)
-			DebugMemory(machine)
+			machine.DebugRegisters()
 			machine.Mutex.Unlock()
+
+		case "reg":
+			if !machine.IsDebugMode() {
+				fmt.Printf("Máquina não está em debug mode!\n")
+				continue
+			}
+			machine.DebugRegisters()
+
+		case "pcb":
+			if !machine.IsDebugMode() {
+				fmt.Printf("Máquina não está em debug mode!\n")
+				continue
+			}
+			machine.DebugSystem()
 		}
 	}
 
