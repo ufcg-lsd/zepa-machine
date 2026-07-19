@@ -1,2 +1,0 @@
-rele:
-  JUMP schedule

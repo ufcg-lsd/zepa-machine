@@ -253,19 +253,20 @@ MRET //go to infinite loop, waiting for exceptions
 - There will be at most partition_number process stored on memory
 - Each PID will be defined as a 4 byte unsigned integer
 
-### Singular values (32 bits)
-- **partition_number**: how many partitions there will be
-- **running_pid**: PID of the current running process, or -1 if no process is running
-- **clock_interrupt_count**: number of clock interruptions since last scheduler call
-- **kernel_stack_pointer**: the address of the kernel stackpointer
-- **scratch_space_0**: aux address to temporarily save W0 on interruptions
-- **scratch_space_1**: aux address to temporarily save W1 on interruptions
-
 ### Constants (set by the OS developer) (32 bits)
 - **PARTITION_SIZE**: how large a partition is
 - **TIME_SLICE**: defined as the amount of clock interrupts to trigger the scheduler
 - **KERNEL_MAX_MEMORY**: how much memory the kernel occupies, code + data structures
-- **BUFFER**: size of the buffer in
+- **BUFFER_SIZE**: size of the input buffer 
+
+### Singular values (32 bits)
+- **memory_size**: how much memory is there available
+- **partition_number**: how many partitions there will be
+- **running_pid**: PID of the current running process, or -1 if no process is running
+- **clock_interrupt_count**: number of clock interruptions since last scheduler call
+- **kernel_stack_pointer**: points to the current kernel stack
+- **scratch_space_0**: aux address to temporarily save W0 on interruptions
+- **scratch_space_1**: aux address to temporarily save W1 on interruptions
 
 ### PCB
 - **parent_pid**: 4 bytes [0]
@@ -301,4 +302,30 @@ MRET //go to infinite loop, waiting for exceptions
 Similar to the Xv6 scheduler, the PCB vector is the queue itself, with the scheduler iterating it continuously until it finds a ready process.
 
 # Addresses
-TODO
+The kernel code has 833 instructions as of now, resulting in 3332 bytes of memory, we rounded it to 4KB, so addresses will start at 0x1000
+
+### Constants (set by the OS developer) (32 bits)
+- **PARTITION_SIZE**: 0x1000
+- **TIME_SLICE**: 0x1004
+- **KERNEL_MAX_MEMORY**: 0x1008
+- **BUFFER_SIZE**: 0x100C
+
+### Singular values (32 bits)
+- **memory_size**: 0x1010
+- **partition_number**: 0x1014
+- **running_pid**: 0x1018
+- **clock_interrupt_count**: 0x101C
+- **kernel_stack_pointer**: 0x1020
+- **scratch_space_0**: 0x1024
+- **scratch_space_1**: 0x1028
+
+### Data Structures
+- **pcb_vector**: 0x102C
+
+
+kernel_code = 4KB
+addresses = 44B
+min_partition_size = 64KB
+max_memory = 4GB
+
+4GB = 64KB * 
