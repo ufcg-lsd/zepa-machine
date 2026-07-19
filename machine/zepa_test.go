@@ -305,7 +305,7 @@ func TestLDD(t *testing.T) {
 	machine.memory[258] = 0x34
 	machine.memory[259] = 0x12
 
-	inst := Instruction{opcode: LDD, rs1: w1, immediate: 256}
+	inst := Instruction{opcode: LDD, rd: w1, immediate: 256}
 	machine.execute(inst)
 
 	if machine.registers[w1] != 0x12345678 {
@@ -318,7 +318,7 @@ func TestSTRD(t *testing.T) {
 
 	machine.registers[w1] = 0x12345678
 
-	inst := Instruction{opcode: STRD, rs1: w1, immediate: 100}
+	inst := Instruction{opcode: STRD, rd: w1, immediate: 100}
 	machine.execute(inst)
 
 	if machine.memory[100] != 0x78 {

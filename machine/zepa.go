@@ -243,10 +243,10 @@ func (m *Machine) ldd(inst Instruction) {
 		return
 	}
 
-	m.registers[inst.rs1] = 0
+	m.registers[inst.rd] = 0
 
 	for i := uint32(0); i < 4; i++ {
-		m.registers[inst.rs1] |= (uint32(m.memory[addr+i]) << (i * 8))
+		m.registers[inst.rd] |= (uint32(m.memory[addr+i]) << (i * 8))
 	}
 }
 
@@ -257,7 +257,7 @@ func (m *Machine) strd(inst Instruction) {
 	}
 
 	for i := uint32(0); i < 4; i++ {
-		m.memory[addr+i] = byte(m.registers[inst.rs1] >> (i * 8))
+		m.memory[addr+i] = byte(m.registers[inst.rd] >> (i * 8))
 	}
 }
 
