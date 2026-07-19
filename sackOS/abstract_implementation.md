@@ -321,11 +321,3 @@ The kernel code has 833 instructions as of now, resulting in 3332 bytes of memor
 
 ### Data Structures
 - **pcb_vector**: 0x102C
-
-
-kernel_code = 4KB
-addresses = 44B
-min_partition_size = 64KB
-max_memory = 4GB
-
-4GB = 64KB * 
