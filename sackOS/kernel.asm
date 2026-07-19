@@ -11,6 +11,7 @@ setup:
     LDD W2 #0x1000 ; partition_size
 
     UDIV W3 W0 W2 ; W3 -> NUM_PARTITIONS = user_memory / PARTITION_SIZE
+    STRD W3, #0x1014 ; partition_number
 
     LDD W4 #0x102C
 
@@ -49,8 +50,8 @@ setup:
 
         setup_registers:
             LDD SP #0x1020 ; kernel_stack_pointer
-            MV ESA #0x84 ; the exception_supervisor initial address
-            MV EPC #0x80 ; the infinite loop below
+            MV ESA #0x88 ; the exception_supervisor initial address
+            MV EPC #0x84 ; the infinite loop below
             MV ESR #16 ; enable interruptions
             
             MRET ; go to infinite loop, waiting for program inputs
@@ -1390,7 +1391,7 @@ schedule:
 
         MV W9, #-1
 
-        MV EPC, #0x80 ; infinite_loop
+        MV EPC, #0x84 ; infinite_loop
 
         MV ESR, #16
 
