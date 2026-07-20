@@ -42,7 +42,7 @@ Triggered by a killFlag. This interruption expects a process identifier from the
 
 #### System Call - ID 3
 
-Triggered by the syscall instruction, its id is expected to be at w5.
+Triggered by the syscall instruction, its id is expected to be at w8.
 
 #### Fault - ID 4
 
@@ -261,7 +261,7 @@ These flags can be used by instructions to make decisions that can change the pr
 - **Opcode (decimal)**: 22
 
 **SYSCALL**
-- **Description**: Triggers a synchronous exception to transfer control to the operating system's exception to request privileged services, the immediate code is put into W5 and the syscall return is put back into w5.
+- **Description**: Triggers a synchronous exception to transfer control to the operating system's exception to request privileged services, the immediate code is put into W9 and the syscall return is put back into W9.
 - **Syntax and Example**: SYSCALL #2
 - **Format**: I-Type
 - **Opcode (decimal)**: 23

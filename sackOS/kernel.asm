@@ -1,7 +1,6 @@
 setup:
     MV W1 #0x2000 ; 8KB of full kernel memory
     STRD W1 #0x1008 ; kernel_max_memory
-    LDD W1 #0x1008 ; kernel_max_memory
     LDD W2 #0x100C ; buffer_size
     STRD W1, #0x1020 ; initilizes the kernel stack pointer as the kernel_max_memory
     STRD LIMIT #0x1010 ; memory_size
@@ -13,7 +12,10 @@ setup:
     UDIV W3 W0 W2 ; W3 -> NUM_PARTITIONS = user_memory / PARTITION_SIZE
     STRD W3, #0x1014 ; partition_number
 
-    LDD W4 #0x102C
+    MV W0, #-1
+    STRD W0, #0x1018 ; running_pid = -1
+
+    MV W4 #0x102C ; pcb_v
 
     MV W8 #72
     ADD W4 W4 W8 ; gets W4 to pcb_v[0].BASE address
@@ -50,8 +52,8 @@ setup:
 
         setup_registers:
             LDD SP #0x1020 ; kernel_stack_pointer
-            MV ESA #0x88 ; the exception_supervisor initial address
-            MV EPC #0x84 ; the infinite loop below
+            MV ESA #0x8C ; the exception_supervisor initial address
+            MV EPC #0x88 ; the infinite loop below
             MV ESR #16 ; enable interruptions
             
             MRET ; go to infinite loop, waiting for program inputs
@@ -72,10 +74,10 @@ exception_supervisor:
     CMP W0 W1
     BEQ jumpToHandler
 
-    LDD W0 #84 ; pcb_size
+    MV W0 #84 ; pcb_size
     MUL W1 W1 W0 ; W1 = RUNNING_PID * pcb_size
 
-    LDD W0 #0x102C ; pcb_v
+    MV W0 #0x102C ; pcb_v
     ADD W0 W0 W1 ; W0 = pcb[RUNNING_PID] address
 
     MV W1 #28
@@ -124,7 +126,7 @@ exception_supervisor:
     STORE W2 W0
 
     MV W8 #4
-    ADD W0 W1 W8 ; w0 points to pcb[RUNNING_PID].w1
+    ADD W0 W0 W8 ; w0 points to pcb[RUNNING_PID].w1
 
     LDD W2 #0x1028 ; scratch_space_1
     STORE W2 W0
@@ -426,7 +428,8 @@ kill_int:
 
     LDD W9, #0x1010 ; memory_size
     LDD W7, #0x100C ; buffer_size
-    SUB W9, W9, W7
+    SUB W9, W9, W7  ; initial buffer addr
+    LOAD W9, W9     ; pid of kill_int
 
     LDD W1, #0x1014 ; partition_number
 
@@ -436,7 +439,7 @@ kill_int:
 
     MV  W2, #84
     MUL W3, W9, W2
-    LDD W4, #0x102C ; pcb_v
+    MV W4, #0x102C ; pcb_v
     ADD W3, W3, W4
 
     MV  W5, #80
@@ -768,7 +771,7 @@ fork:
         STORE W3, W0                ; pcb[running_pid].w9 = -1
 
 wait:
-    LDD W0 #0x102C ; w0 points to pcb_v[0] first byte 
+    MV W0 #0x102C ; w0 points to pcb_v[0] first byte
     MV W8 #52 
     ADD W0 W8 ; w0 points to pcb_v[0].w8
     MV W8 #84 ; bytes size of each pcb
@@ -821,7 +824,7 @@ wait:
         JUMP schedule
 
     LOAD W3 W2 ; w3 = curr_child = pcb_v[running_pid].childPID
-    LDD W0 #0x102C ;  w0 points to pcb_v[0] first byte
+    MV W0 #0x102C ;  w0 points to pcb_v[0] first byte
 
     waitLoop:
         ;calculate pcb_v[curr_child]
@@ -988,7 +991,7 @@ exit:
 
 getPID:
     LDD W0 #0x1018 ; running_pid
-    LDD W1 #0x102C ; pcb_v
+    MV W1 #0x102C ; pcb_v
 
     MV W8 #84
     MUL W2 W0 W8 ; RUNNING_PID * 84 get the offset of bytes to acess pcb[RUNNING_PID]
@@ -1343,6 +1346,7 @@ schedule:
 
         MV W9, #0
         ADD W9, W9, W4
+        STRD W9, #0x1018 ; running_pid = curr_pid
 
         ; W6 = &pcb_v[running_pid]
 
@@ -1391,7 +1395,7 @@ schedule:
 
         MV W9, #-1
 
-        MV EPC, #0x84 ; infinite_loop
+        MV EPC, #0x88 ; infinite_loop
 
         MV ESR, #16
 

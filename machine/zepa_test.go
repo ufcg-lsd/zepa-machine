@@ -425,7 +425,7 @@ func TestSYSCALL(t *testing.T) {
 
 	machine.execute(inst)
 
-	if machine.registers[w5] != uint32(syscallCode) {
+	if machine.registers[w9] != uint32(syscallCode) {
 		t.Errorf("Expected w5 to hold syscall code %d, got %d", syscallCode, machine.registers[w5])
 	}
 

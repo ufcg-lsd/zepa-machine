@@ -365,7 +365,7 @@ MRET   ; Return from an exception / interruption
 ```
 
 ### SYSCALL (System Call)
-Triggers a synchronous exception to transfer control to the operating system's exception to request privileged services, the immediate code is put into W5.
+Triggers a synchronous exception to transfer control to the operating system's exception to request privileged services, the immediate code is put into W9.
 
 **Syntax:**
 ```

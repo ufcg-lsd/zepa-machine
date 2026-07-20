@@ -1,8 +1,8 @@
 package machine
 
 import (
+	"fmt"
 	"slices"
-	"sync"
 )
 
 type Register uint32
@@ -138,7 +138,8 @@ type Machine struct {
 	killFlag  bool
 	inputFlag bool
 	debugFlag bool
-	Mutex     sync.Mutex
+	StepChan  chan struct{}
+	DoneChan  chan struct{}
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -295,7 +296,7 @@ func (m *Machine) mret(inst Instruction) {
 }
 
 func (m *Machine) syscall(inst Instruction) {
-	m.registers[w5] = uint32(inst.immediate)
+	m.registers[w9] = uint32(inst.immediate)
 	m.exception(syscallInt)
 }
 
@@ -441,16 +442,23 @@ func (m *Machine) Boot() {
 	for {
 
 		if m.debugFlag {
-			m.Mutex.Lock()
+			<-m.StepChan
 		}
 
 		if !m.fetch() {
 			continue
 		}
 
-		if m.isEndOfProgram() {
-			m.exception(faultInt)
+		if m.registers[pc] == 2408 {
+			fmt.Println("chegou no kill")
 		}
+		if m.registers[pc] == 1004 {
+			fmt.Println("chegou no kill_int")
+		}
+
+		/*if m.isEndOfProgram() {
+			m.exception(faultInt)
+		}*/
 		decodedInstruction := m.decode()
 
 		if m.isInterruptEnabled() {
@@ -466,11 +474,9 @@ func (m *Machine) Boot() {
 
 		m.execute(decodedInstruction)
 
-		if !m.isInterruptEnabled() {
-			instructionsExcecuted++
-		}
-
 		if m.isInterruptEnabled() {
+			instructionsExcecuted++
+
 			if instructionsExcecuted%TIMER_INTERVAL == 0 {
 				m.exception(clockInt)
 			} else if m.killFlag {
@@ -480,6 +486,10 @@ func (m *Machine) Boot() {
 				m.exception(inputInt)
 				m.inputFlag = false
 			}
+		}
+
+		if m.debugFlag {
+			m.DoneChan <- struct{}{}
 		}
 
 	}
@@ -526,7 +536,8 @@ func NewMachine(memoryBytes int, debugFlag bool) *Machine {
 		memory:    make([]byte, memoryBytes),
 		registers: make(map[Register]uint32),
 		debugFlag: debugFlag,
-		Mutex:     sync.Mutex{},
+		StepChan:  make(chan struct{}),
+		DoneChan:  make(chan struct{}),
 	}
 
 	return machine
