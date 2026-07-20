@@ -1,3 +1,5 @@
+//go:build kernel
+
 package main
 
 import (
@@ -14,7 +16,7 @@ import (
 
 func main() {
 	if len(os.Args) < 4 {
-		fmt.Println("Usage: go run ./main_kernel.go <memory_size> <partition_size> <time_slice> [--no-debug]")
+		fmt.Println("Usage: go run -tags kernel . <memory_size> <partition_size> <time_slice> [--tui] [--no-debug]")
 		return
 	}
 
@@ -25,43 +27,56 @@ func main() {
 		return
 	}
 
-	debugMode := len(os.Args) < 5 || os.Args[4] != "--no-debug"
-
 	memorySize, err := strconv.Atoi(os.Args[1])
-
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
 
 	partitionSize, err := strconv.Atoi(os.Args[2])
-
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
 
 	timeSlice, err := strconv.Atoi(os.Args[3])
-
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
 
-	machine := machine.NewMachine(memorySize, debugMode)
-	machine.LoadProgram(binaryCode)
+	// Parse optional flags
+	useTUI := false
+	debugMode := true
+	for _, arg := range os.Args[4:] {
+		switch arg {
+		case "--tui":
+			useTUI = true
+		case "--no-debug":
+			debugMode = false
+		}
+	}
 
-	memSlice := machine.GetMemory()[4096:4100]
-	binary.LittleEndian.PutUint32(memSlice, uint32(partitionSize))
+	// TUI always requires debug mode
+	if useTUI {
+		debugMode = true
+	}
 
-	memSlice = machine.GetMemory()[4100:4104]
-	binary.LittleEndian.PutUint32(memSlice, uint32(timeSlice))
+	m := machine.NewMachine(memorySize, debugMode)
+	m.LoadProgram(binaryCode)
 
-	memSlice = machine.GetMemory()[4108:4112]
-	binary.LittleEndian.PutUint32(memSlice, uint32(0x10000))
+	mem := m.GetMemory()
+	binary.LittleEndian.PutUint32(mem[0x1000:0x1004], uint32(partitionSize))
+	binary.LittleEndian.PutUint32(mem[0x1004:0x1008], uint32(timeSlice))
+	binary.LittleEndian.PutUint32(mem[0x1008:0x100C], uint32(0x10000))
 
-	go machine.Boot()
+	go m.Boot()
 
-	// IO loop
+	if useTUI {
+		runTUIWithMachine(m)
+		return
+	}
+
+	// CLI loop
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("Comandos: d (step), reg (registradores), pcb (processos), kill <pid>, input <path>")
+	fmt.Println("Comandos: d [n] (step), reg (registradores), pcb (processos), kill <pid>, input <path>")
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		parts := strings.Fields(line)
@@ -79,10 +94,10 @@ func main() {
 				fmt.Println("PID inválido")
 				continue
 			}
-			buffer := make([]byte, 4)
-			binary.LittleEndian.PutUint32(buffer, uint32(pid))
-			machine.LoadBuffer(buffer)
-			machine.SetKillFlag()
+			var buf [4]byte
+			binary.LittleEndian.PutUint32(buf[:], uint32(pid))
+			m.LoadBuffer(buf[:])
+			m.SetKillFlag()
 			fmt.Printf("kill %d enviado\n", pid)
 
 		case "input":
@@ -90,17 +105,17 @@ func main() {
 				fmt.Println("uso: input <path>")
 				continue
 			}
-			binaryCode, err := assembler.RunAssembler(parts[1])
+			code, err := assembler.RunAssembler(parts[1])
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				continue
 			}
-			machine.LoadBuffer(binaryCode)
-			machine.SetInputFlag()
+			m.LoadBuffer(code)
+			m.SetInputFlag()
 			fmt.Printf("input enviado\n")
 
 		case "d":
-			if !machine.IsDebugMode() {
+			if !m.IsDebugMode() {
 				fmt.Printf("Máquina não está em debug mode!\n")
 				continue
 			}
@@ -116,26 +131,25 @@ func main() {
 			}
 
 			for i := 0; i < steps; i++ {
-				machine.StepChan <- struct{}{}
-				<-machine.DoneChan
+				m.StepChan <- struct{}{}
+				<-m.DoneChan
 			}
 
-			machine.DebugRegisters()
+			m.DebugRegisters()
 
 		case "reg":
-			if !machine.IsDebugMode() {
+			if !m.IsDebugMode() {
 				fmt.Printf("Máquina não está em debug mode!\n")
 				continue
 			}
-			machine.DebugRegisters()
+			m.DebugRegisters()
 
 		case "pcb":
-			if !machine.IsDebugMode() {
+			if !m.IsDebugMode() {
 				fmt.Printf("Máquina não está em debug mode!\n")
 				continue
 			}
-			machine.DebugSystem()
+			m.DebugSystem()
 		}
 	}
-
 }

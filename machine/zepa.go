@@ -1,8 +1,8 @@
 package machine
 
 import (
-	"fmt"
 	"slices"
+	"sync"
 )
 
 type Register uint32
@@ -135,6 +135,7 @@ type Instruction struct {
 type Machine struct {
 	memory    []byte
 	registers map[Register]uint32
+	mu        sync.RWMutex
 	killFlag  bool
 	inputFlag bool
 	debugFlag bool
@@ -449,25 +450,21 @@ func (m *Machine) Boot() {
 			continue
 		}
 
-		if m.registers[pc] == 2408 {
-			fmt.Println("chegou no kill")
-		}
-		if m.registers[pc] == 1004 {
-			fmt.Println("chegou no kill_int")
-		}
-
 		/*if m.isEndOfProgram() {
 			m.exception(faultInt)
 		}*/
 		decodedInstruction := m.decode()
 
+		m.mu.Lock()
 		if m.isInterruptEnabled() {
 			if m.checkIllegalRegisterAccess(decodedInstruction) {
 				m.exception(faultInt)
+				m.mu.Unlock()
 				continue
 			}
 			if m.checkIllegalInstruction(decodedInstruction) {
 				m.exception(faultInt)
+				m.mu.Unlock()
 				continue
 			}
 		}
@@ -487,6 +484,7 @@ func (m *Machine) Boot() {
 				m.inputFlag = false
 			}
 		}
+		m.mu.Unlock()
 
 		if m.debugFlag {
 			m.DoneChan <- struct{}{}
@@ -501,6 +499,14 @@ func (m *Machine) LoadProgram(program []byte) {
 
 func (m *Machine) GetMemory() []byte {
 	return m.memory
+}
+
+func (m *Machine) ReadWord(addr uint32) uint32 {
+	var word uint32
+	for i := uint32(0); i < 4; i++ {
+		word |= uint32(m.memory[addr+i]) << (24 - 8*i)
+	}
+	return word
 }
 
 func (m *Machine) LoadBuffer(buffer []byte) bool {
