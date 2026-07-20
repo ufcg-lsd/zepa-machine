@@ -27,32 +27,32 @@ func main() {
 
 	debugMode := len(os.Args) < 5 || os.Args[4] != "--no-debug"
 
-	memory_size, err := strconv.Atoi(os.Args[1])
+	memorySize, err := strconv.Atoi(os.Args[1])
 
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
 
-	partition_size, err := strconv.Atoi(os.Args[2])
+	partitionSize, err := strconv.Atoi(os.Args[2])
 
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
 
-	time_slice, err := strconv.Atoi(os.Args[3])
+	timeSlice, err := strconv.Atoi(os.Args[3])
 
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
 
-	machine := machine.NewMachine(memory_size, debugMode)
+	machine := machine.NewMachine(memorySize, debugMode)
 	machine.LoadProgram(binaryCode)
 
 	memSlice := machine.GetMemory()[4096:4100]
-	binary.LittleEndian.PutUint32(memSlice, uint32(partition_size))
+	binary.LittleEndian.PutUint32(memSlice, uint32(partitionSize))
 
 	memSlice = machine.GetMemory()[4100:4104]
-	binary.LittleEndian.PutUint32(memSlice, uint32(time_slice))
+	binary.LittleEndian.PutUint32(memSlice, uint32(timeSlice))
 
 	memSlice = machine.GetMemory()[4108:4112]
 	binary.LittleEndian.PutUint32(memSlice, uint32(0x10000))
@@ -104,8 +104,23 @@ func main() {
 				fmt.Printf("Máquina não está em debug mode!\n")
 				continue
 			}
+
+			steps := 1
+			if len(parts) > 1 {
+				parsedSteps, err := strconv.Atoi(parts[1])
+				if err != nil || parsedSteps <= 0 {
+					fmt.Println("Número de passos inválido. Executando 1 passo.")
+				} else {
+					steps = parsedSteps
+				}
+			}
+
+			for i := 0; i < steps; i++ {
+				machine.StepChan <- struct{}{}
+				<-machine.DoneChan
+			}
+
 			machine.DebugRegisters()
-			machine.Mutex.Unlock()
 
 		case "reg":
 			if !machine.IsDebugMode() {

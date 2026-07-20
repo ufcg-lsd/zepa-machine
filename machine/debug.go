@@ -130,9 +130,9 @@ func pcbState(flags byte) string {
 
 	switch state {
 	case 0:
-		return "ready"
-	case 1:
 		return "running"
+	case 1:
+		return "ready"
 	case 2:
 		return "blocked"
 	default:
@@ -234,7 +234,6 @@ func tableWidth(widths []int) int {
 	if len(widths) == 0 {
 		return 2
 	}
-
 
 	width := 2 + len(widths) - 1
 
@@ -668,7 +667,6 @@ func (m *Machine) DebugSystem() {
 	fmt.Println(hLine("└", "┴", "┘", columnWidths))
 	fmt.Println()
 
-
 	if partitionNumber == 0 {
 		fmt.Println("Nenhum processo (partition_number = 0).")
 		fmt.Println()
@@ -687,7 +685,6 @@ func (m *Machine) DebugSystem() {
 	for pid := uint32(0); pid < partitionNumber; pid++ {
 		pcbAddress := getPcbBase(pid)
 		flags := memory[pcbAddress+80]
-
 
 		if flags&1 == 0 {
 			continue
@@ -912,7 +909,7 @@ func (m *Machine) DebugSystem() {
 	fmt.Println(
 		"  PID marker: '>' = running    " +
 			"Flags: bit0=mapped, bit1=zombie, bit2=waiting, " +
-			"bit3-4=state(00=ready,01=running,10=blocked)",
+			"bit3-4=state(00=running,01=ready,10=blocked)",
 	)
 
 	fmt.Println()
