@@ -106,7 +106,7 @@ for pid in range(0, partition_number):
     pcb_v[pid].status_addr = -1
     
     pcb_v[running_pid].w9 = pid
-    pcb_v[pid].w9 = 0
+    pcb_v[pid].w9 = -2
 
     pcb_v[pid].next_sibling = pcb_v[running_pid].child
     if pcb_v[running_pid].child != -1:

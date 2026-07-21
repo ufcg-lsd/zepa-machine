@@ -47,7 +47,7 @@ Creates a new process by duplicating the calling process. The child process rece
 * **Returns (in `W9`):**
     * To the **parent**: The PID of the newly created child process.
     * To the **parent**: `-1` if the OS has reached its maximum partition capacity and cannot spawn a new process.
-    * To the **child**: `0`.
+    * To the **child**: `-2`.
 
 ### `wait(status_addr)` - ID 1
 Pauses the execution of the calling process until one of its child processes terminates. 
