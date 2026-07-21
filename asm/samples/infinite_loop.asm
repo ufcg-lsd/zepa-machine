@@ -1,1 +1,4 @@
-JUMP #0
+MV W0, #0
+MV W1, #1
+ADD W0, W0, W1
+JUMP #-1

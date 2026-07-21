@@ -598,11 +598,11 @@ fork:
         ADD W8, W7, W3          ; W8 = endereço de pcb_v[running_pid].w9
         STORE W4, W8            ; pcb_v[running_pid].w9 = pid
 
-        ; f. Retorno do fork no filho: pcb_v[pid].w9 = 0
+        ; f. Retorno do fork no filho: pcb_v[pid].w9 = -2
         MV W3, #56              ; offset de W9 no PCB
         ADD W8, W0, W3          ; W8 = endereço de pcb_v[pid].w9
-        MV W1, #0               ; W1 = 0
-        STORE W1, W8            ; pcb_v[pid].w9 = 0
+        MV W1, #-2              ; W1 = -2
+        STORE W1, W8            ; pcb_v[pid].w9 = -2
 
         ; g. Ajustar ponteiros de família: pcb_v[pid].next_sibling = pcb_v[running_pid].child
         MV W3, #4               ; offset do child
@@ -769,6 +769,7 @@ fork:
 
         MV W3, #-1                  ; value -1
         STORE W3, W0                ; pcb[running_pid].w9 = -1
+        JUMP schedule
 
 wait:
     MV W0 #0x102C ; w0 points to pcb_v[0] first byte
@@ -1394,6 +1395,7 @@ schedule:
         ; nenhum pronto, idle loop
 
         MV W9, #-1
+        STRD W9, #0x1018 ; running_pid = -1
 
         MV EPC, #0x88 ; infinite_loop
 

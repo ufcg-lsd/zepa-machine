@@ -180,12 +180,14 @@ func (m *Machine) sdiv(inst Instruction) {
 }
 
 func (m *Machine) cmp(inst Instruction) {
+	var cmpMask int32 = -8
+	m.registers[sr] &= uint32(cmpMask)
 	if m.registers[inst.rs1] == m.registers[inst.rs2] {
-		m.registers[sr] = 1
+		m.registers[sr] |= 1
 	} else if m.registers[inst.rs1] > m.registers[inst.rs2] {
-		m.registers[sr] = 4
+		m.registers[sr] |= 4
 	} else {
-		m.registers[sr] = 2
+		m.registers[sr] |= 2
 	}
 }
 
@@ -198,19 +200,19 @@ func (m *Machine) jmpr(inst Instruction) {
 }
 
 func (m *Machine) beq(inst Instruction) {
-	if m.registers[sr] == 1 {
+	if m.registers[sr]&1 != 0 {
 		m.jump(inst)
 	}
 }
 
 func (m *Machine) blt(inst Instruction) {
-	if m.registers[sr] == 2 {
+	if m.registers[sr]&2 != 0 {
 		m.jump(inst)
 	}
 }
 
 func (m *Machine) bgt(inst Instruction) {
-	if m.registers[sr] == 4 {
+	if m.registers[sr]&4 != 0 {
 		m.jump(inst)
 	}
 }
@@ -453,6 +455,7 @@ func (m *Machine) Boot() {
 		/*if m.isEndOfProgram() {
 			m.exception(faultInt)
 		}*/
+
 		decodedInstruction := m.decode()
 
 		m.mu.Lock()
