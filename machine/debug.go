@@ -998,7 +998,7 @@ func (m *Machine) GetMemoryViewString() string {
 	if pc < 4 {
 		pc = 4
 	}
-	currentAddr := pc - 4
+	currentAddr := pc
 
 	startAddr := currentAddr
 	if startAddr >= 8 {
