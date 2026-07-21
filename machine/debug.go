@@ -142,6 +142,43 @@ func pcbState(flags byte) string {
 	}
 }
 
+func pcbFlagString(flags byte) string {
+	var s string
+
+	if flags&1 != 0 {
+		s += "M"
+	} else {
+		s += "."
+	}
+
+	if flags&2 != 0 {
+		s += "Z"
+	} else {
+		s += "."
+	}
+
+	if flags&4 != 0 {
+		s += "W"
+	} else {
+		s += "."
+	}
+
+	state := (flags >> 3) & 3
+
+	switch state {
+	case 0:
+		s += "R"
+	case 1:
+		s += "Y"
+	case 2:
+		s += "B"
+	default:
+		s += "?"
+	}
+
+	return s
+}
+
 func getPcbBase(pid uint32) uint32 {
 	return 0x102C + pid*84
 }
@@ -650,10 +687,10 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 	}
 
 	type pcbRow struct {
-		pidCell string
-		state   string
-		parent  int32
-		regs    [13]int32
+		pidCell  string
+		flagsStr string
+		parent   int32
+		regs     [13]int32
 	}
 
 	var processes []pcbRow
@@ -693,16 +730,16 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 		}
 
 		processes = append(processes, pcbRow{
-			pidCell: fmt.Sprintf("%s%d", marker, pid),
-			state:   pcbState(flags),
-			parent:  parentPid,
-			regs:    registerValues,
+			pidCell:  fmt.Sprintf("%s%d", marker, pid),
+			flagsStr: pcbFlagString(flags),
+			parent:   parentPid,
+			regs:     registerValues,
 		})
 	}
 
 	columnHeaders := []string{
 		"PID",
-		"State",
+		"Flags",
 		"Parent",
 		"W0",
 		"W1",
@@ -733,7 +770,7 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 
 		columnWidths[1] = maxLenMin(
 			columnWidths[1],
-			process.state,
+			process.flagsStr,
 		)
 
 		columnWidths[2] = maxLenMin(
@@ -845,7 +882,7 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 		arguments = append(
 			arguments,
 			process.pidCell,
-			process.state,
+			process.flagsStr,
 			process.parent,
 		)
 
@@ -884,8 +921,8 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 
 	fmt.Fprintln(out,
 		"  PID marker: '>' = running    "+
-			"Flags: bit0=mapped, bit1=zombie, bit2=waiting, "+
-			"bit3-4=state(00=running,01=ready,10=blocked)",
+			"Flags: M=mapped, Z=zombie, W=waiting, "+
+			"R=running, Y=ready, B=blocked",
 	)
 
 	fmt.Fprintln(out)
