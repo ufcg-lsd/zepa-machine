@@ -62,10 +62,14 @@ func main() {
 	m := machine.NewMachine(memorySize, debugMode)
 	m.LoadProgram(binaryCode)
 
-	mem := m.GetMemory()
-	binary.LittleEndian.PutUint32(mem[0x1000:0x1004], uint32(partitionSize))
-	binary.LittleEndian.PutUint32(mem[0x1004:0x1008], uint32(timeSlice))
-	binary.LittleEndian.PutUint32(mem[0x1008:0x100C], uint32(0x10000))
+	memSlice := m.GetMemory()[4096:4100]
+	binary.LittleEndian.PutUint32(memSlice, uint32(partitionSize))
+
+	memSlice = m.GetMemory()[4100:4104]
+	binary.LittleEndian.PutUint32(memSlice, uint32(timeSlice))
+
+	memSlice = m.GetMemory()[4108:4112]
+	binary.LittleEndian.PutUint32(memSlice, uint32(0x10000))
 
 	go m.Boot()
 

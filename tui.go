@@ -1,4 +1,4 @@
-
+//go:build kernel
 
 package main
 
@@ -26,7 +26,7 @@ func runTUIWithMachine(m *machine.Machine) {
 	pcbView := tview.NewTextView()
 	pcbView.SetDynamicColors(true)
 	pcbView.SetScrollable(true)
-	pcbView.SetTitle(" Processes ")
+	pcbView.SetTitle(" Kernel Variables ")
 	pcbView.SetBorder(true)
 
 	memoryView := tview.NewTextView()
@@ -35,14 +35,21 @@ func runTUIWithMachine(m *machine.Machine) {
 	memoryView.SetTitle(" Memory ")
 	memoryView.SetBorder(true)
 
+	pcbVectorView := tview.NewTextView()
+	pcbVectorView.SetDynamicColors(true)
+	pcbVectorView.SetScrollable(true)
+	pcbVectorView.SetTitle(" PCB Vector ")
+	pcbVectorView.SetBorder(true)
+
 	inputField := tview.NewInputField()
 	inputField.SetLabel("cmd> ")
 	inputField.SetFieldWidth(60)
 
 	refreshAll := func() {
 		registersView.SetText(m.DebugRegistersString())
-		pcbView.SetText(m.DebugSystemString())
+		pcbView.SetText(m.GetKernelVarsString())
 		memoryView.SetText(m.GetMemoryViewString())
+		pcbVectorView.SetText(m.GetProcessTableString())
 	}
 
 	step := func() {
@@ -102,7 +109,7 @@ func runTUIWithMachine(m *machine.Machine) {
 			registersView.SetText(m.DebugRegistersString())
 
 		case "pcb":
-			pcbView.SetText(m.DebugSystemString())
+			pcbView.SetText(m.GetKernelVarsString())
 
 		case "refresh":
 			refreshAll()
@@ -126,17 +133,23 @@ func runTUIWithMachine(m *machine.Machine) {
 		}
 	}()
 
-	// Top row: registers + processes side by side
+	// Top row: registers + processes
 	topRow := tview.NewFlex()
 	topRow.SetDirection(tview.FlexColumn)
 	topRow.AddItem(registersView, 0, 1, false)
 	topRow.AddItem(pcbView, 0, 1, false)
 
-	// Full layout: top row, memory, cmd
+	// Middle row: memory + pcb vector
+	middleRow := tview.NewFlex()
+	middleRow.SetDirection(tview.FlexColumn)
+	middleRow.AddItem(memoryView, 0, 1, false)
+	middleRow.AddItem(pcbVectorView, 0, 1, false)
+
+	// Full layout: top, middle, cmd
 	root := tview.NewFlex()
 	root.SetDirection(tview.FlexRow)
 	root.AddItem(topRow, 0, 3, false)
-	root.AddItem(memoryView, 0, 2, false)
+	root.AddItem(middleRow, 0, 2, false)
 	root.AddItem(inputField, 3, 0, true)
 
 	app.SetRoot(root, true)

@@ -509,6 +509,17 @@ func (m *Machine) DebugSystem() {
 }
 
 func (m *Machine) debugSystemTo(out io.Writer) {
+	m.debugKernelVarsTo(out)
+	m.debugProcessTableTo(out)
+}
+
+func (m *Machine) GetKernelVarsString() string {
+	var buf strings.Builder
+	m.debugKernelVarsTo(&buf)
+	return buf.String()
+}
+
+func (m *Machine) debugKernelVarsTo(out io.Writer) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	memory := m.memory
@@ -535,7 +546,6 @@ func (m *Machine) debugSystemTo(out io.Writer) {
 	const pcbSize uint32 = 84
 
 	runningPidExtra := ""
-
 	if runningPid == 0xFFFFFFFF {
 		runningPidExtra = "(idle)"
 	}
@@ -551,7 +561,6 @@ func (m *Machine) debugSystemTo(out io.Writer) {
 		{"TIME_SLICE", timeSlice, ""},
 		{"KERNEL_MAX_MEMORY", kernelMaxMemory, ""},
 		{"BUFFER_SIZE", bufferSize, ""},
-
 		{"memory_size", memorySize, ""},
 		{"partition_number", partitionNumber, ""},
 		{"running_pid", runningPid, runningPidExtra},
@@ -559,14 +568,9 @@ func (m *Machine) debugSystemTo(out io.Writer) {
 		{"kernel_stack_pointer", kernelStackPointer, ""},
 		{"scratch_space_0", scratchSpace0, ""},
 		{"scratch_space_1", scratchSpace1, ""},
-
 		{"pcb_vector (base)", pcbVector, ""},
 		{"  pcb_size", pcbSize, ""},
-		{
-			"  total_pcb_memory",
-			pcbSize * partitionNumber,
-			totalPcbMemoryExtra,
-		},
+		{"  total_pcb_memory", pcbSize * partitionNumber, totalPcbMemoryExtra},
 	}
 
 	nameWidth := visualLen("Variable")
@@ -575,123 +579,69 @@ func (m *Machine) debugSystemTo(out io.Writer) {
 
 	for _, row := range allRows {
 		nameWidth = maxLenMin(nameWidth, row.name)
-
 		decimalValue := fmt.Sprintf("%d", int32(row.value))
 		decimalWidth = maxLenMin(decimalWidth, decimalValue)
-
 		hexValue := fmt.Sprintf("0x%08X", row.value)
-
 		if row.extra != "" {
 			hexValue += " " + row.extra
 		}
-
 		hexWidth = maxLenMin(hexWidth, hexValue)
 	}
 
-	columnWidths := []int{
-		nameWidth,
-		decimalWidth,
-		hexWidth,
-	}
+	columnWidths := []int{nameWidth, decimalWidth, hexWidth}
 
-	totalWidth := tableWidth(columnWidths)
-
-	fmt.Fprintln(out, "┌"+repeat("─", totalWidth-2)+"┐")
-	fmt.Fprintln(out, titleLine(totalWidth, "KERNEL VARIABLES"))
-	fmt.Fprintln(out, hLine("├", "┬", "┤", columnWidths))
-
-	rowFormat := fmt.Sprintf(
-		"│ %%-%ds │ %%%dd │ %%-%ds │\n",
-		nameWidth,
-		decimalWidth,
-		hexWidth,
-	)
-
-	headerFormat := fmt.Sprintf(
-		"│ %%-%ds │ %%%ds │ %%-%ds │\n",
-		nameWidth,
-		decimalWidth,
-		hexWidth,
-	)
+	rowFormat := fmt.Sprintf("\u2502 %%-%ds │ %%%dd │ %%-%ds │\n", nameWidth, decimalWidth, hexWidth)
+	headerFormat := fmt.Sprintf("\u2502 %%-%ds │ %%%ds │ %%-%ds │\n", nameWidth, decimalWidth, hexWidth)
 
 	emitRow := func(name string, value uint32, extra string) {
 		hexValue := fmt.Sprintf("0x%08X", value)
-
 		if extra != "" {
 			hexValue += " " + extra
 		}
-
-		fmt.Fprintf(out,
-			rowFormat,
-			name,
-			int32(value),
-			hexValue,
-		)
+		fmt.Fprintf(out, rowFormat, name, int32(value), hexValue)
 	}
 
 	emitSection := func(label string) {
-		fmt.Fprintf(out,
-			"│ %-*s │ %*s │ %-*s │\n",
-			nameWidth,
-			label,
-			decimalWidth,
-			"",
-			hexWidth,
-			"",
-		)
+		fmt.Fprintf(out, "\u2502 %-*s │ %*s │ %-*s │\n", nameWidth, label, decimalWidth, "", hexWidth, "")
 	}
 
-	fmt.Fprintf(out,
-		headerFormat,
-		"Variable",
-		"Value",
-		"Hex",
-	)
+	fmt.Fprintf(out, headerFormat, "Variable", "Value", "Hex")
+	fmt.Fprintln(out, hLine("\u251C", "\u253C", "\u2524", columnWidths))
 
-	fmt.Fprintln(out, hLine("├", "┼", "┤", columnWidths))
-
-	emitSection("[Constants]")
-
+	emitSection("Constants")
 	for i := 0; i < 4; i++ {
-		row := allRows[i]
-
-		emitRow(
-			row.name,
-			row.value,
-			row.extra,
-		)
+		emitRow(allRows[i].name, allRows[i].value, allRows[i].extra)
 	}
+	fmt.Fprintln(out, hLine("\u251C", "\u253C", "\u2524", columnWidths))
 
-	fmt.Fprintln(out, hLine("├", "┼", "┤", columnWidths))
-
-	emitSection("[Singular Values]")
-
+	emitSection("Singular Values")
 	for i := 4; i < 11; i++ {
-		row := allRows[i]
-
-		emitRow(
-			row.name,
-			row.value,
-			row.extra,
-		)
+		emitRow(allRows[i].name, allRows[i].value, allRows[i].extra)
 	}
+	fmt.Fprintln(out, hLine("\u251C", "\u253C", "\u2524", columnWidths))
 
-	fmt.Fprintln(out, hLine("├", "┼", "┤", columnWidths))
-
-	emitSection("[Data Structures]")
-
+	emitSection("Data Structures")
 	for i := 11; i < len(allRows); i++ {
-		row := allRows[i]
-
-		emitRow(
-			row.name,
-			row.value,
-			row.extra,
-		)
+		emitRow(allRows[i].name, allRows[i].value, allRows[i].extra)
 	}
 
-	fmt.Fprintln(out, hLine("└", "┴", "┘", columnWidths))
+	fmt.Fprintln(out, hLine("\u2514", "\u2534", "\u2518", columnWidths))
 	fmt.Fprintln(out)
+}
+
+func (m *Machine) GetProcessTableString() string {
+	var buf strings.Builder
+	m.debugProcessTableTo(&buf)
+	return buf.String()
+}
+
+func (m *Machine) debugProcessTableTo(out io.Writer) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	memory := m.memory
+
+	partitionNumber := readUint32(memory, 0x1014)
+	runningPid := readUint32(memory, 0x1018)
 
 	if partitionNumber == 0 {
 		fmt.Fprintln(out, "Nenhum processo (partition_number = 0).")
@@ -769,7 +719,7 @@ func (m *Machine) debugSystemTo(out io.Writer) {
 		"SR",
 	}
 
-	columnWidths = make([]int, len(columnHeaders))
+	columnWidths := make([]int, len(columnHeaders))
 
 	for i, header := range columnHeaders {
 		columnWidths[i] = visualLen(header)
@@ -1098,6 +1048,167 @@ func (m *Machine) GetMemoryViewString() string {
 			e.raw,
 			instrW, e.decode)
 	}
+
+	return buf.String()
+}
+
+func (m *Machine) GetPCBVectorString() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var buf strings.Builder
+	w := &buf
+
+	memory := m.memory
+	partitionNumber := readUint32(memory, 0x1014)
+	runningPid := readUint32(memory, 0x1018)
+
+	if partitionNumber == 0 {
+		fmt.Fprintln(w, "No processes.")
+		return buf.String()
+	}
+
+	type pcbEntry struct {
+		pid         int
+		parent      int32
+		child       int32
+		nextSib     int32
+		prevSib     int32
+		statusAddr  int32
+		w0, w1, w2  int32
+		w3, w4, w5  int32
+		w6, w7, w8  int32
+		w9          int32
+		pc, sp, sr  int32
+		base, limit int32
+		flags       byte
+		state       string
+	}
+
+	var entries []pcbEntry
+
+	for pid := uint32(0); pid < partitionNumber; pid++ {
+		pcbAddr := 0x102C + pid*84
+		flags := memory[pcbAddr+80]
+		if flags&1 == 0 {
+			continue
+		}
+
+		entries = append(entries, pcbEntry{
+			pid:        int(pid),
+			parent:     int32(readUint32(memory, pcbAddr+0)),
+			child:      int32(readUint32(memory, pcbAddr+4)),
+			nextSib:    int32(readUint32(memory, pcbAddr+12)),
+			prevSib:    int32(readUint32(memory, pcbAddr+8)),
+			statusAddr: int32(readUint32(memory, pcbAddr+16)),
+			w0:         int32(readUint32(memory, pcbAddr+20)),
+			w1:         int32(readUint32(memory, pcbAddr+24)),
+			w2:         int32(readUint32(memory, pcbAddr+28)),
+			w3:         int32(readUint32(memory, pcbAddr+32)),
+			w4:         int32(readUint32(memory, pcbAddr+36)),
+			w5:         int32(readUint32(memory, pcbAddr+40)),
+			w6:         int32(readUint32(memory, pcbAddr+44)),
+			w7:         int32(readUint32(memory, pcbAddr+48)),
+			w8:         int32(readUint32(memory, pcbAddr+52)),
+			w9:         int32(readUint32(memory, pcbAddr+56)),
+			pc:         int32(readUint32(memory, pcbAddr+60)),
+			sp:         int32(readUint32(memory, pcbAddr+64)),
+			sr:         int32(readUint32(memory, pcbAddr+68)),
+			base:       int32(readUint32(memory, pcbAddr+72)),
+			limit:      int32(readUint32(memory, pcbAddr+76)),
+			flags:      flags,
+			state:      pcbState(flags),
+		})
+	}
+
+	if len(entries) == 0 {
+		fmt.Fprintln(w, "No mapped processes.")
+		return buf.String()
+	}
+
+	cols := []string{"PID", "State", "Parent", "Child", "W0", "W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9", "PC", "SP", "SR"}
+	widths := make([]int, len(cols))
+	for i, c := range cols {
+		widths[i] = len(c)
+	}
+
+	for _, e := range entries {
+		pidStr := fmt.Sprintf("%d", e.pid)
+		if e.pid == int(runningPid) {
+			pidStr = ">" + pidStr
+		}
+		widths[0] = max(widths[0], len(pidStr))
+		widths[1] = max(widths[1], len(e.state))
+		vals := []int32{e.parent, e.child, e.w0, e.w1, e.w2, e.w3, e.w4, e.w5, e.w6, e.w7, e.w8, e.w9, e.pc, e.sp, e.sr}
+		for i, v := range vals {
+			widths[i+2] = max(widths[i+2], len(fmt.Sprintf("%d", v)))
+		}
+	}
+
+	fmt.Fprintf(w, "\u250C")
+	for i, width := range widths {
+		fmt.Fprintf(w, "%s\u2500\u2500", strings.Repeat("\u2500", width+2))
+		if i < len(widths)-1 {
+			fmt.Fprint(w, "\u252C")
+		}
+	}
+	fmt.Fprintln(w, "\u2510")
+
+	fmt.Fprintf(w, "\u2502")
+	for i, c := range cols {
+		fmt.Fprintf(w, " %-*s \u2502", widths[i], c)
+	}
+	fmt.Fprintln(w)
+
+	fmt.Fprintf(w, "\u251C")
+	for i, width := range widths {
+		fmt.Fprintf(w, "%s\u2500\u2500", strings.Repeat("\u2500", width+2))
+		if i < len(widths)-1 {
+			fmt.Fprint(w, "\u253C")
+		}
+	}
+	fmt.Fprintln(w, "\u2524")
+
+	for idx, e := range entries {
+		pidStr := fmt.Sprintf("%d", e.pid)
+		if e.pid == int(runningPid) {
+			pidStr = ">" + pidStr
+		}
+		vals := []interface{}{
+			pidStr, e.state, e.parent, e.child,
+			e.w0, e.w1, e.w2, e.w3, e.w4, e.w5, e.w6, e.w7, e.w8, e.w9,
+			e.pc, e.sp, e.sr,
+		}
+		fmt.Fprintf(w, "\u2502")
+		for i, v := range vals {
+			if i <= 1 {
+				fmt.Fprintf(w, " %-*s \u2502", widths[i], fmt.Sprintf("%v", v))
+			} else {
+				fmt.Fprintf(w, " %*d \u2502", widths[i], v)
+			}
+		}
+		fmt.Fprintln(w)
+
+		if idx < len(entries)-1 {
+			fmt.Fprintf(w, "\u251C")
+			for i, width := range widths {
+				fmt.Fprintf(w, "%s\u2500\u2500", strings.Repeat("\u2500", width+2))
+				if i < len(widths)-1 {
+					fmt.Fprint(w, "\u253C")
+				}
+			}
+			fmt.Fprintln(w, "\u2524")
+		}
+	}
+
+	fmt.Fprintf(w, "\u2514")
+	for i, width := range widths {
+		fmt.Fprintf(w, "%s\u2500\u2500", strings.Repeat("\u2500", width+2))
+		if i < len(widths)-1 {
+			fmt.Fprint(w, "\u2534")
+		}
+	}
+	fmt.Fprintln(w, "\u2518")
 
 	return buf.String()
 }
