@@ -52,11 +52,6 @@ func runTUIWithMachine(m *machine.Machine) {
 		pcbVectorView.SetText(m.GetProcessTableString())
 	}
 
-	step := func() {
-		m.StepChan <- struct{}{}
-		<-m.DoneChan
-		refreshAll()
-	}
 
 	refreshAll()
 
@@ -75,9 +70,20 @@ func runTUIWithMachine(m *machine.Machine) {
 			if !m.IsDebugMode() {
 				return
 			}
+			steps := 1
+			if len(parts) > 1 {
+				parsedSteps, err := strconv.Atoi(parts[1])
+				if err == nil && parsedSteps > 0 {
+					steps = parsedSteps
+				}
+			}
 			go func() {
+				for i := 0; i < steps; i++ {
+					m.StepChan <- struct{}{}
+					<-m.DoneChan
+				}
 				app.QueueUpdateDraw(func() {
-					step()
+					refreshAll()
 				})
 			}()
 
