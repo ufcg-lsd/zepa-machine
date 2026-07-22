@@ -1,5 +1,5 @@
 setup:
-    MV W1 #0x2000 ; 8KB of full kernel memory
+    MV W1 #0x800000 ; 8KB of full kernel memory
     STRD W1 #0x1008 ; kernel_max_memory
     LDD W2 #0x100C ; buffer_size
     STRD W1, #0x1020 ; initilizes the kernel stack pointer as the kernel_max_memory
