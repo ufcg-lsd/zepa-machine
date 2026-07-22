@@ -385,12 +385,14 @@ input_int:
     input_copy_loop:
         CMP W8, W4              ; Compara index (W8) com tamanho do BUFFER (W4)
         BEQ input_copy_end      ; Se copiou o buffer inteiro, vai para a limpeza do resto
-
+        BGT input_copy_end 
         ; Ler do buffer (BUFFER_START + index)
         ADD W7, W3, W8          ; W7 = BUFFER_START + index
         LOAD W5, W7             ; W5 = memory[BUFFER_START + index]
 
         ; Gravar na partição (BASE + index)
+        ;   W1 = partition_size                         
+
         ADD W7, W1, W8          ; W7 = BASE + index
         STORE W5, W7            ; memory[BASE + index] = W5
 
@@ -404,7 +406,7 @@ input_int:
     input_clear_loop:
         CMP W8, W6              ; Compara index (W8) com tamanho total da partição (W6)
         BEQ input_clear_end     ; Se limpou toda a partição, termina
-
+        BGT input_clear_end
         ; Gravar zero na partição (BASE + index)
         ADD W7, W1, W8          ; W7 = BASE + index
         STORE W5, W7            ; memory[BASE + index] = 0
