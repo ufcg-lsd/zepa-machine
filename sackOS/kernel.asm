@@ -1,11 +1,10 @@
 setup:
-    MV W1 #2048  
-    MV W2 #4096
-    MUL W1 W1 W2   ; 8MB of full kernel memory
-    ADD SP, SP, W3 ; kernel_stack_pointer
+    MV W0 #2048  
+    MV W1 #4096
+    MUL W1, W0, W1   ; 8MB of full kernel memory
     STRD W1 #0x1008 ; kernel_max_memory
-    LDD W2 #0x100C ; buffer_size
     STRD W1, #0x1020 ; initilizes the kernel stack pointer as the kernel_max_memory
+    LDD W2 #0x100C ; buffer_size
     STRD LIMIT #0x1010 ; memory_size
     ADD W3 W1 W2 ; W3 -> KERNEL_MAX_MEMORY + BUFFER
 
@@ -54,6 +53,7 @@ setup:
 
 
         setup_registers:
+            LDD SP #0x1020 ; kernel_stack_pointer
             MV ESA #0x94 ; the exception_supervisor initial address
             MV EPC #0x90 ; the infinite loop below
             MV ESR #16 ; enable interruptions
@@ -167,78 +167,89 @@ clock_int:
 
   LDD W1, #0x1004 ; time_slice 
   CMP W0, W1
-  BLT #2                            ; if clock_interrupt_count < TIME_SLICE
-  JUMP clk_no_preempt
+  BEQ clock_reset                   ; if clock_interrupt_count == TIME_SLICE, reset and check running
 
-  STRD W0, #0x101C ; clock_interrupt_count
-  LDD W0, #0x1024 ; scratch_space_0
-  LDD W1, #0x1028 ; scratch_space_1
-  MRET
+    STRD W0, #0x101C ; clock_interrupt_count
+  clock_return:
+    LDD W0, #0x1024 ; scratch_space_0
+    LDD W1, #0x1028 ; scratch_space_1
+    MRET
 
-  clk_no_preempt:
+  clock_reset:
     MV W0, #0
     STRD W0, #0x101C ; clock_interrupt_count = 0
 
-    LDD W0, #0x1018 ; running_pid
-    MV W1, #-1
-    CMP W0, W1
-    BEQ end_clock                   ; if running_pid != -1 
+  LDD W0, #0x1018 ; running_pid
+  MV W1, #-1
+  CMP W0, W1
+  BEQ clock_return                   ; if running_pid == -1, clock_return
 
-    LDD W1, #0x1018 ; running_pid    
-    MV W0, #84                      ; pcb_size
-    MUL W1, W0, W1                  ; W1 = running_pid * pcb_size
-    
-    MV W0, #0x102C ; pcb_v
-    ADD W1, W0, W1                  ; W1 = pcb_v[running_pid] initial address
+  ; saving registers
+  LDD W1, #0x1018 ; running_pid    
+  MV W0, #84                      ; pcb_size
+  MUL W1, W0, W1                  ; W1 = running_pid * pcb_size
+  
+  MV W0, #0x102C ; pcb_v
+  ADD W1, W0, W1                  ; W1 = pcb_v[running_pid] initial address
 
-    MV W0, #68
-    ADD W1, W0, W1
-    STORE ESR, W1                   ; saving SR
+  MV W0, #68
+  ADD W1, W0, W1
+  STORE ESR, W1                   ; saving SR
 
-    MV W0, #4
-    SUB W1, W1, W0
-    STORE SP, W1                    ; saving SP
+  MV W0, #4
+  SUB W1, W1, W0
+  STORE SP, W1                    ; saving SP
 
-    SUB W1, W1, W0
-    STORE EPC, W1                   ; saving PC
+  SUB W1, W1, W0
+  STORE EPC, W1                   ; saving PC
 
-    SUB W1, W1, W0
-    STORE W9, W1                    ; saving W9
+  SUB W1, W1, W0
+  STORE W9, W1                    ; saving W9
 
-    SUB W1, W1, W0
-    STORE W8, W1                    ; saving W8
+  SUB W1, W1, W0
+  STORE W8, W1                    ; saving W8
 
-    SUB W1, W1, W0
-    STORE W7, W1                    ; saving W7
-    
-    SUB W1, W1, W0
-    STORE W6, W1                    ; saving W6
-    
-    SUB W1, W1, W0
-    STORE W5, W1                    ; saving W5
+  SUB W1, W1, W0
+  STORE W7, W1                    ; saving W7
+  
+  SUB W1, W1, W0
+  STORE W6, W1                    ; saving W6
+  
+  SUB W1, W1, W0
+  STORE W5, W1                    ; saving W5
 
-    SUB W1, W1, W0
-    STORE W4, W1                    ; saving W4
+  SUB W1, W1, W0
+  STORE W4, W1                    ; saving W4
 
-    SUB W1, W1, W0
-    STORE W3, W1                    ; saving W3
+  SUB W1, W1, W0
+  STORE W3, W1                    ; saving W3
 
-    SUB W1, W1, W0
-    STORE W2, W1                    ; saving W2
+  SUB W1, W1, W0
+  STORE W2, W1                    ; saving W2
 
-    LDD W3, #0x1028 ; scratch_space_1
-    SUB W1, W1, W0
-    STORE W3, W1                    ; saving W1
+  LDD W3, #0x1028 ; scratch_space_1
+  SUB W1, W1, W0
+  STORE W3, W1                    ; saving W1
 
-    LDD W3, #0x1024 ; scratch_space_0
-    SUB W1, W1, W0
-    STORE W3, W1                    ; saving W0
+  LDD W3, #0x1024 ; scratch_space_0
+  SUB W1, W1, W0
+  STORE W3, W1                    ; saving W0
 
-  end_clock:
-    JUMP schedule
+  JUMP schedule
 
 
 input_int:
+    ; Obter BUFFER_START em W3 (BUFFER_START = LIMIT - BUFFER)
+    LDD W3, #0x1010     ; W3 = total memory size
+    LDD W2, #0x100C ; W2 = BUFFER size constant
+    SUB W3, W3, W2          ; W3 = BUFFER_START
+    LOAD W3, W3 ; W3 = buffer_input_size, set at the start of the buffer
+
+    LDD W4, #0x1000 ; W4 = partition_size
+    
+    CMP W3, W4
+    BGT input_end ; if the buffer_input_size is greater than the partition size, just go back to the scheduler
+
     MV W4, #0                   ; W4 = pid = 0 (contador do loop)
     LDD W5, #0x1014    ; W5 = PARTITION_NUMBER (limite do loop)
     MV W2, #1                   ; W2 = 1 (passo do loop)
@@ -380,9 +391,10 @@ input_int:
         LDD W6, #0x1000 ; W6 = partition size
 
         ; Etapa 1: Copiar exatamente o tamanho do BUFFER
-        LDD W4, 0x100C ; W4 = tamanho do BUFFER
         MV W8, #0               ; W8 = index = 0
         MV W2, #4               ; W2 = passo (4 bytes)
+        LOAD W4, W3             ; W4 = buffer_input_size
+        ADD W3, W3, W2          ; Começa após o input_size
 
     input_copy_loop:
         CMP W8, W4              ; Compara index (W8) com tamanho do BUFFER (W4)

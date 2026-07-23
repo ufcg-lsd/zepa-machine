@@ -418,17 +418,18 @@ func (m *Machine) getOpcode(instruction uint32) Opcode {
 	return Opcode(opcode)
 }
 
-func (m *Machine) decode() Instruction {
+func (m *Machine) decode() (Instruction, bool) {
 	instruction := m.registers[ir]
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
 	case AND, OR, XOR, ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE, LDB, LDSB, STRB:
-		return m.decodeRTypeInst(instruction)
+		return m.decodeRTypeInst(instruction), true
 	case MV, JUMP, BEQ, BLT, BGT, LDD, STRD, MRET:
-		fallthrough
+		return m.decodeITypeInst(instruction), true
 	default:
-		return m.decodeITypeInst(instruction)
+		m.exception(faultInt)
+		return Instruction{}, false
 	}
 }
 
@@ -454,7 +455,10 @@ func (m *Machine) Boot() {
 			m.exception(faultInt)
 		}*/
 
-		decodedInstruction := m.decode()
+		decodedInstruction, ok := m.decode()
+		if !ok {
+			continue
+		}
 
 		if m.isInterruptEnabled() {
 			if m.checkIllegalRegisterAccess(decodedInstruction) {
@@ -499,12 +503,18 @@ func (m *Machine) GetMemory() []byte {
 }
 
 func (m *Machine) LoadBuffer(buffer []byte) bool {
-	if len(buffer) > bufferSize {
+	if len(buffer) > bufferSize-4 {
 		return false
 	}
+
 	bufferIndex := len(m.memory) - bufferSize
 	clear(m.memory[bufferIndex:])
-	copy(m.memory[bufferIndex:], buffer)
+
+	for i := 0; i < 4; i++ {
+		m.memory[bufferIndex+i] = byte(len(buffer) >> (i * 8))
+	}
+
+	copy(m.memory[bufferIndex+4:], buffer)
 
 	return true
 }

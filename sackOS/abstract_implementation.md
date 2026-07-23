@@ -37,14 +37,20 @@ if clock_interrupt_count < TIME_SLICE:
   MRET
 
 clock_interrupt_count = 0
-if running_pid != -1
-  Save all registers except base and limit on pcb_v[running_pid] //remember W0 and W1 in scratch space
+
+if running_pid == -1:
+  load W0 and W1 back from scratch space
+  MRET
+
+Save all registers except base and limit on pcb_v[running_pid] //remember W0 and W1 in scratch space
 
 schedule()
 ```
 
 ## input_int()
 ```
+Extract the size from buffer and schedule() if its bigger than the partition
+
 for pid in range(0, partition_number):
   if pcb_v[pid].is_mapped = 0:
     //initialize the PCB
