@@ -33,10 +33,18 @@ func main() {
 		log.Fatalf("Conversion failed: %v", err)
 	}
 
+	if memorySize%4 != 0 {
+		log.Fatalf("memory_size must be a multiple of 4, got %d", memorySize)
+	}
+
 	partitionSize, err := strconv.Atoi(os.Args[2])
 
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
+	}
+
+	if partitionSize%4 != 0 {
+		log.Fatalf("partition_size must be a multiple of 4, got %d", partitionSize)
 	}
 
 	timeSlice, err := strconv.Atoi(os.Args[3])
@@ -61,7 +69,7 @@ func main() {
 
 	// IO loop
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("Comandos: d (step), reg (registradores), pcb (processos), kill <pid>, input <path>")
+	fmt.Println("Commands: d (step), r (restore), reg (registers), pcb (processes), kill <pid>, input <path>")
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		parts := strings.Fields(line)
@@ -71,23 +79,23 @@ func main() {
 		switch parts[0] {
 		case "kill":
 			if len(parts) < 2 {
-				fmt.Println("uso: kill <pid>")
+				fmt.Println("usage: kill <pid>")
 				continue
 			}
 			pid, err := strconv.Atoi(parts[1])
 			if err != nil {
-				fmt.Println("PID inválido")
+				fmt.Println("invalid PID")
 				continue
 			}
 			buffer := make([]byte, 4)
 			binary.LittleEndian.PutUint32(buffer, uint32(pid))
 			machine.LoadBuffer(buffer)
 			machine.SetKillFlag()
-			fmt.Printf("kill %d enviado\n", pid)
+			fmt.Printf("kill %d sent\n", pid)
 
 		case "input":
 			if len(parts) < 2 {
-				fmt.Println("uso: input <path>")
+				fmt.Println("usage: input <path>")
 				continue
 			}
 			binaryCode, err := assembler.RunAssembler(parts[1])
@@ -97,11 +105,11 @@ func main() {
 			}
 			machine.LoadBuffer(binaryCode)
 			machine.SetInputFlag()
-			fmt.Printf("input enviado\n")
+			fmt.Printf("input sent\n")
 
 		case "d":
 			if !machine.IsDebugMode() {
-				fmt.Printf("Máquina não está em debug mode!\n")
+				fmt.Printf("Machine is not in debug mode!\n")
 				continue
 			}
 
@@ -109,12 +117,13 @@ func main() {
 			if len(parts) > 1 {
 				parsedSteps, err := strconv.Atoi(parts[1])
 				if err != nil || parsedSteps <= 0 {
-					fmt.Println("Número de passos inválido. Executando 1 passo.")
+					fmt.Println("Invalid number of steps. Running 1 step.")
 				} else {
 					steps = parsedSteps
 				}
 			}
 
+			machine.SaveCheckpoint()
 			for i := 0; i < steps; i++ {
 				machine.StepChan <- struct{}{}
 				<-machine.DoneChan
@@ -122,16 +131,54 @@ func main() {
 
 			machine.DebugRegisters()
 
+		case "b":
+			if !machine.IsDebugMode() {
+				fmt.Printf("Machine is not in debug mode!\n")
+				continue
+			}
+
+			if len(parts) > 1 {
+				pcValue, err := strconv.Atoi(parts[1])
+				if err != nil || pcValue < 0 {
+					fmt.Println("Invalid PC.")
+					continue
+				}
+
+				machine.SaveCheckpoint()
+				for {
+					machine.StepChan <- struct{}{}
+					<-machine.DoneChan
+
+					if machine.GetRegisters()[10] == uint32(pcValue) {
+						break
+					}
+				}
+
+				machine.DebugRegisters()
+			}
+
+		case "r":
+			if !machine.IsDebugMode() {
+				fmt.Printf("Machine is not in debug mode!\n")
+				continue
+			}
+			if !machine.RestoreCheckpoint() {
+				fmt.Println("No checkpoint available.")
+			} else {
+				fmt.Println("Checkpoint restored!")
+				machine.DebugRegisters()
+			}
+
 		case "reg":
 			if !machine.IsDebugMode() {
-				fmt.Printf("Máquina não está em debug mode!\n")
+				fmt.Printf("Machine is not in debug mode!\n")
 				continue
 			}
 			machine.DebugRegisters()
 
 		case "pcb":
 			if !machine.IsDebugMode() {
-				fmt.Printf("Máquina não está em debug mode!\n")
+				fmt.Printf("Machine is not in debug mode!\n")
 				continue
 			}
 			machine.DebugSystem()
