@@ -1,5 +1,8 @@
 setup:
-    MV W1 #0x800000 ; 8KB of full kernel memory
+    MV W1 #2048  
+    MV W2 #4096
+    MUL W1 W1 W2   ; 8MB of full kernel memory
+    ADD SP, SP, W3 ; kernel_stack_pointer
     STRD W1 #0x1008 ; kernel_max_memory
     LDD W2 #0x100C ; buffer_size
     STRD W1, #0x1020 ; initilizes the kernel stack pointer as the kernel_max_memory
@@ -51,9 +54,8 @@ setup:
 
 
         setup_registers:
-            LDD SP #0x1020 ; kernel_stack_pointer
-            MV ESA #0x8C ; the exception_supervisor initial address
-            MV EPC #0x88 ; the infinite loop below
+            MV ESA #0x94 ; the exception_supervisor initial address
+            MV EPC #0x90 ; the infinite loop below
             MV ESR #16 ; enable interruptions
             
             MRET ; go to infinite loop, waiting for program inputs
@@ -1399,7 +1401,7 @@ schedule:
         MV W9, #-1
         STRD W9, #0x1018 ; running_pid = -1
 
-        MV EPC, #0x88 ; infinite_loop
+        MV EPC, #0x90 ; infinite_loop
 
         MV ESR, #16
 
