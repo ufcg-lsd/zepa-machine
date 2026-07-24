@@ -404,14 +404,6 @@ func (m *Machine) decodeITypeInst(instruction uint32) Instruction {
 	}
 }
 
-func (m *Machine) isEndOfProgram() bool {
-	if (m.registers[ir]) == 0 {
-		m.registers[pc] -= 4
-		return true
-	}
-	return false
-}
-
 func (m *Machine) getOpcode(instruction uint32) Opcode {
 	offsetOpcode := word - opcodeLength
 	opcode := instruction >> (uint32(offsetOpcode))
@@ -426,10 +418,12 @@ func (m *Machine) decode() (Instruction, bool) {
 	switch opcode {
 	case AND, OR, XOR, ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE, LDB, LDSB, STRB:
 		return m.decodeRTypeInst(instruction), true
-	case MV, JUMP, BEQ, BLT, BGT, LDD, STRD, MRET:
+	case MV, JUMP, BEQ, BLT, BGT, LDD, STRD, SYSCALL, MRET:
 		return m.decodeITypeInst(instruction), true
 	default:
-		m.exception(faultInt)
+		if m.isInterruptEnabled() {
+			m.exception(faultInt)
+		}
 		return Instruction{}, false
 	}
 }
@@ -442,6 +436,9 @@ func (m *Machine) Boot() {
 	m.registers[limit] = uint32(len(m.memory))
 	instructionsExcecuted := 0
 
+	var decodedInstruction Instruction
+	var ok bool
+
 	for {
 
 		if m.debugFlag {
@@ -449,26 +446,22 @@ func (m *Machine) Boot() {
 		}
 
 		if !m.fetch() {
-			continue
+			goto endStep
 		}
 
-		/*if m.isEndOfProgram() {
-			m.exception(faultInt)
-		}*/
-
-		decodedInstruction, ok := m.decode()
+		decodedInstruction, ok = m.decode()
 		if !ok {
-			continue
+			goto endStep
 		}
 
 		if m.isInterruptEnabled() {
 			if m.checkIllegalRegisterAccess(decodedInstruction) {
 				m.exception(faultInt)
-				continue
+				goto endStep
 			}
 			if m.checkIllegalInstruction(decodedInstruction) {
 				m.exception(faultInt)
-				continue
+				goto endStep
 			}
 		}
 
@@ -488,6 +481,7 @@ func (m *Machine) Boot() {
 			}
 		}
 
+	endStep:
 		if m.debugFlag {
 			m.DoneChan <- struct{}{}
 		}
