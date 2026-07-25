@@ -88,8 +88,8 @@ const (
 	clockInt uint32 = iota
 	inputInt
 	killInt
-	syscallInt
-	faultInt
+	syscallExc
+	faultExc
 )
 
 const TIMER_INTERVAL = 128
@@ -299,14 +299,14 @@ func (m *Machine) mret(inst Instruction) {
 
 func (m *Machine) syscall(inst Instruction) {
 	m.registers[w9] = uint32(inst.immediate)
-	m.exception(syscallInt)
+	m.exception(syscallExc)
 }
 
 func (m *Machine) translate(addr uint32, addrOffset uint32) (uint32, bool) {
 	if !m.isKernelMode() {
 		addr = addr + m.registers[base]
 		if addr+addrOffset >= m.registers[limit] {
-			m.exception(faultInt)
+			m.exception(faultExc)
 			return addr, false
 		}
 	}
@@ -421,9 +421,7 @@ func (m *Machine) decode() (Instruction, bool) {
 	case MV, JUMP, BEQ, BLT, BGT, LDD, STRD, SYSCALL, MRET:
 		return m.decodeITypeInst(instruction), true
 	default:
-		if m.isInterruptEnabled() {
-			m.exception(faultInt)
-		}
+		m.exception(faultExc)
 		return Instruction{}, false
 	}
 }
@@ -454,15 +452,13 @@ func (m *Machine) Boot() {
 			goto endStep
 		}
 
-		if m.isInterruptEnabled() {
-			if m.checkIllegalRegisterAccess(decodedInstruction) {
-				m.exception(faultInt)
-				goto endStep
-			}
-			if m.checkIllegalInstruction(decodedInstruction) {
-				m.exception(faultInt)
-				goto endStep
-			}
+		if m.checkIllegalRegisterAccess(decodedInstruction) {
+			m.exception(faultExc)
+			goto endStep
+		}
+		if m.checkIllegalInstruction(decodedInstruction) {
+			m.exception(faultExc)
+			goto endStep
 		}
 
 		m.execute(decodedInstruction)
