@@ -171,10 +171,20 @@ func (m *Machine) mul(inst Instruction) {
 }
 
 func (m *Machine) udiv(inst Instruction) {
+	if m.registers[inst.rs2] == 0 {
+		m.exception(faultExc)
+		return
+	}
+
 	m.registers[inst.rd] = m.registers[inst.rs1] / m.registers[inst.rs2]
 }
 
 func (m *Machine) sdiv(inst Instruction) {
+	if m.registers[inst.rs2] == 0 {
+		m.exception(faultExc)
+		return
+	}
+
 	m.registers[inst.rd] = uint32(int32(m.registers[inst.rs1]) / int32(m.registers[inst.rs2]))
 }
 
