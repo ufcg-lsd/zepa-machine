@@ -34,8 +34,9 @@ const (
 	ESA
 	ESR
 	EPC
-	BASE
-	LIMIT
+	UPTR
+	KPTR
+	EFA
 )
 
 const (
@@ -68,24 +69,25 @@ const (
 
 // Map register names to Register values
 var registerMap = map[string]Register{
-	"W0":    W0,
-	"W1":    W1,
-	"W2":    W2,
-	"W3":    W3,
-	"W4":    W4,
-	"W5":    W5,
-	"W6":    W6,
-	"W7":    W7,
-	"W8":    W8,
-	"W9":    W9,
-	"PC":    PC,
-	"SP":    SP,
-	"ECR":   ECR,
-	"ESA":   ESA,
-	"ESR":   ESR,
-	"EPC":   EPC,
-	"BASE":  BASE,
-	"LIMIT": LIMIT,
+	"W0":   W0,
+	"W1":   W1,
+	"W2":   W2,
+	"W3":   W3,
+	"W4":   W4,
+	"W5":   W5,
+	"W6":   W6,
+	"W7":   W7,
+	"W8":   W8,
+	"W9":   W9,
+	"PC":   PC,
+	"SP":   SP,
+	"ECR":  ECR,
+	"ESA":  ESA,
+	"ESR":  ESR,
+	"EPC":  EPC,
+	"UPTR": UPTR,
+	"KPTR": KPTR,
+	"EFA":  EFA,
 }
 
 // Map instruction names to Opcode values

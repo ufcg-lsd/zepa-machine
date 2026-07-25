@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"encoding/binary"
 	"slices"
 )
 
@@ -29,8 +30,9 @@ const (
 	esa
 	esr
 	epc
-	base
-	limit
+	uptr
+	kptr
+	efa
 )
 
 const (
@@ -88,11 +90,18 @@ const (
 	clockInt uint32 = iota
 	inputInt
 	killInt
-	syscallInt
-	faultInt
+	syscallExc
+	faultExc
+	pageFaultExc
 )
 
 const TIMER_INTERVAL = 128
+
+const (
+	pageSize       = 4096       // 4KB pages (12 bits of offset)
+	kernelBoundary = 0xC0000000 // 3GB mark
+	flagValid      = 0x00100000 // V flag is bit 20 of the PTE
+)
 
 var operations = map[Opcode]Operation{
 	MV:      (*Machine).mv,
@@ -171,10 +180,20 @@ func (m *Machine) mul(inst Instruction) {
 }
 
 func (m *Machine) udiv(inst Instruction) {
+	if m.registers[inst.rs2] == 0 {
+		m.exception(faultExc)
+		return
+	}
+
 	m.registers[inst.rd] = m.registers[inst.rs1] / m.registers[inst.rs2]
 }
 
 func (m *Machine) sdiv(inst Instruction) {
+	if m.registers[inst.rs2] == 0 {
+		m.exception(faultExc)
+		return
+	}
+
 	m.registers[inst.rd] = uint32(int32(m.registers[inst.rs1]) / int32(m.registers[inst.rs2]))
 }
 
@@ -217,55 +236,43 @@ func (m *Machine) bgt(inst Instruction) {
 }
 
 func (m *Machine) load(inst Instruction) {
-	addr, ok := m.translate(m.registers[inst.rs2], 3)
+	addr, ok := m.translate(m.registers[inst.rs2], 4)
 	if !ok {
 		return
 	}
 
-	m.registers[inst.rs1] = 0
-
-	for i := uint32(0); i < 4; i++ {
-		m.registers[inst.rs1] |= (uint32(m.memory[addr+i]) << (i * 8))
-	}
+	m.registers[inst.rs1] = binary.LittleEndian.Uint32(m.memory[addr : addr+4])
 }
 
 func (m *Machine) store(inst Instruction) {
-	addr, ok := m.translate(m.registers[inst.rs2], 3)
+	addr, ok := m.translate(m.registers[inst.rs2], 4)
 	if !ok {
 		return
 	}
 
-	for i := uint32(0); i < 4; i++ {
-		m.memory[addr+i] = byte(m.registers[inst.rs1] >> (i * 8))
-	}
+	binary.LittleEndian.PutUint32(m.memory[addr:addr+4], m.registers[inst.rs1])
 }
 
 func (m *Machine) ldd(inst Instruction) {
-	addr, ok := m.translate(uint32(inst.immediate), 3)
+	addr, ok := m.translate(uint32(inst.immediate), 4)
 	if !ok {
 		return
 	}
 
-	m.registers[inst.rd] = 0
-
-	for i := uint32(0); i < 4; i++ {
-		m.registers[inst.rd] |= (uint32(m.memory[addr+i]) << (i * 8))
-	}
+	m.registers[inst.rd] = binary.LittleEndian.Uint32(m.memory[addr : addr+4])
 }
 
 func (m *Machine) strd(inst Instruction) {
-	addr, ok := m.translate(uint32(inst.immediate), 3)
+	addr, ok := m.translate(uint32(inst.immediate), 4)
 	if !ok {
 		return
 	}
 
-	for i := uint32(0); i < 4; i++ {
-		m.memory[addr+i] = byte(m.registers[inst.rd] >> (i * 8))
-	}
+	binary.LittleEndian.PutUint32(m.memory[addr:addr+4], m.registers[inst.rd])
 }
 
 func (m *Machine) ldb(inst Instruction) {
-	addr, ok := m.translate(m.registers[inst.rs2], 0)
+	addr, ok := m.translate(m.registers[inst.rs2], 1)
 	if !ok {
 		return
 	}
@@ -274,7 +281,7 @@ func (m *Machine) ldb(inst Instruction) {
 }
 
 func (m *Machine) ldsb(inst Instruction) {
-	addr, ok := m.translate(m.registers[inst.rs2], 0)
+	addr, ok := m.translate(m.registers[inst.rs2], 1)
 	if !ok {
 		return
 	}
@@ -283,7 +290,7 @@ func (m *Machine) ldsb(inst Instruction) {
 }
 
 func (m *Machine) strb(inst Instruction) {
-	addr, ok := m.translate(m.registers[inst.rs2], 0)
+	addr, ok := m.translate(m.registers[inst.rs2], 1)
 	if !ok {
 		return
 	}
@@ -299,33 +306,63 @@ func (m *Machine) mret(inst Instruction) {
 
 func (m *Machine) syscall(inst Instruction) {
 	m.registers[w9] = uint32(inst.immediate)
-	m.exception(syscallInt)
+	m.exception(syscallExc)
 }
 
-func (m *Machine) translate(addr uint32, addrOffset uint32) (uint32, bool) {
-	if !m.isKernelMode() {
-		addr = addr + m.registers[base]
-		if addr+addrOffset >= m.registers[limit] {
-			m.exception(faultInt)
-			return addr, false
-		}
+func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
+	if !m.isMmuEnabled() {
+		return addr, true
 	}
 
-	return addr, true
+	if byteCount == 4 && addr%4 != 0 {
+		m.registers[efa] = addr
+		m.exception(faultExc) // unaligned address
+		return 0, false
+	}
+
+	if !m.isKernelMode() && addr > kernelBoundary {
+		m.exception(pageFaultExc)
+		m.registers[efa] = addr
+		return 0, false
+	}
+
+	var ptr uint32
+	if addr >= kernelBoundary {
+		ptr = uint32(m.registers[kptr])
+	} else {
+		ptr = uint32(m.registers[uptr])
+	}
+
+	pageNumber := addr / pageSize
+	pteAddr := ptr + (pageNumber * 4)
+
+	pte := binary.LittleEndian.Uint32(m.memory[pteAddr : pteAddr+4])
+
+	if pte&flagValid == 0 {
+		m.registers[efa] = addr
+		m.exception(pageFaultExc)
+		return 0, false
+	}
+
+	physicalFrame := pte & 0xFFFFF
+	offset := addr % pageSize
+	physicalAddr := physicalFrame + offset
+
+	return physicalAddr, true
 }
 
 func (m *Machine) exception(cause uint32) {
 	m.registers[ecr] = cause
 
 	m.registers[esr] = m.registers[sr]
-	m.registers[sr] = 0
+	m.registers[sr] &^= 0b11111 //sets the first 5 bits to 0, clears cmp tags, enters kernel mode and disables instructions
 
 	m.registers[epc] = m.registers[pc]
 	m.registers[pc] = m.registers[esa]
 }
 
 func (m *Machine) checkIllegalRegisterAccess(inst Instruction) bool {
-	priviligedRegisters := []Register{ecr, esa, esr, epc, base, limit}
+	priviligedRegisters := []Register{ecr, esa, esr, epc, kptr, uptr, efa}
 	return !m.isKernelMode() && (slices.Contains(priviligedRegisters, inst.rd) || slices.Contains(priviligedRegisters, inst.rs1) || slices.Contains(priviligedRegisters, inst.rs2))
 }
 
@@ -342,21 +379,18 @@ func (m *Machine) isInterruptEnabled() bool {
 	return m.registers[sr]&16 != 0
 }
 
+func (m *Machine) isMmuEnabled() bool {
+	return m.registers[sr]&32 != 0
+}
+
 func (m *Machine) fetch() bool {
-	addr, ok := m.translate(m.registers[pc], 3)
+	addr, ok := m.translate(m.registers[pc], 4)
 	if !ok {
 		return false
 	}
 
-	var completeInstruction uint32 = 0
-
-	for i := 0; i < 4; i++ {
-		currentInstruction := m.memory[addr]
-		completeInstruction = completeInstruction | uint32(currentInstruction)<<(24-8*i)
-		addr += 1
-		m.registers[pc] += 1
-	}
-	m.registers[ir] = completeInstruction
+	m.registers[ir] = binary.LittleEndian.Uint32(m.memory[addr : addr+4])
+	m.registers[pc] += 4
 	return true
 }
 
@@ -421,9 +455,7 @@ func (m *Machine) decode() (Instruction, bool) {
 	case MV, JUMP, BEQ, BLT, BGT, LDD, STRD, SYSCALL, MRET:
 		return m.decodeITypeInst(instruction), true
 	default:
-		if m.isInterruptEnabled() {
-			m.exception(faultInt)
-		}
+		m.exception(faultExc)
 		return Instruction{}, false
 	}
 }
@@ -433,7 +465,7 @@ func (m *Machine) execute(inst Instruction) {
 }
 
 func (m *Machine) Boot() {
-	m.registers[limit] = uint32(len(m.memory))
+	m.registers[w0] = uint32(len(m.memory))
 	instructionsExcecuted := 0
 
 	var decodedInstruction Instruction
@@ -454,15 +486,13 @@ func (m *Machine) Boot() {
 			goto endStep
 		}
 
-		if m.isInterruptEnabled() {
-			if m.checkIllegalRegisterAccess(decodedInstruction) {
-				m.exception(faultInt)
-				goto endStep
-			}
-			if m.checkIllegalInstruction(decodedInstruction) {
-				m.exception(faultInt)
-				goto endStep
-			}
+		if m.checkIllegalRegisterAccess(decodedInstruction) {
+			m.exception(faultExc)
+			goto endStep
+		}
+		if m.checkIllegalInstruction(decodedInstruction) {
+			m.exception(faultExc)
+			goto endStep
 		}
 
 		m.execute(decodedInstruction)
@@ -527,10 +557,7 @@ func (m *Machine) LoadBuffer(buffer []byte) bool {
 	bufferIndex := len(m.memory) - bufferSize
 	clear(m.memory[bufferIndex:])
 
-	for i := 0; i < 4; i++ {
-		m.memory[bufferIndex+i] = byte(len(buffer) >> (i * 8))
-	}
-
+	binary.LittleEndian.PutUint32(m.memory[bufferIndex:bufferIndex+4], uint32(len(buffer)))
 	copy(m.memory[bufferIndex+4:], buffer)
 
 	return true
