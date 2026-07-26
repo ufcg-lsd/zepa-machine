@@ -10,25 +10,29 @@ Initially, this machine has 10 registers, which are named W0 to W9, each of them
 - **W0, W1, W2, W3, W4, W5, W6, W7, W8 and W9 [31:0]**
 
 ### Special Registers
-The special registers have specific purposes and exist to handle essential functions for the machine's operation.
-For the specific case of this machine, six registers were defined, mainly to assist in memory manipulation, all storing values up to 32 bits.
+The special registers have specific purposes and exist to handle essential functions for the machine's operation. For the specific case of this machine, thirteen special registers were defined, mainly to assist in memory manipulation, process state, and exception handling, all storing values up to 32 bits.
 
-- **Program Counter (PC) [31:0]**: Stores the address of the next instruction to be executed. Is automaticaly incremented after every instruction cycle, unless modified by a JUMP instruction.
-- **Instruction Register (IR) [31:0]**: Contains the current instruction being decoded and executed.
-- **Memory Data Register (MDR) [31:0]**: Holds the data being transferred from or to memory.
-- **Stack Pointer (SP) [31:0]**: Points to the top of the stack, used to manage function calls and local variable storage.
-- **Memory Address Register (MAR) [31:0]**: Stores the memory address where reading or writing operations will be executed.
-- **Status Register (SR) [31:0]**: Stores flags that indicate the result of test operations executed and current CPU flags. The first three bits are reserved for the G, L and Z flags, bit 3 indicates whether the CPU is in kernel mode (0) or in user mode (1), and bit 4 indicates if interruptions are disabled (0) or enabled (1).
-- **Exception Cause Register (ECR) [31:0]**: Stores a specific hardware code indicating the reason the exception or interrupt was triggered (e.g., an invalid instruction, a system call, or a hardware timer interrupt).
-- **Exception Supervisor Address (ESA) [31:0]**: Stores the base memory address of the exception supervisor routine. When an exception occurs, the CPU automatically jumps to this address so the supervisor can route execution to the appropriate specific handler.
-- **Exception Status Register (ESR) [31:0]**: Backs up the exact state of the Status Register (SR) at the moment the exception occurred.
-- **Exception Program Counter (EPC) [31:0]**: Stores the value of the Program Counter (PC) at the exact instruction where the exception occurred.
-- **Base (BASE) [31:0]**: Stores the starting physical address position of the running user process, to be managed by the MMU.
-- **Limit (LIMIT) [31:0]**: Stores the final physical address position of the running user process, to be managed by the MMU.
+- **Program Counter (PC) [31:0]:**: Stores the address of the next instruction to be executed. It is automatically incremented after every instruction cycle, unless modified by a control flow instruction (like a branch or jump).
+- **Instruction Register (IR) [31:0]:** Contains the current instruction being decoded and executed.
+- **Memory Data Register (MDR) [31:0]:** Holds the data being transferred from or to memory.
+- **Memory Address Register (MAR) [31:0]:** Stores the memory address where reading or writing operations will be executed.
+- **Stack Pointer (SP) [31:0]:** Points to the top of the stack, used to manage function calls and local variable storage.
+- **Status Register (SR) [31:0]:** Stores flags that indicate the result of test operations executed and current CPU state. 
+    - **Bits 0-2:** Reserved for the comparison flags: Equal (Z) at bit 0, Less (L) at bit 1, and Greater (G) at bit 2. 
+    - **Bit 3:** Indicates whether the CPU is in kernel mode (`0`) or user mode (`1`).
+    - **Bit 4:** Indicates if interrupts are disabled (`0`) or enabled (`1`).
+    - **Bit 5:** Indicates if the MMU is disabled (`0`) or enabled (`1`) for address translation.
+- **Exception Cause Register (ECR) [31:0]:** Stores a specific hardware code indicating the reason an exception or interrupt was triggered (e.g., an invalid instruction, a system call, a page fault, or a hardware timer interrupt).
+- **Exception Supervisor Address (ESA) [31:0]:** Stores the base memory address of the kernel's exception supervisor routine. When an exception occurs, the CPU automatically jumps to this address so the supervisor can route execution to the appropriate specific handler.
+- **Exception Status Register (ESR) [31:0]:** Backs up the exact state of the Status Register (SR) at the moment an exception occurred, allowing the CPU to restore its previous privilege and MMU state upon returning (`MRET`).
+- **Exception Program Counter (EPC) [31:0]:** Stores the value of the Program Counter (PC) at the exact instruction where the exception occurred, so execution can resume safely after the fault is handled.
+- **Exception Fault Address (EFA) [31:0]:** Stores the exact virtual memory address that caused an exception. This is critical for the kernel to resolve page faults, unaligned memory accesses, or privilege violations.
+- **User Page Table Pointer (UPTR) [31:0]:** Stores the base physical address of the page table used by the MMU to translate User-space memory (virtual addresses below the 3GB boundary).
+- **Kernel Page Table Pointer (KPTR) [31:0]:** Stores the base physical address of the page table used by the MMU to translate Kernel-space memory (virtual addresses at or above the 3GB boundary).
 
 ## Interruptions
 
-For this machine, when interruptions occur, the cause of the interruption is saved in the ecr, the status is saved in the esr, the pc is saved in the epc and is set as the esa. This machine contains 4 types of interruptions implemented:
+For this machine, when interruptions occur, the cause of the interruption is saved in the ecr, the status is saved in the esr, the pc is saved in the epc and is set as the esa. This machine contains 6 types of interruptions implemented:
 
 #### Clock - ID 0
 
@@ -46,10 +50,14 @@ Triggered by the syscall instruction, its id is expected to be at w8.
 
 #### Fault - ID 4
 
-Triggered by access outside base limit, empty instruction decode, use of privileged instruction/register when in user mode.
+Triggered by the use of privileged instruction/register when in user mode.
+
+#### PageFault - ID 5
+
+Triggered by accessing a page table not mapped by the page table (Valid = 0), by accessing a kernel table when in user mode, or by accessing a misaligned address for a 32 bit word. The address used is stored in the exception fault address.
 
 ## Buffer
-Buffer is a part of the memory designed to receive outside data. Buffer is defined as the last 64KB of the memory.
+Buffer is a part of the memory designed to receive outside data. Buffer is defined as the last 64KB of the memory and receives the byte size of the input in the first 32 bits of the buffer.
 
 
 ## Encoding
