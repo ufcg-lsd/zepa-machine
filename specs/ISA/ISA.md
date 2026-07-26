@@ -46,7 +46,7 @@ Triggered by the syscall instruction, its id is expected to be at w8.
 
 #### Fault - ID 4
 
-Triggered by access outside base limit, empty instruction decode, use of privileged instruction/register when in user mode.
+Triggered by access outside base limit, use of privileged instruction/register when in user mode.
 
 ## Buffer
 Buffer is a part of the memory designed to receive outside data. Buffer is defined as the last 64KB of the memory.
