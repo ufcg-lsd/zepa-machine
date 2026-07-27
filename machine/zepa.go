@@ -320,7 +320,7 @@ func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
 		return 0, false
 	}
 
-	if !m.isKernelMode() && addr > kernelBoundary {
+	if !m.isKernelMode() && addr >= kernelBoundary {
 		m.exception(pageFaultExc)
 		m.registers[efa] = addr
 		return 0, false
