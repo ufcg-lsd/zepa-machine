@@ -33,9 +33,9 @@ A process in sackOS can be in one of the following states:
 ### 2.2 Termination and Exit Codes
 Processes can be terminated in three ways. The system uses specific exit codes (status codes stored in `W9`) to denote how a process ended:
 * **Normal Exit:** Triggered via the `exit()` syscall. Status code is user-defined.
-* **General Fault (Exit Code `1`):** Triggered if the process attempts an out-of-bounds memory access, an illegal register access or a privileged instruction use.
+* **General Fault (Exit Code `1`):** Triggered if the process attempts an kernel, memory access, an illegal register access, privileged instruction use or invalid instruction.
 * **External Kill (Exit Code `2`):** Triggered if the OS directly terminates the process (e.g., via kill signal).
-
+* **Page Fault (Exit Code `3`):** Triggered if the process attempts to allocate a page but there are no frames left.
 ---
 
 ## 3. System Calls (Syscalls)

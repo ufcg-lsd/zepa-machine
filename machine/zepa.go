@@ -98,9 +98,9 @@ const (
 const TIMER_INTERVAL = 128
 
 const (
-	pageSize       = 4096       // 4KB pages (12 bits of offset)
-	kernelBoundary = 0xC0000000 // 3GB mark
-	flagValid      = 0x00100000 // V flag is bit 20 of the PTE
+	pageSize        = 4096       // 4KB pages (12 bits of offset)
+	kernelBoundary  = 0xC0000000 // 3GB mark
+	isPteMappedMask = 0x00100000 // V flag is bit 20 of the PTE
 )
 
 var operations = map[Opcode]Operation{
@@ -338,7 +338,7 @@ func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
 
 	pte := binary.LittleEndian.Uint32(m.memory[pteAddr : pteAddr+4])
 
-	if pte&flagValid == 0 {
+	if pte&isPteMappedMask == 0 {
 		m.registers[efa] = addr
 		m.exception(pageFaultExc)
 		return 0, false
