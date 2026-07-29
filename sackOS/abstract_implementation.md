@@ -2,17 +2,25 @@
 
 ## setup
 ```
-user_memory = LIMIT - (KERNEL_MAX_MEMORY + BUFFER)
-MAX_PROCESSES = USER_MEMORY / PARTITION_SIZE
+store memory_size
+user_memory = memory_size = 1GB
+frame_number = user_memory / 4KB
 
-for pid in range(0, MAX_PROCESSES):
-  pcb_v[pid].BASE = KERNEL_MAX_MEMORY + pid * PARTITION_SIZE
-  pcb_v[pid].LIMIT = BASE + PARTITION_SIZE
+allocate all kernel frames to both high and low pages
+updating the bitmap for high pages
+
+set UPTR and KPTR
+ESR = 32 //enable MMU
+EPC = next instruction
+MRET
+
+jump to high addresses
+unmap low pages
 
 SP = SP_ADDRESS
 ESA = EXCEPTION_SUPERVISOR_ADDRESS
 EPC = LOOP ADDRESS
-ESR = 16 //will enable interruptions
+ESR = 48 //will enable interruptions and MMU
 MRET //go to infinite loop, waiting for exceptions
 ```
 
@@ -67,7 +75,12 @@ for pid in range(0, MAX_PROCESSES):
 
     SP = 3GB (user virtual memory limit)
     //All other registers are 0
-    Copy the buffer (BUFFER bytes) to the user memory, (load PTR)
+    load pid UPTR
+    for page_id in range(0, buffer_size/4KB):
+      x = map_page(page_id)
+      if x != 0:
+        kill(pid)
+    Copy the buffer (BUFFER bytes) to the user memory
     break
 
 schedule()
@@ -100,15 +113,16 @@ kill(running_pid)
     pcb_v[running_pid].w9 = 3
     kill(running_pid)
 
-  search the bitmap for a free frame, map the PTE to the free frame, based on efa, set valid = 1
-  set the pcb_v[running_process].PC to an instruction before what it is in the EPC
-  update pcb_v[running_process].pages_used
+  page_id calculated based on efa
+  x = map_page(page_id)
+  if x != 0:
+    pcb_v[running_pid].w9 = 3
+    kill(running_pid)
 
-  if there is no free frame:
-  pcb_v[running_pid].w9 = 3
-  kill(running_pid)
-
-  schedule()
+  clear page with all 0
+  
+  restore CPU context of running_pid
+  MRET //make sure to make EPC point to the instruction before what it currently is
 ```
 
 # Syscall handlers
@@ -138,11 +152,15 @@ for pid in range(0, MAX_PROCESSES):
       pcb_v[pcb_v[running_pid].child].prev_sibling = pid
     pcb_v[running_pid].child = pid
 
-    //All other registers are copied from pcb_v[running_pid]
-    Copy the running_pid memory to the pid memory (switch between parent PTR and child PTR to copy)
+    //All other registers are copied from pcb_v[running_pid] 
+    load pid UPTR
     for pte in pcb_v[running_pid].page_table:
       if pte.Valid:
-        copy the page content from pte.page to the child page
+        // chante the uptr to the child one
+        x = map_page(pageId)
+        if x != 0:
+          kill(pid)
+        copy the page content from pte.page to the child page (switch between parent PTR and child PTR to copy)
       
     schedule()
 
@@ -242,7 +260,7 @@ while curr_child != -1:
   curr_child = next
 
 free every stack page cleaning the pages from the end of memory till the stack pointer address page 
-free every page from page table couting till pcb_v[pid].pages_used[i] == 0
+free every page from page table couting till pcb_v[pid].pages_used == 0
 
 schedule()
 ```
@@ -280,6 +298,25 @@ EPC = LOOP ADDRESS
 ESR = 48 //will enable interruptions
 MRET //go to infinite loop, waiting for exceptions
 ```
+
+## map_page(page_id)
+**page_id is on W9**
+**return address is on W8**
+**return on W9, 0 if successful, 1 otherwise**
+```
+search the bitmap for a free frame, map the PTE of page_id to the free frame, set valid = 1
+if it is an user page:
+  update pages_used (using address before uptr)
+
+if there is no free frame:
+  if efa >= kernelBoundary:
+    panic
+  w9 = 1
+
+w9 = 0
+jump back to return address
+```
+
 
 # Data Structures
 - Each Page has the fixed size of 4KB
