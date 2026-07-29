@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	buffer = 6 * 1024 // 6KB
+	buffer = 64 * 1024 // 64KB
 	minKernelSize = 8 * 1024 * 1024 // 8MB
 )
 
@@ -45,7 +45,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
-	
+
 	if partitionSize%4 != 0 {
 		log.Fatalf("partition_size must be a multiple of 4, got %d", partitionSize)
 	}
