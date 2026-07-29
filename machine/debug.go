@@ -690,7 +690,7 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 		pidCell  string
 		flagsStr string
 		parent   int32
-		regs     [13]int32
+		regs     [15]int32
 	}
 
 	var processes []pcbRow
@@ -707,7 +707,7 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 			readUint32(memory, pcbAddress+0),
 		)
 
-		registerValues := [13]int32{
+		registerValues := [15]int32{
 			int32(readUint32(memory, pcbAddress+20)),
 			int32(readUint32(memory, pcbAddress+24)),
 			int32(readUint32(memory, pcbAddress+28)),
@@ -721,6 +721,8 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 			int32(readUint32(memory, pcbAddress+60)),
 			int32(readUint32(memory, pcbAddress+64)),
 			int32(readUint32(memory, pcbAddress+68)),
+			int32(readUint32(memory, pcbAddress+72)),
+			int32(readUint32(memory, pcbAddress+76)),
 		}
 
 		marker := " "
@@ -754,6 +756,8 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 		"PC",
 		"SP",
 		"SR",
+		"BASE",
+		"LIMIT",
 	}
 
 	columnWidths := make([]int, len(columnHeaders))
