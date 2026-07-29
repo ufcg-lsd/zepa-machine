@@ -14,6 +14,11 @@ import (
 	"zepa-machine/machine"
 )
 
+const (
+	buffer = 6 * 1024 // 6KB
+	minKernelSize = 8 * 1024 * 1024 // 8MB
+)
+
 func main() {
 	if len(os.Args) < 4 {
 		fmt.Println("Usage: go run -tags kernel . <memory_size> <partition_size> <time_slice> [--tui] [--no-debug]")
@@ -40,9 +45,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
-
+	
 	if partitionSize%4 != 0 {
 		log.Fatalf("partition_size must be a multiple of 4, got %d", partitionSize)
+	}
+
+	if memorySize < minKernelSize + buffer + partitionSize {
+		log.Fatalf("memory_size must be at least 8MB + 6KB + partition_size, got %d", memorySize)
 	}
 
 	timeSlice, err := strconv.Atoi(os.Args[3])
@@ -67,22 +76,22 @@ func main() {
 		debugMode = true
 	}
 
-	m := machine.NewMachine(memorySize, debugMode)
-	m.LoadProgram(binaryCode)
+	machine := machine.NewMachine(memorySize, debugMode)
+	machine.LoadProgram(binaryCode)
 
-	memSlice := m.GetMemory()[4096:4100]
+	memSlice := machine.GetMemory()[4096:4100]
 	binary.LittleEndian.PutUint32(memSlice, uint32(partitionSize))
 
-	memSlice = m.GetMemory()[4100:4104]
+	memSlice = machine.GetMemory()[4100:4104]
 	binary.LittleEndian.PutUint32(memSlice, uint32(timeSlice))
 
-	memSlice = m.GetMemory()[4108:4112]
+	memSlice = machine.GetMemory()[4108:4112]
 	binary.LittleEndian.PutUint32(memSlice, uint32(0x10000))
 
-	go m.Boot()
+	go machine.Boot()
 
 	if useTUI {
-		runTUIWithMachine(m)
+		runTUIWithMachine(machine)
 		return
 	}
 
@@ -144,11 +153,11 @@ func main() {
 
 			machine.SaveCheckpoint()
 			for i := 0; i < steps; i++ {
-				m.StepChan <- struct{}{}
-				<-m.DoneChan
+				machine.StepChan <- struct{}{}
+				<-machine.DoneChan
 			}
 
-			m.DebugRegisters()
+			machine.DebugRegisters()
 
 		case "b":
 			if !machine.IsDebugMode() {
@@ -193,14 +202,14 @@ func main() {
 				fmt.Printf("Machine is not in debug mode!\n")
 				continue
 			}
-			m.DebugRegisters()
+			machine.DebugRegisters()
 
 		case "pcb":
 			if !machine.IsDebugMode() {
 				fmt.Printf("Machine is not in debug mode!\n")
 				continue
 			}
-			m.DebugSystem()
+			machine.DebugSystem()
 		}
 	}
 }
