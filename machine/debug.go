@@ -2,6 +2,8 @@ package machine
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"unicode/utf8"
 )
@@ -138,6 +140,43 @@ func pcbState(flags byte) string {
 	default:
 		return "unknown"
 	}
+}
+
+func pcbFlagString(flags byte) string {
+	var s string
+
+	if flags&1 != 0 {
+		s += "M"
+	} else {
+		s += "."
+	}
+
+	if flags&2 != 0 {
+		s += "Z"
+	} else {
+		s += "."
+	}
+
+	if flags&4 != 0 {
+		s += "W"
+	} else {
+		s += "."
+	}
+
+	state := (flags >> 3) & 3
+
+	switch state {
+	case 0:
+		s += "R"
+	case 1:
+		s += "Y"
+	case 2:
+		s += "B"
+	default:
+		s += "?"
+	}
+
+	return s
 }
 
 func getPcbBase(pid uint32) uint32 {
@@ -277,7 +316,19 @@ func titleLine(width int, title string) string {
 		"│"
 }
 
+func (m *Machine) DebugRegistersString() string {
+	var buf strings.Builder
+	m.debugRegistersTo(&buf)
+	return buf.String()
+}
+
 func (m *Machine) DebugRegisters() {
+	m.debugRegistersTo(os.Stdout)
+}
+
+func (m *Machine) debugRegistersTo(out io.Writer) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	registers := m.registers
 
 	registerOrder := []Register{
@@ -380,9 +431,9 @@ func (m *Machine) DebugRegisters() {
 
 	totalWidth := tableWidth(columnWidths)
 
-	fmt.Println("┌" + repeat("─", totalWidth-2) + "┐")
-	fmt.Println(titleLine(totalWidth, "CPU REGISTERS"))
-	fmt.Println(hLine("├", "┬", "┤", columnWidths))
+	fmt.Fprintln(out, "┌"+repeat("─", totalWidth-2)+"┐")
+	fmt.Fprintln(out, titleLine(totalWidth, "CPU REGISTERS"))
+	fmt.Fprintln(out, hLine("├", "┬", "┤", columnWidths))
 
 	rowFormat := fmt.Sprintf(
 		"│ %%-%ds │ %%%dd │ %%-%ds │ %%-%ds │ %%%dd │ %%-%ds │\n",
@@ -404,7 +455,7 @@ func (m *Machine) DebugRegisters() {
 		hexWidth,
 	)
 
-	fmt.Printf(
+	fmt.Fprintf(out,
 		headerFormat,
 		"REG",
 		"DEC",
@@ -414,7 +465,7 @@ func (m *Machine) DebugRegisters() {
 		"HEX",
 	)
 
-	fmt.Println(hLine("├", "┼", "┤", columnWidths))
+	fmt.Fprintln(out, hLine("├", "┼", "┤", columnWidths))
 
 	srLine := ""
 	ecrLine := ""
@@ -437,7 +488,7 @@ func (m *Machine) DebugRegisters() {
 		}
 
 		if pair[1].name == "" {
-			fmt.Printf(
+			fmt.Fprintf(out,
 				rowFormat,
 				pair[0].name,
 				pair[0].dec,
@@ -450,7 +501,7 @@ func (m *Machine) DebugRegisters() {
 			continue
 		}
 
-		fmt.Printf(
+		fmt.Fprintf(out,
 			rowFormat,
 			pair[0].name,
 			pair[0].dec,
@@ -461,19 +512,19 @@ func (m *Machine) DebugRegisters() {
 		)
 	}
 
-	fmt.Println(hLine("└", "┴", "┘", columnWidths))
+	fmt.Fprintln(out, hLine("└", "┴", "┘", columnWidths))
 
 	if srLine != "" || ecrLine != "" {
-		fmt.Printf("  %s", srLine)
+		fmt.Fprintf(out, "  %s", srLine)
 
 		if srLine != "" && ecrLine != "" {
-			fmt.Print("    ")
+			fmt.Fprint(out, "    ")
 		}
 
-		fmt.Println(ecrLine)
+		fmt.Fprintln(out, ecrLine)
 	}
 
-	fmt.Println()
+	fmt.Fprintln(out)
 }
 
 func runningPidStr(runningPid uint32) string {
@@ -484,7 +535,30 @@ func runningPidStr(runningPid uint32) string {
 	return fmt.Sprintf("%d", runningPid)
 }
 
+func (m *Machine) DebugSystemString() string {
+	var buf strings.Builder
+	m.debugSystemTo(&buf)
+	return buf.String()
+}
+
 func (m *Machine) DebugSystem() {
+	m.debugSystemTo(os.Stdout)
+}
+
+func (m *Machine) debugSystemTo(out io.Writer) {
+	m.debugKernelVarsTo(out)
+	m.debugProcessTableTo(out)
+}
+
+func (m *Machine) GetKernelVarsString() string {
+	var buf strings.Builder
+	m.debugKernelVarsTo(&buf)
+	return buf.String()
+}
+
+func (m *Machine) debugKernelVarsTo(out io.Writer) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	memory := m.memory
 
 	type keyValue struct {
@@ -509,7 +583,6 @@ func (m *Machine) DebugSystem() {
 	const pcbSize uint32 = 84
 
 	runningPidExtra := ""
-
 	if runningPid == 0xFFFFFFFF {
 		runningPidExtra = "(idle)"
 	}
@@ -525,7 +598,6 @@ func (m *Machine) DebugSystem() {
 		{"TIME_SLICE", timeSlice, ""},
 		{"KERNEL_MAX_MEMORY", kernelMaxMemory, ""},
 		{"BUFFER_SIZE", bufferSize, ""},
-
 		{"memory_size", memorySize, ""},
 		{"partition_number", partitionNumber, ""},
 		{"running_pid", runningPid, runningPidExtra},
@@ -533,14 +605,9 @@ func (m *Machine) DebugSystem() {
 		{"kernel_stack_pointer", kernelStackPointer, ""},
 		{"scratch_space_0", scratchSpace0, ""},
 		{"scratch_space_1", scratchSpace1, ""},
-
 		{"pcb_vector (base)", pcbVector, ""},
 		{"  pcb_size", pcbSize, ""},
-		{
-			"  total_pcb_memory",
-			pcbSize * partitionNumber,
-			totalPcbMemoryExtra,
-		},
+		{"  total_pcb_memory", pcbSize * partitionNumber, totalPcbMemoryExtra},
 	}
 
 	nameWidth := visualLen("Variable")
@@ -549,135 +616,81 @@ func (m *Machine) DebugSystem() {
 
 	for _, row := range allRows {
 		nameWidth = maxLenMin(nameWidth, row.name)
-
 		decimalValue := fmt.Sprintf("%d", int32(row.value))
 		decimalWidth = maxLenMin(decimalWidth, decimalValue)
-
 		hexValue := fmt.Sprintf("0x%08X", row.value)
-
 		if row.extra != "" {
 			hexValue += " " + row.extra
 		}
-
 		hexWidth = maxLenMin(hexWidth, hexValue)
 	}
 
-	columnWidths := []int{
-		nameWidth,
-		decimalWidth,
-		hexWidth,
-	}
+	columnWidths := []int{nameWidth, decimalWidth, hexWidth}
 
-	totalWidth := tableWidth(columnWidths)
-
-	fmt.Println("┌" + repeat("─", totalWidth-2) + "┐")
-	fmt.Println(titleLine(totalWidth, "KERNEL VARIABLES"))
-	fmt.Println(hLine("├", "┬", "┤", columnWidths))
-
-	rowFormat := fmt.Sprintf(
-		"│ %%-%ds │ %%%dd │ %%-%ds │\n",
-		nameWidth,
-		decimalWidth,
-		hexWidth,
-	)
-
-	headerFormat := fmt.Sprintf(
-		"│ %%-%ds │ %%%ds │ %%-%ds │\n",
-		nameWidth,
-		decimalWidth,
-		hexWidth,
-	)
+	rowFormat := fmt.Sprintf("\u2502 %%-%ds │ %%%dd │ %%-%ds │\n", nameWidth, decimalWidth, hexWidth)
+	headerFormat := fmt.Sprintf("\u2502 %%-%ds │ %%%ds │ %%-%ds │\n", nameWidth, decimalWidth, hexWidth)
 
 	emitRow := func(name string, value uint32, extra string) {
 		hexValue := fmt.Sprintf("0x%08X", value)
-
 		if extra != "" {
 			hexValue += " " + extra
 		}
-
-		fmt.Printf(
-			rowFormat,
-			name,
-			int32(value),
-			hexValue,
-		)
+		fmt.Fprintf(out, rowFormat, name, int32(value), hexValue)
 	}
 
 	emitSection := func(label string) {
-		fmt.Printf(
-			"│ %-*s │ %*s │ %-*s │\n",
-			nameWidth,
-			label,
-			decimalWidth,
-			"",
-			hexWidth,
-			"",
-		)
+		fmt.Fprintf(out, "\u2502 %-*s │ %*s │ %-*s │\n", nameWidth, label, decimalWidth, "", hexWidth, "")
 	}
 
-	fmt.Printf(
-		headerFormat,
-		"Variable",
-		"Value",
-		"Hex",
-	)
+	fmt.Fprintf(out, headerFormat, "Variable", "Value", "Hex")
+	fmt.Fprintln(out, hLine("\u251C", "\u253C", "\u2524", columnWidths))
 
-	fmt.Println(hLine("├", "┼", "┤", columnWidths))
-
-	emitSection("[Constants]")
-
+	emitSection("Constants")
 	for i := 0; i < 4; i++ {
-		row := allRows[i]
-
-		emitRow(
-			row.name,
-			row.value,
-			row.extra,
-		)
+		emitRow(allRows[i].name, allRows[i].value, allRows[i].extra)
 	}
+	fmt.Fprintln(out, hLine("\u251C", "\u253C", "\u2524", columnWidths))
 
-	fmt.Println(hLine("├", "┼", "┤", columnWidths))
-
-	emitSection("[Singular Values]")
-
+	emitSection("Singular Values")
 	for i := 4; i < 11; i++ {
-		row := allRows[i]
-
-		emitRow(
-			row.name,
-			row.value,
-			row.extra,
-		)
+		emitRow(allRows[i].name, allRows[i].value, allRows[i].extra)
 	}
+	fmt.Fprintln(out, hLine("\u251C", "\u253C", "\u2524", columnWidths))
 
-	fmt.Println(hLine("├", "┼", "┤", columnWidths))
-
-	emitSection("[Data Structures]")
-
+	emitSection("Data Structures")
 	for i := 11; i < len(allRows); i++ {
-		row := allRows[i]
-
-		emitRow(
-			row.name,
-			row.value,
-			row.extra,
-		)
+		emitRow(allRows[i].name, allRows[i].value, allRows[i].extra)
 	}
 
-	fmt.Println(hLine("└", "┴", "┘", columnWidths))
-	fmt.Println()
+	fmt.Fprintln(out, hLine("\u2514", "\u2534", "\u2518", columnWidths))
+	fmt.Fprintln(out)
+}
+
+func (m *Machine) GetProcessTableString() string {
+	var buf strings.Builder
+	m.debugProcessTableTo(&buf)
+	return buf.String()
+}
+
+func (m *Machine) debugProcessTableTo(out io.Writer) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	memory := m.memory
+
+	partitionNumber := readUint32(memory, 0x1014)
+	runningPid := readUint32(memory, 0x1018)
 
 	if partitionNumber == 0 {
-		fmt.Println("Nenhum processo (partition_number = 0).")
-		fmt.Println()
+		fmt.Fprintln(out, "Nenhum processo (partition_number = 0).")
+		fmt.Fprintln(out)
 		return
 	}
 
 	type pcbRow struct {
-		pidCell string
-		state   string
-		parent  int32
-		regs    [13]int32
+		pidCell  string
+		flagsStr string
+		parent   int32
+		regs     [15]int32
 	}
 
 	var processes []pcbRow
@@ -694,7 +707,7 @@ func (m *Machine) DebugSystem() {
 			readUint32(memory, pcbAddress+0),
 		)
 
-		registerValues := [13]int32{
+		registerValues := [15]int32{
 			int32(readUint32(memory, pcbAddress+20)),
 			int32(readUint32(memory, pcbAddress+24)),
 			int32(readUint32(memory, pcbAddress+28)),
@@ -708,6 +721,8 @@ func (m *Machine) DebugSystem() {
 			int32(readUint32(memory, pcbAddress+60)),
 			int32(readUint32(memory, pcbAddress+64)),
 			int32(readUint32(memory, pcbAddress+68)),
+			int32(readUint32(memory, pcbAddress+72)),
+			int32(readUint32(memory, pcbAddress+76)),
 		}
 
 		marker := " "
@@ -717,16 +732,16 @@ func (m *Machine) DebugSystem() {
 		}
 
 		processes = append(processes, pcbRow{
-			pidCell: fmt.Sprintf("%s%d", marker, pid),
-			state:   pcbState(flags),
-			parent:  parentPid,
-			regs:    registerValues,
+			pidCell:  fmt.Sprintf("%s%d", marker, pid),
+			flagsStr: pcbFlagString(flags),
+			parent:   parentPid,
+			regs:     registerValues,
 		})
 	}
 
 	columnHeaders := []string{
 		"PID",
-		"State",
+		"Flags",
 		"Parent",
 		"W0",
 		"W1",
@@ -741,9 +756,11 @@ func (m *Machine) DebugSystem() {
 		"PC",
 		"SP",
 		"SR",
+		"BASE",
+		"LIMIT",
 	}
 
-	columnWidths = make([]int, len(columnHeaders))
+	columnWidths := make([]int, len(columnHeaders))
 
 	for i, header := range columnHeaders {
 		columnWidths[i] = visualLen(header)
@@ -757,7 +774,7 @@ func (m *Machine) DebugSystem() {
 
 		columnWidths[1] = maxLenMin(
 			columnWidths[1],
-			process.state,
+			process.flagsStr,
 		)
 
 		columnWidths[2] = maxLenMin(
@@ -777,13 +794,13 @@ func (m *Machine) DebugSystem() {
 
 	processTableWidth := tableWidth(columnWidths)
 
-	fmt.Println(
-		"┌" +
-			repeat("─", processTableWidth-2) +
+	fmt.Fprintln(out,
+		"┌"+
+			repeat("─", processTableWidth-2)+
 			"┐",
 	)
 
-	fmt.Println(
+	fmt.Fprintln(out,
 		titleLine(
 			processTableWidth,
 			fmt.Sprintf(
@@ -793,7 +810,7 @@ func (m *Machine) DebugSystem() {
 		),
 	)
 
-	fmt.Println(
+	fmt.Fprintln(out,
 		hLine(
 			"├",
 			"┬",
@@ -823,12 +840,12 @@ func (m *Machine) DebugSystem() {
 		headerArguments[i] = header
 	}
 
-	fmt.Printf(
+	fmt.Fprintf(out,
 		headerFormatBuilder.String(),
 		headerArguments...,
 	)
 
-	fmt.Println(
+	fmt.Fprintln(out,
 		hLine(
 			"├",
 			"┼",
@@ -869,7 +886,7 @@ func (m *Machine) DebugSystem() {
 		arguments = append(
 			arguments,
 			process.pidCell,
-			process.state,
+			process.flagsStr,
 			process.parent,
 		)
 
@@ -880,13 +897,13 @@ func (m *Machine) DebugSystem() {
 			)
 		}
 
-		fmt.Printf(
+		fmt.Fprintf(out,
 			dataFormat,
 			arguments...,
 		)
 
 		if processIndex < len(processes)-1 {
-			fmt.Println(
+			fmt.Fprintln(out,
 				hLine(
 					"├",
 					"┼",
@@ -897,7 +914,7 @@ func (m *Machine) DebugSystem() {
 		}
 	}
 
-	fmt.Println(
+	fmt.Fprintln(out,
 		hLine(
 			"└",
 			"┴",
@@ -906,11 +923,333 @@ func (m *Machine) DebugSystem() {
 		),
 	)
 
-	fmt.Println(
-		"  PID marker: '>' = running    " +
-			"Flags: bit0=mapped, bit1=zombie, bit2=waiting, " +
-			"bit3-4=state(00=running,01=ready,10=blocked)",
+	fmt.Fprintln(out,
+		"  PID marker: '>' = running    "+
+			"Flags: M=mapped, Z=zombie, W=waiting, "+
+			"R=running, Y=ready, B=blocked",
 	)
 
-	fmt.Println()
+	fmt.Fprintln(out)
+}
+
+var opNames = map[byte]string{
+	0: "MV", 1: "AND", 2: "OR", 3: "XOR",
+	4: "ADD", 5: "SUB", 6: "MUL", 7: "UDIV",
+	8: "SDIV", 9: "CMP", 10: "JUMP", 11: "JMPR",
+	12: "BEQ", 13: "BLT", 14: "BGT",
+	15: "LOAD", 16: "STORE", 17: "LDD", 18: "STRD",
+	19: "LDB", 20: "LDSB", 21: "STRB", 22: "MRET",
+	23: "SYSCALL",
+}
+
+var regNames = [22]string{
+	"w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8", "w9",
+	"pc", "sp", "ir", "sr", "mdr", "mar",
+	"ecr", "esa", "esr", "epc", "base", "limit",
+}
+
+func decodeInstruction(inst uint32) string {
+	opcode := byte((inst >> 26) & 0x3F)
+	name, ok := opNames[opcode]
+	if !ok {
+		return ".word 0x" + fmt.Sprintf("%08X", inst)
+	}
+
+	rType := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 15, 16, 19, 20, 21}
+	isRType := false
+	for _, op := range rType {
+		if opcode == op {
+			isRType = true
+			break
+		}
+	}
+
+	if isRType {
+		rd := byte((inst >> 21) & 0x1F)
+		rs1 := byte((inst >> 16) & 0x1F)
+		rs2 := byte((inst >> 11) & 0x1F)
+		if opcode == 9 {
+			return fmt.Sprintf("%s %s, %s", name, regNames[rs1], regNames[rs2])
+		}
+		if opcode == 11 || opcode == 15 || opcode == 16 || opcode == 19 || opcode == 20 || opcode == 21 {
+			return fmt.Sprintf("%s %s, [%s]", name, regNames[rd], regNames[rs1])
+		}
+		return fmt.Sprintf("%s %s, %s, %s", name, regNames[rd], regNames[rs1], regNames[rs2])
+	}
+
+	rs1rd := byte((inst >> 21) & 0x1F)
+	imm := int16((inst >> 5) & 0xFFFF)
+	if opcode == 10 || opcode == 12 || opcode == 13 || opcode == 14 {
+		return fmt.Sprintf("%s %+d", name, imm)
+	}
+	if opcode == 22 {
+		return "MRET"
+	}
+	if opcode == 23 {
+		return fmt.Sprintf("SYSCALL #%d", imm)
+	}
+	return fmt.Sprintf("%s %s, #%d", name, regNames[rs1rd], imm)
+}
+
+func (m *Machine) GetMemoryViewString() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var buf strings.Builder
+	w := &buf
+
+	pc := m.registers[pc]
+	if pc < 4 {
+		pc = 4
+	}
+	currentAddr := pc
+
+	startAddr := currentAddr
+	if startAddr >= 8 {
+		startAddr -= 8
+	} else {
+		startAddr = 0
+	}
+
+	type instrEntry struct {
+		addr      uint32
+		raw       uint32
+		decode    string
+		isCurrent bool
+	}
+
+	var entries []instrEntry
+	for addr := startAddr; addr <= currentAddr+8; addr += 4 {
+		physAddr, _ := m.translate(addr, 3)
+		raw := m.ReadWord(physAddr)
+		if raw == 0 {
+			continue
+		}
+		decoded := decodeInstruction(raw)
+		entries = append(entries, instrEntry{
+			addr:      addr,
+			raw:       raw,
+			decode:    decoded,
+			isCurrent: addr == currentAddr,
+		})
+	}
+
+	centerIdx := 0
+	for i, e := range entries {
+		if e.isCurrent {
+			centerIdx = i
+			break
+		}
+	}
+
+	from := centerIdx - 2
+	if from < 0 {
+		from = 0
+	}
+	to := from + 4
+	if to >= len(entries) {
+		to = len(entries) - 1
+		from = to - 4
+		if from < 0 {
+			from = 0
+		}
+	}
+
+	displayed := entries[from : to+1]
+
+	addrW := 6
+	hexW := 10
+	instrW := 0
+	for _, e := range displayed {
+		if len(e.decode) > instrW {
+			instrW = len(e.decode)
+		}
+	}
+	if instrW < 7 {
+		instrW = 7
+	}
+
+	fmt.Fprintf(w, " %-*s \u2502 %-*s \u2502 %-*s\n",
+		addrW+1, "ADDR",
+		hexW, "HEX",
+		instrW, "INSTRUCTION")
+
+	fmt.Fprintf(w, strings.Repeat("\u2500", addrW+3)+"\u253C"+
+		strings.Repeat("\u2500", hexW+2)+"\u253C"+
+		strings.Repeat("\u2500", instrW+2)+"\n")
+
+	for _, e := range displayed {
+		marker := " "
+		if e.isCurrent {
+			marker = ">"
+		}
+		fmt.Fprintf(w, "%s%-*s \u2502 0x%08X \u2502 %-*s\n",
+			marker,
+			addrW+1, fmt.Sprintf("0x%04X", e.addr),
+			e.raw,
+			instrW, e.decode)
+	}
+
+	return buf.String()
+}
+
+func (m *Machine) GetPCBVectorString() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var buf strings.Builder
+	w := &buf
+
+	memory := m.memory
+	partitionNumber := readUint32(memory, 0x1014)
+	runningPid := readUint32(memory, 0x1018)
+
+	if partitionNumber == 0 {
+		fmt.Fprintln(w, "No processes.")
+		return buf.String()
+	}
+
+	type pcbEntry struct {
+		pid         int
+		parent      int32
+		child       int32
+		nextSib     int32
+		prevSib     int32
+		statusAddr  int32
+		w0, w1, w2  int32
+		w3, w4, w5  int32
+		w6, w7, w8  int32
+		w9          int32
+		pc, sp, sr  int32
+		base, limit int32
+		flags       byte
+		state       string
+	}
+
+	var entries []pcbEntry
+
+	for pid := uint32(0); pid < partitionNumber; pid++ {
+		pcbAddr := 0x102C + pid*84
+		flags := memory[pcbAddr+80]
+		if flags&1 == 0 {
+			continue
+		}
+
+		entries = append(entries, pcbEntry{
+			pid:        int(pid),
+			parent:     int32(readUint32(memory, pcbAddr+0)),
+			child:      int32(readUint32(memory, pcbAddr+4)),
+			nextSib:    int32(readUint32(memory, pcbAddr+12)),
+			prevSib:    int32(readUint32(memory, pcbAddr+8)),
+			statusAddr: int32(readUint32(memory, pcbAddr+16)),
+			w0:         int32(readUint32(memory, pcbAddr+20)),
+			w1:         int32(readUint32(memory, pcbAddr+24)),
+			w2:         int32(readUint32(memory, pcbAddr+28)),
+			w3:         int32(readUint32(memory, pcbAddr+32)),
+			w4:         int32(readUint32(memory, pcbAddr+36)),
+			w5:         int32(readUint32(memory, pcbAddr+40)),
+			w6:         int32(readUint32(memory, pcbAddr+44)),
+			w7:         int32(readUint32(memory, pcbAddr+48)),
+			w8:         int32(readUint32(memory, pcbAddr+52)),
+			w9:         int32(readUint32(memory, pcbAddr+56)),
+			pc:         int32(readUint32(memory, pcbAddr+60)),
+			sp:         int32(readUint32(memory, pcbAddr+64)),
+			sr:         int32(readUint32(memory, pcbAddr+68)),
+			base:       int32(readUint32(memory, pcbAddr+72)),
+			limit:      int32(readUint32(memory, pcbAddr+76)),
+			flags:      flags,
+			state:      pcbState(flags),
+		})
+	}
+
+	if len(entries) == 0 {
+		fmt.Fprintln(w, "No mapped processes.")
+		return buf.String()
+	}
+
+	cols := []string{"PID", "State", "Parent", "Child", "W0", "W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9", "PC", "SP", "SR"}
+	widths := make([]int, len(cols))
+	for i, c := range cols {
+		widths[i] = len(c)
+	}
+
+	for _, e := range entries {
+		pidStr := fmt.Sprintf("%d", e.pid)
+		if e.pid == int(runningPid) {
+			pidStr = ">" + pidStr
+		}
+		widths[0] = max(widths[0], len(pidStr))
+		widths[1] = max(widths[1], len(e.state))
+		vals := []int32{e.parent, e.child, e.w0, e.w1, e.w2, e.w3, e.w4, e.w5, e.w6, e.w7, e.w8, e.w9, e.pc, e.sp, e.sr}
+		for i, v := range vals {
+			widths[i+2] = max(widths[i+2], len(fmt.Sprintf("%d", v)))
+		}
+	}
+
+	fmt.Fprintf(w, "\u250C")
+	for i, width := range widths {
+		fmt.Fprintf(w, "%s\u2500\u2500", strings.Repeat("\u2500", width+2))
+		if i < len(widths)-1 {
+			fmt.Fprint(w, "\u252C")
+		}
+	}
+	fmt.Fprintln(w, "\u2510")
+
+	fmt.Fprintf(w, "\u2502")
+	for i, c := range cols {
+		fmt.Fprintf(w, " %-*s \u2502", widths[i], c)
+	}
+	fmt.Fprintln(w)
+
+	fmt.Fprintf(w, "\u251C")
+	for i, width := range widths {
+		fmt.Fprintf(w, "%s\u2500\u2500", strings.Repeat("\u2500", width+2))
+		if i < len(widths)-1 {
+			fmt.Fprint(w, "\u253C")
+		}
+	}
+	fmt.Fprintln(w, "\u2524")
+
+	for idx, e := range entries {
+		pidStr := fmt.Sprintf("%d", e.pid)
+		if e.pid == int(runningPid) {
+			pidStr = ">" + pidStr
+		}
+		vals := []interface{}{
+			pidStr, e.state, e.parent, e.child,
+			e.w0, e.w1, e.w2, e.w3, e.w4, e.w5, e.w6, e.w7, e.w8, e.w9,
+			e.pc, e.sp, e.sr,
+		}
+		fmt.Fprintf(w, "\u2502")
+		for i, v := range vals {
+			if i <= 1 {
+				fmt.Fprintf(w, " %-*s \u2502", widths[i], fmt.Sprintf("%v", v))
+			} else {
+				fmt.Fprintf(w, " %*d \u2502", widths[i], v)
+			}
+		}
+		fmt.Fprintln(w)
+
+		if idx < len(entries)-1 {
+			fmt.Fprintf(w, "\u251C")
+			for i, width := range widths {
+				fmt.Fprintf(w, "%s\u2500\u2500", strings.Repeat("\u2500", width+2))
+				if i < len(widths)-1 {
+					fmt.Fprint(w, "\u253C")
+				}
+			}
+			fmt.Fprintln(w, "\u2524")
+		}
+	}
+
+	fmt.Fprintf(w, "\u2514")
+	for i, width := range widths {
+		fmt.Fprintf(w, "%s\u2500\u2500", strings.Repeat("\u2500", width+2))
+		if i < len(widths)-1 {
+			fmt.Fprint(w, "\u2534")
+		}
+	}
+	fmt.Fprintln(w, "\u2518")
+
+	return buf.String()
 }
