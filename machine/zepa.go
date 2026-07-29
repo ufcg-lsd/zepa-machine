@@ -89,8 +89,8 @@ const (
 	clockInt uint32 = iota
 	inputInt
 	killInt
-	syscallInt
-	faultInt
+	syscallExc
+	faultExc
 )
 
 const TIMER_INTERVAL = 128
@@ -141,6 +141,7 @@ type Machine struct {
 	debugFlag bool
 	StepChan  chan struct{}
 	DoneChan  chan struct{}
+	checkpoint *Machine
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -172,10 +173,20 @@ func (m *Machine) mul(inst Instruction) {
 }
 
 func (m *Machine) udiv(inst Instruction) {
+	if m.registers[inst.rs2] == 0 {
+		m.exception(faultExc)
+		return
+	}
+
 	m.registers[inst.rd] = m.registers[inst.rs1] / m.registers[inst.rs2]
 }
 
 func (m *Machine) sdiv(inst Instruction) {
+	if m.registers[inst.rs2] == 0 {
+		m.exception(faultExc)
+		return
+	}
+
 	m.registers[inst.rd] = uint32(int32(m.registers[inst.rs1]) / int32(m.registers[inst.rs2]))
 }
 
@@ -300,14 +311,14 @@ func (m *Machine) mret(inst Instruction) {
 
 func (m *Machine) syscall(inst Instruction) {
 	m.registers[w9] = uint32(inst.immediate)
-	m.exception(syscallInt)
+	m.exception(syscallExc)
 }
 
 func (m *Machine) translate(addr uint32, addrOffset uint32) (uint32, bool) {
 	if !m.isKernelMode() {
 		addr = addr + m.registers[base]
 		if addr+addrOffset >= m.registers[limit] {
-			m.exception(faultInt)
+			m.exception(faultExc)
 			return addr, false
 		}
 	}
@@ -405,14 +416,6 @@ func (m *Machine) decodeITypeInst(instruction uint32) Instruction {
 	}
 }
 
-func (m *Machine) isEndOfProgram() bool {
-	if (m.registers[ir]) == 0 {
-		m.registers[pc] -= 4
-		return true
-	}
-	return false
-}
-
 func (m *Machine) getOpcode(instruction uint32) Opcode {
 	offsetOpcode := word - opcodeLength
 	opcode := instruction >> (uint32(offsetOpcode))
@@ -420,17 +423,18 @@ func (m *Machine) getOpcode(instruction uint32) Opcode {
 	return Opcode(opcode)
 }
 
-func (m *Machine) decode() Instruction {
+func (m *Machine) decode() (Instruction, bool) {
 	instruction := m.registers[ir]
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
 	case AND, OR, XOR, ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE, LDB, LDSB, STRB:
-		return m.decodeRTypeInst(instruction)
-	case MV, JUMP, BEQ, BLT, BGT, LDD, STRD, MRET:
-		fallthrough
+		return m.decodeRTypeInst(instruction), true
+	case MV, JUMP, BEQ, BLT, BGT, LDD, STRD, SYSCALL, MRET:
+		return m.decodeITypeInst(instruction), true
 	default:
-		return m.decodeITypeInst(instruction)
+		m.exception(faultExc)
+		return Instruction{}, false
 	}
 }
 
@@ -442,6 +446,9 @@ func (m *Machine) Boot() {
 	m.registers[limit] = uint32(len(m.memory))
 	instructionsExcecuted := 0
 
+	var decodedInstruction Instruction
+	var ok bool
+
 	for {
 
 		if m.debugFlag {
@@ -449,27 +456,24 @@ func (m *Machine) Boot() {
 		}
 
 		if !m.fetch() {
-			continue
+			goto endStep
 		}
 
-		/*if m.isEndOfProgram() {
-			m.exception(faultInt)
-		}*/
-
-		decodedInstruction := m.decode()
+		decodedInstruction, ok = m.decode()
+		if !ok {
+			goto endStep
+		}
 
 		m.mu.Lock()
-		if m.isInterruptEnabled() {
-			if m.checkIllegalRegisterAccess(decodedInstruction) {
-				m.exception(faultInt)
-				m.mu.Unlock()
-				continue
-			}
-			if m.checkIllegalInstruction(decodedInstruction) {
-				m.exception(faultInt)
-				m.mu.Unlock()
-				continue
-			}
+		if m.checkIllegalRegisterAccess(decodedInstruction) {
+			m.exception(faultExc)
+			m.mu.Unlock()
+			goto endStep
+		}
+		if m.checkIllegalInstruction(decodedInstruction) {
+			m.exception(faultExc)
+			m.mu.Unlock()
+			goto endStep
 		}
 
 		m.execute(decodedInstruction)
@@ -489,11 +493,34 @@ func (m *Machine) Boot() {
 		}
 		m.mu.Unlock()
 
+	endStep:
 		if m.debugFlag {
 			m.DoneChan <- struct{}{}
 		}
 
 	}
+}
+
+func (m *Machine) SaveCheckpoint() {
+	cp := &Machine{
+		memory:    make([]byte, len(m.memory)),
+		registers: make(map[Register]uint32, len(m.registers)),
+		debugFlag: m.debugFlag,
+	}
+	copy(cp.memory, m.memory)
+	for k, v := range m.registers {
+		cp.registers[k] = v
+	}
+	m.checkpoint = cp
+}
+
+func (m *Machine) RestoreCheckpoint() bool {
+	if m.checkpoint == nil {
+		return false
+	}
+	m.memory, m.checkpoint.memory = m.checkpoint.memory, m.memory
+	m.registers, m.checkpoint.registers = m.checkpoint.registers, m.registers
+	return true
 }
 
 func (m *Machine) LoadProgram(program []byte) {
@@ -513,12 +540,18 @@ func (m *Machine) ReadWord(addr uint32) uint32 {
 }
 
 func (m *Machine) LoadBuffer(buffer []byte) bool {
-	if len(buffer) > bufferSize {
+	if len(buffer) > bufferSize-4 {
 		return false
 	}
+
 	bufferIndex := len(m.memory) - bufferSize
 	clear(m.memory[bufferIndex:])
-	copy(m.memory[bufferIndex:], buffer)
+
+	for i := 0; i < 4; i++ {
+		m.memory[bufferIndex+i] = byte(len(buffer) >> (i * 8))
+	}
+
+	copy(m.memory[bufferIndex+4:], buffer)
 
 	return true
 }
