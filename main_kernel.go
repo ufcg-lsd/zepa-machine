@@ -1,3 +1,5 @@
+//go:build kernel
+
 package main
 
 import (
@@ -12,9 +14,14 @@ import (
 	"zepa-machine/machine"
 )
 
+const (
+	buffer = 64 * 1024 // 64KB
+	minKernelSize = 8 * 1024 * 1024 // 8MB
+)
+
 func main() {
 	if len(os.Args) < 4 {
-		fmt.Println("Usage: go run ./main_kernel.go <memory_size> <partition_size> <time_slice> [--no-debug]")
+		fmt.Println("Usage: go run -tags kernel . <memory_size> <partition_size> <time_slice> [--tui] [--no-debug]")
 		return
 	}
 
@@ -25,10 +32,7 @@ func main() {
 		return
 	}
 
-	debugMode := len(os.Args) < 5 || os.Args[4] != "--no-debug"
-
 	memorySize, err := strconv.Atoi(os.Args[1])
-
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
@@ -38,7 +42,6 @@ func main() {
 	}
 
 	partitionSize, err := strconv.Atoi(os.Args[2])
-
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
@@ -47,10 +50,30 @@ func main() {
 		log.Fatalf("partition_size must be a multiple of 4, got %d", partitionSize)
 	}
 
-	timeSlice, err := strconv.Atoi(os.Args[3])
+	if memorySize < minKernelSize + buffer + partitionSize {
+		log.Fatalf("memory_size must be at least 8MB + 6KB + partition_size, got %d", memorySize)
+	}
 
+	timeSlice, err := strconv.Atoi(os.Args[3])
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
+	}
+
+	// Parse optional flags
+	useTUI := false
+	debugMode := true
+	for _, arg := range os.Args[4:] {
+		switch arg {
+		case "--tui":
+			useTUI = true
+		case "--no-debug":
+			debugMode = false
+		}
+	}
+
+	// TUI always requires debug mode
+	if useTUI {
+		debugMode = true
 	}
 
 	machine := machine.NewMachine(memorySize, debugMode)
@@ -67,7 +90,12 @@ func main() {
 
 	go machine.Boot()
 
-	// IO loop
+	if useTUI {
+		runTUIWithMachine(machine)
+		return
+	}
+
+	// CLI loop
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("Commands: d (step), r (restore), reg (registers), pcb (processes), kill <pid>, input <path>")
 	for scanner.Scan() {
@@ -98,12 +126,12 @@ func main() {
 				fmt.Println("usage: input <path>")
 				continue
 			}
-			binaryCode, err := assembler.RunAssembler(parts[1])
+			code, err := assembler.RunAssembler(parts[1])
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				continue
 			}
-			machine.LoadBuffer(binaryCode)
+			machine.LoadBuffer(code)
 			machine.SetInputFlag()
 			fmt.Printf("input sent\n")
 
@@ -184,5 +212,4 @@ func main() {
 			machine.DebugSystem()
 		}
 	}
-
 }

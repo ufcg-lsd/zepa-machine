@@ -2,6 +2,7 @@ package machine
 
 import (
 	"slices"
+	"sync"
 )
 
 type Register uint32
@@ -132,13 +133,14 @@ type Instruction struct {
 }
 
 type Machine struct {
-	memory     []byte
-	registers  map[Register]uint32
-	killFlag   bool
-	inputFlag  bool
-	debugFlag  bool
-	StepChan   chan struct{}
-	DoneChan   chan struct{}
+	memory    []byte
+	registers map[Register]uint32
+	mu        sync.RWMutex
+	killFlag  bool
+	inputFlag bool
+	debugFlag bool
+	StepChan  chan struct{}
+	DoneChan  chan struct{}
 	checkpoint *Machine
 }
 
@@ -462,12 +464,15 @@ func (m *Machine) Boot() {
 			goto endStep
 		}
 
+		m.mu.Lock()
 		if m.checkIllegalRegisterAccess(decodedInstruction) {
 			m.exception(faultExc)
+			m.mu.Unlock()
 			goto endStep
 		}
 		if m.checkIllegalInstruction(decodedInstruction) {
 			m.exception(faultExc)
+			m.mu.Unlock()
 			goto endStep
 		}
 
@@ -486,6 +491,7 @@ func (m *Machine) Boot() {
 				m.inputFlag = false
 			}
 		}
+		m.mu.Unlock()
 
 	endStep:
 		if m.debugFlag {
@@ -523,6 +529,14 @@ func (m *Machine) LoadProgram(program []byte) {
 
 func (m *Machine) GetMemory() []byte {
 	return m.memory
+}
+
+func (m *Machine) ReadWord(addr uint32) uint32 {
+	var word uint32
+	for i := uint32(0); i < 4; i++ {
+		word |= uint32(m.memory[addr+i]) << (24 - 8*i)
+	}
+	return word
 }
 
 func (m *Machine) LoadBuffer(buffer []byte) bool {
