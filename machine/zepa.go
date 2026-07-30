@@ -133,15 +133,16 @@ type Instruction struct {
 }
 
 type Machine struct {
-	memory    []byte
-	registers map[Register]uint32
-	mu        sync.RWMutex
-	killFlag  bool
-	inputFlag bool
-	debugFlag bool
-	StepChan  chan struct{}
-	DoneChan  chan struct{}
+	memory     []byte
+	registers  map[Register]uint32
+	mu         sync.RWMutex
+	killFlag   bool
+	inputFlag  bool
+	debugFlag  bool
+	StepChan   chan struct{}
+	DoneChan   chan struct{}
 	checkpoint *Machine
+	quitChan   chan struct{}
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -452,7 +453,11 @@ func (m *Machine) Boot() {
 	for {
 
 		if m.debugFlag {
-			<-m.StepChan
+			select {
+			case <-m.StepChan:
+			case <-m.quitChan:
+				return
+			}
 		}
 
 		if !m.fetch() {
@@ -568,6 +573,10 @@ func (m *Machine) IsDebugMode() bool {
 	return m.debugFlag
 }
 
+func (m *Machine) Quit() {
+	close(m.quitChan)
+}
+
 func (m *Machine) GetRegisters() map[Register]uint32 {
 
 	return m.registers
@@ -580,6 +589,7 @@ func NewMachine(memoryBytes int, debugFlag bool) *Machine {
 		debugFlag: debugFlag,
 		StepChan:  make(chan struct{}),
 		DoneChan:  make(chan struct{}),
+		quitChan:  make(chan struct{}),
 	}
 
 	return machine

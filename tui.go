@@ -52,7 +52,6 @@ func runTUIWithMachine(m *machine.Machine) {
 		pcbVectorView.SetText(m.GetProcessTableString())
 	}
 
-
 	refreshAll()
 
 	inputField.SetDoneFunc(func(key tcell.Key) {
@@ -119,11 +118,16 @@ func runTUIWithMachine(m *machine.Machine) {
 
 		case "refresh":
 			refreshAll()
+
+		case "q":
+			m.Quit()
+			app.Stop()
 		}
 	})
 
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyCtrlC {
+			m.Quit()
 			app.Stop()
 			return nil
 		}

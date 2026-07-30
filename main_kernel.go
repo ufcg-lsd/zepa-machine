@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	buffer = 64 * 1024 // 64KB
+	buffer        = 64 * 1024       // 64KB
 	minKernelSize = 8 * 1024 * 1024 // 8MB
 )
 
@@ -50,7 +50,7 @@ func main() {
 		log.Fatalf("partition_size must be a multiple of 4, got %d", partitionSize)
 	}
 
-	if memorySize < minKernelSize + buffer + partitionSize {
+	if memorySize < minKernelSize+buffer+partitionSize {
 		log.Fatalf("memory_size must be at least 8MB + 6KB + partition_size, got %d", memorySize)
 	}
 
@@ -210,6 +210,11 @@ func main() {
 				continue
 			}
 			machine.DebugSystem()
+
+		case "q":
+			fmt.Println("exiting debugger")
+			machine.Quit()
+			return
 		}
 	}
 }
