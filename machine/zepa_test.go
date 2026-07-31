@@ -33,7 +33,7 @@ func TestDecode(t *testing.T) {
 	machine.memory[3] = 0b00000000
 	machine.fetch()
 
-	decodedInstruction := machine.decode()
+	decodedInstruction, _ := machine.decode()
 
 	if decodedInstruction.rd != Register(2) {
 		t.Errorf("Expected rd to be 2, but got %d", decodedInstruction.rd)
@@ -227,7 +227,7 @@ func TestBLT(t *testing.T) {
 	}
 
 	machine.registers[pc] = 50
-	machine.registers[sr] = 10
+	machine.registers[sr] = 4
 	machine.execute(inst)
 
 	if machine.registers[pc] != 50 {
@@ -429,8 +429,8 @@ func TestSYSCALL(t *testing.T) {
 		t.Errorf("Expected w5 to hold syscall code %d, got %d", syscallCode, machine.registers[w5])
 	}
 
-	if machine.registers[ecr] != syscallInt {
-		t.Errorf("Expected ecr to be %d (syscallInt), got %d", syscallInt, machine.registers[ecr])
+	if machine.registers[ecr] != syscallExc {
+		t.Errorf("Expected ecr to be %d (syscallInt), got %d", syscallExc, machine.registers[ecr])
 	}
 
 	if machine.registers[esr] != initialSR {
