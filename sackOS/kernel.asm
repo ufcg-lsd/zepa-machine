@@ -160,36 +160,36 @@ exception_supervisor:
 
 
 clock_int:
-  LDD W0, #0x101C    ; w0 = clock_interrupt_count
+  LDD W0, #clock_interrupt_count    ; w0 = clock_interrupt_count
 
   MV W1, #1
   ADD W0, W0, W1                    ; clock_interrupt_count += 1
 
-  LDD W1, #0x1004 ; time_slice 
+  LDD W1, #time_slice ; time_slice 
   CMP W0, W1
   BEQ clock_reset                   ; if clock_interrupt_count == TIME_SLICE, reset and check running
 
-    STRD W0, #0x101C ; clock_interrupt_count
+    STRD W0, #clock_interrupt_count ; clock_interrupt_count
   clock_return:
-    LDD W0, #0x1024 ; scratch_space_0
-    LDD W1, #0x1028 ; scratch_space_1
+    LDD W0, #scratch_space_0 ; scratch_space_0
+    LDD W1, #scratch_space_1 ; scratch_space_1
     MRET
 
   clock_reset:
     MV W0, #0
-    STRD W0, #0x101C ; clock_interrupt_count = 0
+    STRD W0, #clock_interrupt_count ; clock_interrupt_count = 0
 
-  LDD W0, #0x1018 ; running_pid
+  LDD W0, #running_pid ; running_pid
   MV W1, #-1
   CMP W0, W1
   BEQ clock_return                   ; if running_pid == -1, clock_return
 
   ; saving registers
-  LDD W1, #0x1018 ; running_pid    
-  MV W0, #84                      ; pcb_size
+  LDD W1, #running_pid ; running_pid    
+  MV W0, #0x300050                      ; pcb_size
   MUL W1, W0, W1                  ; W1 = running_pid * pcb_size
   
-  MV W0, #0x102C ; pcb_v
+  MV W0, #pcb_v ; pcb_v
   ADD W1, W0, W1                  ; W1 = pcb_v[running_pid] initial address
 
   MV W0, #68
@@ -227,11 +227,11 @@ clock_int:
   SUB W1, W1, W0
   STORE W2, W1                    ; saving W2
 
-  LDD W3, #0x1028 ; scratch_space_1
+  LDD W3, #scratch_space_1 ; scratch_space_1
   SUB W1, W1, W0
   STORE W3, W1                    ; saving W1
 
-  LDD W3, #0x1024 ; scratch_space_0
+  LDD W3, #scratch_space_0 ; scratch_space_0
   SUB W1, W1, W0
   STORE W3, W1                    ; saving W0
 
@@ -524,9 +524,9 @@ syscall_int:
 
 
 fault_int:
-  MV W0, #0x102C       ; pcb_v initial address
-  LDD W9, #0x1018      ; running_pid
-  MV W1, #84           ; pcb_size
+  MV W0, #pcb_v        ; pcb_v initial address
+  LDD W9, #running_pid      ; running_pid
+  MV W1, #0x300050     ; pcb_size
 
   MUL W1, W9, W1       ; W1 = running_pid * pcb_size
   ADD W0, W0, W1       ; W0 = pcb_v[running_pid] initial address
