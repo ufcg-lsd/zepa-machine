@@ -1059,8 +1059,12 @@ kill:
       MV W4, #9           ; mapped = 1, zombie = 0, waiting = 0, state = ready
       STRB W4, W3
 
-      MV W4, #8
-      SUB W3, W3, W4      ; W3 = pcb_v[parent].BASE address
+      MV W4, #24
+      SUB W3, W3, W4      ; W3 = pcb_v[parent].W9 address
+      STORE W9, W3        ; pcb_v[parent].W9 = pid
+
+      MV W4, #16
+      ADD W3, W3, W4      ; W3 = pcb_v[parent].BASE address
       LOAD W4, W3         ; W4 = pcb_v[parent].BASE
 
       MV W5, #56
