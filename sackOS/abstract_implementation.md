@@ -170,7 +170,7 @@ schedule()
 
 ## wait(status_addr) - ID 1
 ```
-if status_addr >= 0xC0000000:
+if status_addr >= 0xC0000000 || status_addr page is not valid:
   fault_int()
 
 if pcb_v[running_pid].child == -1:

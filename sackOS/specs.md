@@ -56,7 +56,7 @@ Pauses the execution of the calling process until one of its child processes ter
 * **Returns (in `W9`):**
     * The PID of the terminated child process.
     * `-1` if the calling process has no children.
-* **Exceptions:** Triggers a fatal fault if `status_addr` points outside the process's valid memory partition.
+* **Exceptions:** Triggers a fatal fault if `status_addr` points outside the process's valid virtual memory, or points to an address not mapped yet, so, when setting `status_addr`, make sure to "touch" the address first.
 
 ### `exit(status_code)` - ID 2
 Terminates the calling process and returns the `status_code` to the parent process (if the parent is waiting).
