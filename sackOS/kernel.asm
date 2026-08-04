@@ -1007,16 +1007,16 @@ exit:
 
 
 getPID:
-    LDD W0 #0x1018 ; running_pid
-    MV W1 #0x102C ; pcb_v
+    LDD W0 #RUNNING_PID_ADDR ; running_pid
+    MV W1 #PCB_V_ADDR ; pcb_v
 
-    MV W8 #84
-    MUL W2 W0 W8 ; RUNNING_PID * 84 get the offset of bytes to acess pcb[RUNNING_PID]
+    MV W8 #3145808 ; pcb_size 
+    MUL W2 W0 W8 ; RUNNING_PID * pcb_size get the offset of bytes to acess pcb[RUNNING_PID]
     
-    ADD W1 W1 W2 ; stores on W1 the first address of pcb[RUNNING_PID]
+    ADD W1 W1 W2 ; W1 = pcb[RUNNING_PID] addr
 
     MV W8 #56
-    ADD W1 W1 W8 ; W1 = pcb[RUNNING_PID].w9 address bytes
+    ADD W1 W1 W8 ; W1 = pcb[RUNNING_PID].w9 addr
 
     STORE W0 W1 ; stores RUNNING_PID on pcb[RUNNING_PID].w9
 
