@@ -142,14 +142,14 @@ type Instruction struct {
 }
 
 type Machine struct {
-	memory    []byte
-	registers map[Register]uint32
-	mu        sync.RWMutex
-	killFlag  bool
-	inputFlag bool
-	debugFlag bool
-	StepChan  chan struct{}
-	DoneChan  chan struct{}
+	memory     []byte
+	registers  map[Register]uint32
+	mu         sync.RWMutex
+	killFlag   bool
+	inputFlag  bool
+	debugFlag  bool
+	StepChan   chan struct{}
+	DoneChan   chan struct{}
 	checkpoint *Machine
 }
 
@@ -391,7 +391,7 @@ func (m *Machine) fetch() bool {
 		return false
 	}
 
-	m.registers[ir] = binary.LittleEndian.Uint32(m.memory[addr : addr+4])
+	m.registers[ir] = binary.BigEndian.Uint32(m.memory[addr : addr+4])
 	m.registers[pc] += 4
 	return true
 }

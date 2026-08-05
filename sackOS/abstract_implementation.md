@@ -170,7 +170,7 @@ schedule()
 
 ## wait(status_addr) - ID 1
 ```
-if status_addr >= 0xC0000000:
+if status_addr >= 0xC0000000 || status_addr page is not valid:
   fault_int()
 
 if pcb_v[running_pid].child == -1:
@@ -378,20 +378,20 @@ Array that will tell whether a page frame is being used or not [2^20 bits = 128 
 Similar to the Xv6 scheduler, the PCB vector is the queue itself, with the scheduler iterating it continuously until it finds a ready process.
 
 # Addresses
-The kernel code has 833 instructions as of now, resulting in 3332 bytes of memory, we rounded it to 4KB, so addresses will start at 0x1000
+Note: The specific memory layout addresses below are placeholders and subject to adjustment.
 
 ### Constants (set by the OS developer) (32 bits)
-- **MAX_PROCESSES**: 0x1000
-- **TIME_SLICE**: 0x1004
-- **BUFFER_SIZE**: 0x1008
+- **MAX_PROCESSES**: MAX_PROCESSES_ADDR
+- **TIME_SLICE**: TIME_SLICE_ADDR
+- **BUFFER_SIZE**: BUFFER_SIZE_ADDR
 
 ### Singular values (32 bits)
-- **memory_size**: 0x100C
-- **running_pid**: 0x1010
-- **clock_interrupt_count**: 0x1014
-- **kernel_stack_pointer**: 0x1018
-- **scratch_space_0**: 0x101C
-- **scratch_space_1**: 0x1020
+- **memory_size**: MEMORY_SIZE_ADDR
+- **running_pid**: RUNNING_PID_ADDR
+- **clock_interrupt_count**: CLOCK_INTERRUPT_COUNT_ADDR
+- **kernel_stack_pointer**: KERNEL_STACK_POINTER_ADDR
+- **scratch_space_0**: SCRATCH_SPACE_0_ADDR
+- **scratch_space_1**: SCRATCH_SPACE_1_ADDR
 
 ### Data Structures
-- **pcb_vector**: 0x1024
+- **pcb_vector**: PCB_VECTOR_ADDR
