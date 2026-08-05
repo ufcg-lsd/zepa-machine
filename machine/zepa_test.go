@@ -27,7 +27,7 @@ func TestFetch(t *testing.T) {
 
 func TestDecode(t *testing.T) {
 	machine := NewMachine(2048, false)
-	machine.memory[0] = 0b01000000
+	machine.memory[0] = 0b01001000
 	machine.memory[1] = 0b01000011
 	machine.memory[2] = 0b00001000
 	machine.memory[3] = 0b00000000
@@ -101,6 +101,56 @@ func TestXOR(t *testing.T) {
 
 	if machine.registers[w0] != 6 {
 		t.Errorf("Expected w0 to be 6, got %d", machine.registers[w0])
+	}
+}
+
+func TestSHL(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	machine.registers[w1] = 15
+	machine.registers[w2] = 2
+
+	inst := Instruction{opcode: SHL, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w0] != 60 { // 15 << 2 = 60
+		t.Errorf("Expected w0 to be 60, got %d", machine.registers[w0])
+	}
+
+	machine.registers[w1] = 0xFFFFFFF0 // -16 in two's complement
+	machine.registers[w2] = 0xFFFFFFFE // -2 in two's complement
+
+	inst = Instruction{opcode: SHL, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	expected := uint32(0x3FFFFFFC)
+	if machine.registers[w0] != expected {
+		t.Errorf("Expected w0 to be 0x%X, got 0x%X", expected, machine.registers[w0])
+	}
+}
+
+func TestSHA(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	machine.registers[w1] = 15
+	machine.registers[w2] = 2
+
+	inst := Instruction{opcode: SHA, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	if machine.registers[w0] != 60 { // 15 << 2 = 60
+		t.Errorf("Expected w0 to be 60, got %d", machine.registers[w0])
+	}
+
+	machine.registers[w1] = 0xFFFFFFF0 // -16 in two's complement
+	machine.registers[w2] = 0xFFFFFFFE // -2 in two's complement
+
+	inst = Instruction{opcode: SHA, rd: w0, rs1: w1, rs2: w2}
+	machine.execute(inst)
+
+	expected := uint32(0xFFFFFFFC) // -4 in two's complement
+	if machine.registers[w0] != expected {
+		t.Errorf("Expected w0 to be 0x%X, got 0x%X", expected, machine.registers[w0])
 	}
 }
 
