@@ -258,9 +258,9 @@ while curr_child != -1:
   next = pcb_v[curr_child].next_sibling
   pcb_v[curr_child].next_sibling = -1
   curr_child = next
-
-free every stack page cleaning the pages from the end of memory till the stack pointer address page 
+ 
 free every page from page table couting till pcb_v[pid].pages_used == 0
+(use two pointers to unmap from both memory ends, unmapping the stack efficiently)
 
 schedule()
 ```

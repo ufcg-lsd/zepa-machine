@@ -1031,8 +1031,8 @@ rele:
 
 
 kill:
-  MV W0, #0x102C          ; W0 = pcb_v initial address
-  MV W1, #84              ; W1 = pcb_size
+  MV W0, #pcb_v           ; W0 = pcb_v initial address
+  MV W1, #0x300050        ; W1 = pcb_size
   MUL W2, W1, W9
   ADD W2, W0, W2          ; W2 = pcb_v[pid].parent_pid address
 
@@ -1045,7 +1045,7 @@ kill:
     MUL W3, W3, W1
     ADD W3, W3, W0        ; W3 = pcb_v[parent] initial address
 
-    MV W4, #80
+    MV W4, #72
     ADD W3, W3, W4        ; W3 = pcb_v[parent].flags address
 
     LDB W4, W3           ; W4 = pcb_v[parent].flags
@@ -1059,21 +1059,22 @@ kill:
       MV W4, #9           ; mapped = 1, zombie = 0, waiting = 0, state = ready
       STRB W4, W3
 
-      MV W4, #8
-      SUB W3, W3, W4      ; W3 = pcb_v[parent].BASE address
-      LOAD W4, W3         ; W4 = pcb_v[parent].BASE
+      MV W5, #16
+      SUB W3, W3, W5      ; W3 = pcb_v[parent].W9 address
+      STORE W9, W3        ; pcb_v[parent].W9 = pid
 
-      MV W5, #56
+      MV W5, #40
       SUB W3, W3, W5      ; W3 = pcb_v[parent].status_addr address
-      LOAD W5, W3         ; W5 = pcb_v[parent].status_addr
+      LOAD W4, W3         ; W4 = pcb_v[parent].status_addr
 
-      ADD W4, W4, W5      ; W4 = base+status_addr address
+      MV W5, #64
+      ADD UPTR, W3, W5      ; UPTR = pcb_v[parent].page_table address
 
       MV W5, #56
       ADD W2, W2, W5      ; W2 = pcb_v[pid].W9 address
       LOAD W5, W2         ; W5 = pcb_v[pid].W9
 
-      STORE W5, W4        ; memory[pcb_v[parent].BASE+pcb_v[parent].status_addr] = pcb_v[pid].w9
+      STORE W5, W4        ; memory[pcb_v[parent].status_addr] = pcb_v[pid].w9
 
       MV W5, #12
       SUB W3, W3, W5      ; W3 = pcb_v[parent].child address
@@ -1123,7 +1124,7 @@ kill:
         STORE W3, W5      ; pcb_v[pcb_v[pid].next_sibling].prev_sibling = pcb_v[pid].prev_sibling
 
       
-      MV W3, #68
+      MV W3, #60
       ADD W2, W2, W3      ; W2 = pcb_v[pid].flags address
       LDB W3, W2         ; W3 = pcb_v[pid].flags
 
@@ -1135,7 +1136,7 @@ kill:
 
     kill_not_waiting:
       ; here W2 = pcb_v[pid].parent_pid address
-      MV W3, #80
+      MV W3, #72
       ADD W2, W2, W3      ; W2 = pcb_v[pid].flags address
       LDB W3, W2         ; W3 = pcb_v[pid].flags
 
@@ -1147,7 +1148,7 @@ kill:
 
   kill_no_parent:
     ; here W2 = pcb_v[pid].parent_pid address
-    MV W3, #80
+    MV W3, #72
     ADD W2, W2, W3      ; W2 = pcb_v[pid].flags address
     LDB W3, W2         ; W3 = pcb_v[pid].flags
 
@@ -1159,14 +1160,14 @@ kill:
   kill_orphanize:
     ; here W2 = pcb_v[pid].flags address
 
-    MV W3, #76
+    MV W3, #68
     SUB W2, W2, W3      ; W2 = pcb_v[pid].child address
     LOAD W3, W2          ; W3 = pcb_v[pid].child (curr_child)
     MV W7, #-1
 
     orphanize_loop:
       CMP W3, W7
-      BEQ kill_end
+      BEQ orphanize_end
 
       MUL W4, W3, W1
       ADD W4, W4, W0    ; W4 = pcb_v[curr_child].parent_pid address
@@ -1184,6 +1185,95 @@ kill:
       MV W8, #0
       ADD W3, W5, W8    ; W3 = curr_child = next
       JUMP orphanize_loop
+
+
+  orphanize_end:
+    MV W0, #bitmap      ; W0 = bitmap address
+
+    MV W1, #72
+    ADD W1, W2, W1      ; W1 = pcb_v[pid].pages_used address
+    LOAD W2, W1         ; W2 = pcb_v[pid].pages_used
+
+    MV W3, #4
+    ADD W3, W1, W3      ; W3 = pcb_v[pid].page_table first address (pointer i)
+    MV W4, #0x2FFFFC    ; 3MB - 1B
+    ADD W4, W4, W3      ; W4 = pcb_v[pid].page_table last address (pointer j)
+
+    MV W5, #0x100000    ; W5 = mask of valid (bit 20)
+    MV W6, #0xFFFFF     ; W6 = mask of page frame id (bits 0-19)
+
+    kill_free_memory_loop:
+      MV W7, #0
+      CMP W2, W7
+      BEQ kill_end      ; while pages_used != 0
+
+      LOAD W7, W3       ; W7 = pte_i
+      AND W8, W7, W5    ; W8 = pte_i.valid
+      CMP W8, W5
+      BLT kill_skip_i   ; if pte_i is valid, enter block
+
+        MV W8, #0
+        STORE W8, W3    ; set pte_i invalid
+
+        AND W8, W7, W6  ; W8 = pte_i.page_frame_id
+        
+        ; unmap the bitmap
+        MV W9, #-3          ; W9 = -3
+        SHL W9, W8, W9      ; W9 = byte offset (W8 >> 3)
+        
+        ADD W9, W0, W9      ; W9 = address of the byte in the bitmap
+        
+        MV W7, #7
+        AND W8, W8, W7      ; W8 = bit index (0 to 7)
+        
+        MV W7, #1
+        SHL W7, W7, W8      ; W7 = 1 << bit_index (clear mask)
+        
+        LDB W8, W9          ; Load bitmap byte into W8
+        XOR W8, W8, W7      ; Clear the frame's bit
+        STRB W8, W9         ; Store the updated byte back to memory
+        
+        MV W7, #1
+        SUB W2, W2, W7      ; W2 = W2 - 1 (pages_used--)
+
+      kill_skip_i:
+
+      LOAD W7, W4       ; W7 = pte_j
+      AND W8, W7, W5    ; W8 = pte_j.valid
+      CMP W8, W5
+      BLT kill_skip_j   ; if pte_j is valid, enter block
+
+        MV W8, #0
+        STORE W8, W4    ; set pte_j invalid
+
+        AND W8, W7, W6  ; W8 = pte_j.page_frame_id
+        
+        ; unmap the bitmap
+        MV W9, #-3          ; W9 = -3
+        SHL W9, W8, W9      ; W9 = byte offset (W8 >> 3)
+        
+        ADD W9, W0, W9      ; W9 = address of the byte in the bitmap
+        
+        MV W7, #7
+        AND W8, W8, W7      ; W8 = bit index (0 to 7)
+        
+        MV W7, #1
+        SHL W7, W7, W8      ; W7 = 1 << bit_index (clear mask)
+        
+        LDB W8, W9          ; Load bitmap byte into W8
+        XOR W8, W8, W7      ; Clear the frame's bit
+        STRB W8, W9         ; Store the updated byte back to memory
+        
+        MV W7, #1
+        SUB W2, W2, W7      ; W2 = W2 - 1 (pages_used--)
+
+      kill_skip_j:
+
+      MV W7, #4
+      ADD W3, W3, W7        ; pte_i += 1
+      SUB W4, W4, W7        ; pte_j -= 1
+
+      JUMP kill_free_memory_loop
 
   kill_end:
     JUMP schedule
