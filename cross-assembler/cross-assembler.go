@@ -44,6 +44,8 @@ const (
 	AND_OPCODE
 	OR_OPCODE
 	XOR_OPCODE
+	SHL_OPCODE
+	SHA_OPCODE
 	ADD_OPCODE
 	SUB_OPCODE
 	MUL_OPCODE
@@ -93,6 +95,8 @@ var opcodeMap = map[string]Opcode{
 	"AND":     AND_OPCODE,
 	"OR":      OR_OPCODE,
 	"XOR":     XOR_OPCODE,
+	"SHL":     SHL_OPCODE,
+	"SHA":     SHA_OPCODE,
 	"ADD":     ADD_OPCODE,
 	"SUB":     SUB_OPCODE,
 	"MUL":     MUL_OPCODE,
@@ -139,6 +143,8 @@ var instructionSpecs = map[Opcode]InstructionSpec{
 	AND_OPCODE:     newInstructionSpec("R-Type", AND_OPCODE),
 	OR_OPCODE:      newInstructionSpec("R-Type", OR_OPCODE),
 	XOR_OPCODE:     newInstructionSpec("R-Type", XOR_OPCODE),
+	SHL_OPCODE:     newInstructionSpec("R-Type", SHL_OPCODE),
+	SHA_OPCODE:     newInstructionSpec("R-Type", SHA_OPCODE),
 	ADD_OPCODE:     newInstructionSpec("R-Type", ADD_OPCODE),
 	SUB_OPCODE:     newInstructionSpec("R-Type", SUB_OPCODE),
 	MUL_OPCODE:     newInstructionSpec("R-Type", MUL_OPCODE),

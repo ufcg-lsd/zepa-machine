@@ -39,6 +39,8 @@ const (
 	AND
 	OR
 	XOR
+	SHL
+	SHA
 	ADD
 	SUB
 	MUL
@@ -100,6 +102,8 @@ var operations = map[Opcode]Operation{
 	AND:     (*Machine).and,
 	OR:      (*Machine).or,
 	XOR:     (*Machine).xor,
+	SHL:     (*Machine).shl,
+	SHA:     (*Machine).sha,
 	ADD:     (*Machine).add,
 	SUB:     (*Machine).sub,
 	MUL:     (*Machine).mul,
@@ -159,6 +163,32 @@ func (m *Machine) or(inst Instruction) {
 
 func (m *Machine) xor(inst Instruction) {
 	m.registers[inst.rd] = m.registers[inst.rs1] ^ m.registers[inst.rs2]
+}
+
+func (m *Machine) shl(inst Instruction) {
+	val := m.registers[inst.rs1]
+	shiftAmount := int32(m.registers[inst.rs2])
+
+	if shiftAmount > 0 {
+		m.registers[inst.rd] = val << shiftAmount
+	} else if shiftAmount < 0 {
+		m.registers[inst.rd] = val >> (-shiftAmount)
+	} else {
+		m.registers[inst.rd] = val
+	}
+}
+
+func (m *Machine) sha(inst Instruction) {
+	val := m.registers[inst.rs1]
+	shiftAmount := int32(m.registers[inst.rs2])
+
+	if shiftAmount > 0 {
+		m.registers[inst.rd] = val << shiftAmount
+	} else if shiftAmount < 0 {
+		m.registers[inst.rd] = uint32(int32(val) >> (-shiftAmount))
+	} else {
+		m.registers[inst.rd] = val
+	}
 }
 
 func (m *Machine) add(inst Instruction) {
