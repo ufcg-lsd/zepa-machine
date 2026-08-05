@@ -94,6 +94,36 @@ MV W2, #2
 XOR W0, W1, W2    ; W0 = 3 ^ 2
 ```
 
+### SHL (Shift Logical)
+Performs a bidirectional logical shift on a register based on the shift amount in a second register. Shifts left if the amount is positive, and performs a logical right shift (padding with 0s) if the amount is negative.
+
+**Syntax:**
+```
+SHL <Dest Reg.>, <Op1>, <Op2>
+```
+
+**Example:**
+```
+MV W1, #4
+MV W2, #2
+SHL W0, W1, W2    ; W0 = 4 << 2 (Logical shift left by 2)
+```
+
+### SHA (Shift Arithmetic)
+Performs a bidirectional arithmetic shift on a register based on the shift amount in a second register. Shifts left if the amount is positive, and performs an arithmetic right shift (padding with the sign bit) if the amount is negative.
+
+**Syntax:**
+```
+SHA <Dest Reg.>, <Op1>, <Op2>
+```
+
+**Example:**
+```
+MV W1, #-8
+MV W2, #-2
+SHA W0, W1, W2    ; W0 = -8 >> 2 (Arithmetic shift right by 2)
+```
+
 ### ADD (Add)
 Adds the values of two registers and stores the result in a destination register.
 
