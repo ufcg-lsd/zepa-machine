@@ -63,20 +63,20 @@ setup:
 JUMP #0
 
 exception_supervisor:
-    STRD W0 #0x1024 ; scratch_space_0
-    STRD W1 #0x1028 ; scratch_space_1
+    STRD W0 #@SCRATCH_SPACE_0_ADDR ; scratch_space_0
+    STRD W1 #@SCRATCH_SPACE_1_ADDR ; scratch_space_1
 
     MV W0 #0
     CMP ECR W0 ; if ECR = 0 (clock interruption)
     BEQ clock_int
 
     MV W0 #-1
-    LDD W1 #0x1018 ; running_pid
+    LDD W1 #@RUNNING_PID_ADDR ; running_pid
 
     CMP W0 W1
     BEQ jumpToHandler
 
-    MV W0 #84 ; pcb_size
+    MV W0 #3145808 ; pcb_size
     MUL W1 W1 W0 ; W1 = RUNNING_PID * pcb_size
 
     MV W0 #0x102C ; pcb_v
@@ -123,14 +123,14 @@ exception_supervisor:
     MV W3 #48
     SUB W0 W0 W3 ; w0 points to pcb[RUNNING_PID].w0
 
-    LDD W2 #0x1024 ; scratch_space_0
+    LDD W2 #@SCRATCH_SPACE_0_ADDR ; scratch_space_0
 
     STORE W2 W0
 
     MV W8 #4
     ADD W0 W0 W8 ; w0 points to pcb[RUNNING_PID].w1
 
-    LDD W2 #0x1028 ; scratch_space_1
+    LDD W2 #@SCRATCH_SPACE_1_ADDR ; scratch_space_1
     STORE W2 W0
 
     jumpToHandler:
@@ -154,6 +154,11 @@ exception_supervisor:
         
         CMP ECR W0
         BEQ fault_int    
+
+        ADD W0 W0 W1
+
+        CMP ECR W0
+        BEQ @page_fault_int
 
 
 ; INTERRUPTIONS
