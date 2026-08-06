@@ -182,7 +182,7 @@ else:
     if pcb_v[curr_child].is_zombie:
       pcb_v[curr_child].is_mapped = 0
       pcb_v[running_pid].w9 = curr_child
-      memory[status_addr] = pcb_v[curr_child].w9
+      running_pid_virtual_memory[status_addr] = pcb_v[curr_child].w9
 
       if pcb_v[running_pid].child = curr_child:
         pcb_v[running_pid].child = pcb_v[curr_child].next_sibling

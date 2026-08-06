@@ -816,7 +816,7 @@ status_addr_check:
     MUL W6 W2 W6 
     ADD W3 W0 W6 ; w3 points to pcb_v[RUNNING_PID].page_table[page_number]
 
-    LOAD W4 W3 ; w3 = pcb_v[RUNNING_PID].page_table[page_number]
+    LOAD W4 W3 ; w4 = pcb_v[RUNNING_PID].page_table[page_number]
     
     MV W6 #-1
     CMP W4 W6
@@ -842,16 +842,22 @@ status_addr_check:
     LOAD W3 W2 ; w3 = curr_child = pcb_v[running_pid].childPID
     MV W0 #@PCB_V_ADDR ;  w0 points to pcb_v[0] first byte
 
+; w0 points to pcb_v[0] first byte
+; w1  = RUNNING_PID * pcb_size bytes
+; w2 points to pcb_v[RUNNING_PID].child 
+; w3 = pcb_v[running_pid].childPID
+; w4 = pcb_v[RUNNING_PID].page_table[page_number]
+
     waitLoop:
         ;calculate pcb_v[curr_child]
         ; w3 = curr_child
 
-        MV W8 #84
+        MV W8 #3145808
         MUL W1 W3 W8
 
         ADD W1 W0 W1 ;W1 points to pcb_v[curr_child] first byte
 
-        MV W8 #80
+        MV W8 #72
         ADD W1 W1 W8 ; w1 points to pcb_v[curr_child].flags
         LDB W6 W1 ; w6 = pcb_v[curr_child].flags
 
@@ -863,7 +869,7 @@ status_addr_check:
             ;if !pcb_v[curr_child].is_zombie:
             ; curr_child = pcb_v[curr_child].next_sibling
 
-            MV W8 #68
+            MV W8 #60
             SUB W3 W1 W8 ; w3 points to pcb_v[curr_child].next_siblingPID
             LOAD W6 W3 ; w6 = pcb_v[curr_child].next_siblingPID
 
@@ -878,7 +884,7 @@ status_addr_check:
 
         curr_child_is_zombie:
             MV W8  #-2 ;0b11111111111111111111111111111110
-            LDB W6 W1
+            LDB W6 W1 ; w6 = pcb_v[curr_child].flags
             AND W8 W8 W6 
             STRB W8 W1 ; sets pcb_v[curr_child].is_mapped = 0
 
@@ -888,17 +894,17 @@ status_addr_check:
             ; w1 points to pcb_v[curr_child].flags
             ; w2 points to pcb_v[running_pid].child
             ; w3 = curr_child
-            ; w7 = pcb_v[running_pid].BASE + status_addr
+            
 
             MV W8 #52
             ADD W4 W2 W8 ; w4 points to pcb_v[running_pid].w9
             STORE W3 W4 ; pcb_v[running_pid].w9 = curr_child
 
-            MV W8 #24 
+            MV W8 #16 
             SUB W1 W1 W8 ; w1 points to pcb_v[curr_child].w9
             LOAD W6 W1 ; w6 = pcb_v[curr_child].w9
 
-            STORE W6 W7 ; memory[pcb_v[running_pid].BASE+status_addr] = pcb_v[curr_child].w9
+            STORE W6 W9 ; running_pid_virtual_memory[status_addr] = pcb_v[curr_child].w9
 
             MV W8 #44
             SUB W1 W1 W8 ; w1 points to pcb_v[curr_child].next_sibling
@@ -921,7 +927,7 @@ status_addr_check:
             SUB W4 W1 W8 ; w4 points to pcb_v[curr_child].prev_sibling
             LOAD W7 W4   ; w7 = pcb_v[curr_child].prev_sibling
 
-            MV W6 #84 ; 84 bytes each pcb
+            MV W6 #3145808 ; pcb_size
             MUL W5 W7 W6 ; 
             ADD W5 W0 W5 ; w5 points to pcb_v[pcb_v[running_pid].prev_sibling] first byte
 
@@ -942,7 +948,7 @@ status_addr_check:
             CMP W7 W8 ; if pcb_v[curr_child].next_sibling == -1 
             BEQ schedule
 
-            MV W6 #84 ; 84 bytes each pcb
+            MV W6 #3145808 ; pcb_size
             MUL W5 W7 W6 
             ADD W5 W0 W5 ; w5 points to pcb_v[pcb_v[running_pid].next_sibling] first byte
 
@@ -963,7 +969,7 @@ status_addr_check:
         ADD W2 W2 W8 ; w2 = pcb_v[running_pid].status_add
         STORE W9 W2 ; pcb_v[running_pid].status_addr = status_addr
 
-        MV W8 #64
+        MV W8 #56
         ADD W2 W2 W8 ; w2 points to pcb_v[running_pid].flags
 
         LDB W4 W2 ; w4 = pcb_v[running_pid].flags
