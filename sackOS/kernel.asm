@@ -1218,20 +1218,23 @@ kill:
         AND W8, W7, W6  ; W8 = pte_i.page_frame_id
         
         ; unmap the bitmap
-        MV W9, #-3          ; W9 = -3
-        SHL W9, W8, W9      ; W9 = byte offset (W8 >> 3)
+        MV W9, #-5          ; W9 = -5
+        SHL W9, W8, W9      ; W9 = word offset (W8 >> 5)
         
-        ADD W9, W0, W9      ; W9 = address of the byte in the bitmap
+        MV W7, #2
+        SHL W9, W9, W7      ; W9 = byte address offset (W9 * 4)
+
+        ADD W9, W0, W9      ; W9 = address of the word in the bitmap
         
-        MV W7, #7
-        AND W8, W8, W7      ; W8 = bit index (0 to 7)
+        MV W7, #31
+        AND W8, W8, W7      ; W8 = bit index (0 to 31)
         
         MV W7, #1
         SHL W7, W7, W8      ; W7 = 1 << bit_index (clear mask)
         
-        LDB W8, W9          ; Load bitmap byte into W8
+        LOAD W8, W9         ; Load bitmap word into W8
         XOR W8, W8, W7      ; Clear the frame's bit
-        STRB W8, W9         ; Store the updated byte back to memory
+        STORE W8, W9        ; Store the updated word back to memory
         
         MV W7, #1
         SUB W2, W2, W7      ; W2 = W2 - 1 (pages_used--)
@@ -1249,20 +1252,23 @@ kill:
         AND W8, W7, W6  ; W8 = pte_j.page_frame_id
         
         ; unmap the bitmap
-        MV W9, #-3          ; W9 = -3
-        SHL W9, W8, W9      ; W9 = byte offset (W8 >> 3)
+        MV W9, #-5          ; W9 = -5
+        SHL W9, W8, W9      ; W9 = word offset (W8 >> 5)
         
-        ADD W9, W0, W9      ; W9 = address of the byte in the bitmap
+        MV W7, #2
+        SHL W9, W9, W7  
+
+        ADD W9, W0, W9      ; W9 = address of the word in the bitmap
         
-        MV W7, #7
-        AND W8, W8, W7      ; W8 = bit index (0 to 7)
+        MV W7, #31
+        AND W8, W8, W7      ; W8 = bit index (0 to 31)
         
         MV W7, #1
         SHL W7, W7, W8      ; W7 = 1 << bit_index (clear mask)
         
-        LDB W8, W9          ; Load bitmap byte into W8
+        LOAD W8, W9         ; Load bitmap word into W8
         XOR W8, W8, W7      ; Clear the frame's bit
-        STRB W8, W9         ; Store the updated byte back to memory
+        STORE W8, W9        ; Store the updated word back to memory
         
         MV W7, #1
         SUB W2, W2, W7      ; W2 = W2 - 1 (pages_used--)
