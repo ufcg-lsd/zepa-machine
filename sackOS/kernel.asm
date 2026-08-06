@@ -788,43 +788,42 @@ fork:
         JUMP schedule
 
 wait:
-    MV W0 #0x102C ; w0 points to pcb_v[0] first byte
+    MV W0 #@PCB_V_ADDR ; w0 points to pcb_v[0] first byte
     MV W8 #52 
     ADD W0 W8 ; w0 points to pcb_v[0].w8
-    MV W8 #84 ; bytes size of each pcb
+    MV W8 #3145808 ; bytes size of each pcb
 
-    LDD W1 #0x1018 ; running_pid
-    MUL W1 W1 W8 ; W1 = RUNNING_PID * 84 bytes
+    LDD W1 #@RUNNING_PID_ADDR ; running_pid
+    MUL W1 W1 W8 ; W1 = RUNNING_PID * pcb_size bytes
     ADD W0 W0 W1 ; w0 points to pcb_v[RUNNING_PID].w8
     
     LOAD W9 W0 ; w9 = status_addr
 
-    MV W8 #20
-    ADD W0 W8 ; w0 points to pcb_v[running_pid].BASE
+status_addr_check:
 
-    LOAD W2 W0 ; w2 = pcb_v[RUNNING_PID].BASE
+    MV W6 #0xC0000000 
+    CMP W9 W1
+    BGT fault_int
+    BEQ fault_int ; fault_int if status_addr in a kernel address
+
+    MV W6 #0b1000000000000 ; takes the 20 most significant bits of address
+    DIV W2 W9 W3 ; w2 = page_number
+
+    MV W6 #28 ; 
+    ADD W0 W0 W6 ; w0 points to pcb_v[RUNNING_PID].page_table[0]
+
+    MV W6 #4
+    MUL W6 W2 W6 
+    ADD W3 W0 W6 ; w3 points to pcb_v[RUNNING_PID].page_table[page_number]
+
+    LOAD W4 W3 ; w3 = pcb_v[RUNNING_PID].page_table[page_number]
     
-    MV W8 #4
-    ADD W0 W0 W8 ; w0 points to pcb_v[RUNNING_PID].LIMIT
-    
-    LOAD W3 W0 ; w3 = pcb_v[RUNNING_PID].LIMIT
-
-    ADD W7 W2 W9 ; w7 = pcb_v[running_pid].BASE + status_addr
-    ADD W2 W2 W9 ; w2 = pcb_v[running_pid].BASE + status_addr
-    
-    MV W8 #4
-    ADD W2 W2 W8 ; w2 = pcb_v[running_pid].BASE + status_addr + 4
+    MV W6 #-1
+    CMP W4 W6
+    BEQ fault_int ; page_number(status_addr) is not mapped, page_fault
 
 
-    ; if  pcb_v[running_pid].BASE + status_addr + 4 > pcb_v[RUNNING_PID].LIMIT
-    ; fault_int()
-
-
-    CMP W2 W3
-    BGT fault_int 
-
-
-    MV W8 #72
+    MV W8 #48
     SUB W2 W0 W8 ; w2 points to pcb_v[RUNNING_PID].child 
     LOAD W6 W2 ; w6 = pcb_v[RUNNING_PID].child 
 
@@ -834,14 +833,14 @@ wait:
 
     JUMP #6
 
-        MV W8 #20
-        SUB W3 W0 W8 ; w3 points to pcb_v[RUNNING_PID].w9
+        MV W8 #52
+        ADD W6 W2 W8 ; w6 points to pcb_v[RUNNING_PID].w9
         MV W8 #-1
-        STORE W8 W3
+        STORE W8 W6
         JUMP schedule
 
     LOAD W3 W2 ; w3 = curr_child = pcb_v[running_pid].childPID
-    MV W0 #0x102C ;  w0 points to pcb_v[0] first byte
+    MV W0 #@PCB_V_ADDR ;  w0 points to pcb_v[0] first byte
 
     waitLoop:
         ;calculate pcb_v[curr_child]
@@ -1007,8 +1006,8 @@ exit:
 
 
 getPID:
-    LDD W0 #RUNNING_PID_ADDR ; running_pid
-    MV W1 #PCB_V_ADDR ; pcb_v
+    LDD W0 #@RUNNING_PID_ADDR ; running_pid
+    MV W1 #@PCB_V_ADDR ; pcb_v
 
     MV W8 #3145808 ; pcb_size 
     MUL W2 W0 W8 ; RUNNING_PID * pcb_size get the offset of bytes to acess pcb[RUNNING_PID]

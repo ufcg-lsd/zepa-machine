@@ -365,7 +365,7 @@ jump back to return address
   - **is_waiting**: 1 bit [2]
   - **scheduler_state (running, ready, blocked)**: 2 bits [3:4]
   **Pages_Used**: 4 bytes [76]
-  **PAGE TABLE**: (3 MB)
+  **PAGE TABLE**: (3 MB) [80]
   - 3*2^18 PTEs, each PTE has 4 bytes
 - **total_size**: 3MB + 80 bytes = 3145808 bytes 
 
