@@ -1633,3 +1633,94 @@ schedule:
         LDD W0, 0x1024 ; scratch_space_0
 
         MRET
+
+map_page:
+  MV W0, #bitmap       ; W0 = bitmap start address
+  MV W1, #0x20000      ; 128KB
+  ADD W1, W1, W0       ; W1 = bitmap end address (not inclusive)
+  MV W7, #0            ; W7 = current frame_id
+
+  map_find_word_loop:
+    CMP W0, W1
+    BEQ map_frame_not_found
+
+    LOAD W2, W0                 ; W2 = current word of the bitmap
+    MV W3, #-1                  ; mask of a fully occupied bitmap word
+    CMP W2, W3
+    BLT map_found_free_word     ; if there is a bit = 0 in the word, jump
+
+      MV W2, #4                 
+      ADD W0, W0, W2
+      MV W2, #32
+      ADD W7, W7, W2            ;update current bitmap word address and current frame id
+      JUMP map_find_word_loop   ; go to next word if there is no bit = 0
+
+    
+    map_found_free_word:
+
+      MV W3, #1            ; current bit to be checked
+
+      map_find_bit_loop:
+
+        MV W5, #1
+        AND W4, W2, W3     ; W4 = current bit of the bitmap word
+        CMP W4, W3
+        BLT map_found_free_bit    ; if the bitmap is free at the set bit in W3, jump
+
+          SHL W3, W3, W5
+          ADD W7, W7, W5          ; update current bit and page frame id
+          JUMP map_find_bit_loop  ; go to next bit
+
+      map_found_free_bit:
+
+        OR W2, W2, W3
+        STORE W2, W0       ; set the found free bit to 1 and save it to the bitmap
+
+        MV W1, #0xC0000    ; id of the first kernel page
+        CMP W9, W1
+        BGT map_kernel_pte
+        BEQ map_kernel_pte       ; jump if it is a kernel page
+
+          ; if it is an user page:
+          MV W1, #2
+          SHL W3, W9, W1     ; W3 = page table offset of the page to be mapped
+          
+          ADD W4, UPTR, W3   ; W4 = pte address to be set 
+          
+          MV W5, #4
+          SUB W5, UPTR, W5   ; W5 = process.pages_used address
+
+          LOAD W6, W5        ; W6 = process.pages_used
+          MV W1, #1
+          ADD W6, W6, W1
+          STORE W6, W5       ; process.pages_used += 1
+          JUMP map_pte
+        
+        map_kernel_pte:
+          SUB W3, W9, W1     ; page_id -= 0xC0000 (normalize to the start of KPTR)
+          MV W1, #2
+          SHL W3, W3, W1     ; W3 = page table offset of the page to be mapped
+          
+          ADD W4, KPTR, W3   ; W4 = pte address to be set 
+
+        map_pte:
+
+          MV W1, #0x100000   ; to set the valid bit = 1 of the pte
+          ADD W7, W7, W1     ; W7 = pte (valid = 1 and page frame id)
+          STORE W7, W4       ; mapping the page to the frame
+
+          MV W9, #0
+          JUMPR W8           ; return
+
+  map_frame_not_found:
+
+    MV W1, #0xC0000    ; id of the first kernel page
+    CMP W9, W1
+    BLT map_frame_not_found_user ; jump if it is an user page
+
+      ; kernel page and not found, panic
+      JUMP #0
+    
+    map_frame_not_found_user:
+      MV W9, #1
+      JUMPR W8   ; return
