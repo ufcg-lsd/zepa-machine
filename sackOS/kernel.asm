@@ -1636,13 +1636,17 @@ schedule:
 
 map_page:
   MV W0, #bitmap       ; W0 = bitmap start address
-  MV W1, #0x20000      ; 128KB
-  ADD W1, W1, W0       ; W1 = bitmap end address (not inclusive)
+  
+  LDD W1, #memory_size ; W1 = memory_size
+  MV W2, #-12
+  SHL W1, W1, W2       ; W1 = frame_number (memory/4KB)    
+  
   MV W7, #0            ; W7 = current frame_id
 
   map_find_word_loop:
-    CMP W0, W1
+    CMP W7, W1
     BEQ map_frame_not_found
+    BGT map_frame_not_found     ; if current frame_id >= frame_number
 
     LOAD W2, W0                 ; W2 = current word of the bitmap
     MV W3, #-1                  ; mask of a fully occupied bitmap word
@@ -1669,6 +1673,11 @@ map_page:
 
           SHL W3, W3, W5
           ADD W7, W7, W5          ; update current bit and page frame id
+
+          CMP W7, W1
+          BEQ map_frame_not_found
+          BGT map_frame_not_found     ; if current frame_id >= frame_number
+
           JUMP map_find_bit_loop  ; go to next bit
 
       map_found_free_bit:
