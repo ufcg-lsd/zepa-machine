@@ -1,64 +1,85 @@
 setup:
-    MV W0 #2048  
-    MV W1 #4096
-    MUL W1, W0, W1   ; 8MB of full kernel memory
-    STRD W1 #0x1008 ; kernel_max_memory
-    STRD W1, #0x1020 ; initilizes the kernel stack pointer as the kernel_max_memory
-    LDD W2 #0x100C ; buffer_size
-    STRD LIMIT #0x1010 ; memory_size
-    ADD W3 W1 W2 ; W3 -> KERNEL_MAX_MEMORY + BUFFER
+    STRD W0, #memory_size ; memory_size
 
-    SUB W0 LIMIT W3 ; W0 -> USER_MEMORY = limit - (KERNEL_MAX_MEMORY + BUFFER)
-    LDD W2 #0x1000 ; partition_size
+    MV UPTR, #pcb_v_low    ; pcb_v low addr
+    MV W1, #80           ; page_table offset
 
-    UDIV W3 W0 W2 ; W3 -> NUM_PARTITIONS = user_memory / PARTITION_SIZE
-    STRD W3, #0x1014 ; partition_number
+    ADD UPTR, UPTR, W1       ; UPTR = pcb_v[0].page_table address
+
+    MV W9, #0x100000         ; W9 = sets bit 20 (valid) to 1
+    STORE W9, UPTR           ; identity mapping, allocates the first frame to the first page
+
+    MV KPTR, #kernel_page_table_low ; KPTR = kernel_page_table low address
+    MV W0, #kernel_page_table_low   ; W0 = kernel_page_table low first address
+
+    MV W1, #1
+    MV W2, #20
+    SHL W1, W1, W2           ; W1 = 2^20, the size of the kernel page_table
+
+    ADD W1, W1, W0           ; W1 = the end of the kernel page_table
+
+    MV W2, #4                ; W2 = byte step
+    MV W3, #1                ; W3 = one step
+    setup_kernel_mapping_loop:
+        CMP W0, W1
+        BEQ setup_end_kernel_mapping
+
+        STORE W9, W0      ; maps the high address page to the low frame
+        ADD W0, W0, W2    ; W0 = next pte address
+        ADD W9, W9, W3        ; W9 = next page frame id
+        JUMP setup_kernel_mapping_loop
+
+
+    setup_end_kernel_mapping:
+
+    MV ESR, #32     ; enable MMU
+    MV EPC, #4
+    ADD EPC, EPC, PC ; EPC points to next instruction, since fetch already updates PC
+
+    MRET
+
+    ; now using virtual addresses
+
+    MV W0, #0xC0000004   ; 3GB mark + 4 bytes 
+    ADD W0, W0, PC       ; W0 points to the instruction after the jump, but on high addresses
+    JMPR W0
+
+    ; now in high addresses
+
+    MV W0, #0
+    MV W1, #0xC0000000 ; W1 = 3GB offset
+    ADD W1, W1, UPTR   ; W1 = uptr virtual address
+    STORE W0, W1       ; unmaps the identity, sets the pcb_v[0].page_table[0] to invalid
+
+    MV W0, #bitmap     ; W0 = bitmap addr
+    MV W1, #0x8000     ; W1 = 2^18 frames / 8 bits = bytes of the bitmap to populate
+    ADD W1, W1, W0     ; W1 = the end of the bitmap populate portion
+    
+    MV W2, #-1         ; W2 = all ones, to populate the bitmap
+    MV W3, #4          ; byte step
+
+    setup_populate_bitmap_loop:
+        CMP W0, W1
+        BEQ setup_end_populate_bitmap
+
+        STORE W2, W0   ; populate the bitmap
+
+        ADD W0, W0, W3 ; W0 goes to the next byte
+        JUMP setup_populate_bitmap_loop
+    
+    setup_end_populate_bitmap:
 
     MV W0, #-1
-    STRD W0, #0x1018 ; running_pid = -1
+    STRD W0, #running_pid ; running_pid = -1
 
-    MV W4 #0x102C ; pcb_v
+    MV SP, #0
+    STRD SP, #kernel_stack_pointer ; sets kernel_stack_pointer
 
-    MV W8 #72
-    ADD W4 W4 W8 ; gets W4 to pcb_v[0].BASE address
-
-   ; W1 will acumulate PARTITION_SIZE * i through the loop
-
-    MV W6 #0 ; W6 -> pid = 0
-    ; for (int pid = 0, pid < NUM_PARTITIONS; pid++)
-
-    CMP W6 W3 
-    BEQ setup_registers ; loop conditions
-
-        STORE W1 W4 ; pcb_v[pid].BASE = KERNEL_MAX_MEMORY + pid * PARTITION_SIZE
-        
-        MV W8 #4
-        ADD W4 W4 W8 ; W4 = pcb_v[pid].LIMIT address
-
-        ADD W7 W1 W2 ; W7 = BASE + PARTITION_SIZE
-
-        STORE W7 W4 ; pcb_v[pid].LIMIT = BASE + PARTITION_SIZE
-
-        MV W8 #1
-        ADD W6 W6 W8 ; pid += 1 
-
-
-        ; setup variables to next Iteration
-
-        MV W8 #80
-        ADD W4 W4 W8 ; W4 = pcb_v[pid+1].BASE address
-        ADD W1 W1 W2 ; W1 += PARTITION_SIZE
-
-        JUMP #-12
-
-
-        setup_registers:
-            LDD SP #0x1020 ; kernel_stack_pointer
-            MV ESA #0x94 ; the exception_supervisor initial address
-            MV EPC #0x90 ; the infinite loop below
-            MV ESR #16 ; enable interruptions
-            
-            MRET ; go to infinite loop, waiting for program inputs
+    MV ESA, #exception_supervisor ; the exception_supervisor initial address
+    MV EPC, #infinite_loop ; the infinite loop below
+    MV ESR, #48 ; enable interruptions and mmu
+    
+    MRET ; go to infinite loop, waiting for program inputs
 
 JUMP #0
 

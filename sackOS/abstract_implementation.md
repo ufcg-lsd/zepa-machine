@@ -3,19 +3,20 @@
 ## setup
 ```
 store memory_size
-user_memory = memory_size = 1GB
-frame_number = user_memory / 4KB
-
-allocate all kernel frames to both high and low pages
-updating the bitmap for high pages
 
 set UPTR and KPTR
+
+allocate the first frame to the first page
+allocate all kernel frames to high pages
+
 ESR = 32 //enable MMU
 EPC = next instruction
 MRET
 
 jump to high addresses
 unmap low pages
+
+populate the first 1GB worth of frames of the bitmap
 
 SP = SP_ADDRESS
 ESA = EXCEPTION_SUPERVISOR_ADDRESS
@@ -369,6 +370,10 @@ jump back to return address
   - 3*2^18 PTEs, each PTE has 4 bytes
 - **total_size**: 3MB + 80 bytes = 3145808 bytes 
 
+### Kernel Page Table
+
+2^18 PTEs = 2^18*4 bytes = 2^20 bytes
+
 ### Bitmap
 
 Array that will tell whether a page frame is being used or not [2^20 bits = 128 KB]
@@ -395,3 +400,5 @@ Note: The specific memory layout addresses below are placeholders and subject to
 
 ### Data Structures
 - **pcb_vector**: PCB_VECTOR_ADDR
+- **kernel_page_table**: KERNEL_PAGE_TABLE_ADDR
+- **bitmap**: BITMAP_ADDR

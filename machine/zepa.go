@@ -600,11 +600,11 @@ func (m *Machine) LoadBuffer(buffer []byte) bool {
 		return false
 	}
 
-	bufferIndex := len(m.memory) - bufferSize
-	clear(m.memory[bufferIndex:])
-
+	const oneGB = 1 << 30
+	bufferIndex := oneGB - bufferSize
+	clear(m.memory[bufferIndex:oneGB])
 	binary.LittleEndian.PutUint32(m.memory[bufferIndex:bufferIndex+4], uint32(len(buffer)))
-	copy(m.memory[bufferIndex+4:], buffer)
+	copy(m.memory[bufferIndex+4:oneGB], buffer)
 
 	return true
 }
