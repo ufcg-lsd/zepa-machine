@@ -107,7 +107,7 @@ pcb_v[running_pid].w9 = 1
 kill(running_pid)
 ```
 
-## page_fault_int()
+## page_fault_exc()
 ```
   if efa >= kernelBoundary and esr not in kernel mode:
     pcb_v[running_pid].w9 = 3

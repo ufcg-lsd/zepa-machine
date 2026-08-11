@@ -158,7 +158,7 @@ exception_supervisor:
         ADD W0 W0 W1
 
         CMP ECR W0
-        BEQ page_fault_int
+        BEQ page_fault_exc
 
 
 ; INTERRUPTIONS
@@ -544,7 +544,128 @@ fault_int:
 
   JUMP kill            ; kill(running_pid)
 
+; exceptions
 
+page_fault_exc:
+    ; ==========================================================
+    ; 1. Verificação de Segurança (Kernel Boundary)
+    ; ==========================================================
+
+    MV W0, #3
+    MV W2, #30
+    SHL W0, W0, W2                 ; W0 = 3 << 30 = 0xC0000000
+    
+    CMP EFA, W0
+    BLT page_fault_valid_address   ; Se EFA < 0xC0000000, é endereço de usuário válido
+    
+    ; Se EFA >= 0xC0000000, checa se ESR indica modo usuário (bit 3 == 1)
+    MV W1, #8                      ; bit 3 (0b1000)
+    AND W2, ESR, W1
+    CMP W2, W1
+    BEQ page_fault_kill            ; Se for modo usuário e acessou kernel, mata o processo
+
+page_fault_valid_address:
+    ; ==========================================================
+    ; 2. Cálculo do page_id e chamada do map_page
+    ; ==========================================================
+    ; page_id = EFA >> 12 (Em ZEPA, SHL negativo faz shift right)
+    MV W1, #-12
+    SHL W9, EFA, W1
+    
+    MV W8, #@return_from_map_page   ; Endereço de retorno exigido pela map_page
+    JUMP map_page
+
+return_from_map_page:
+    ; W9 contém o retorno de map_page (0 = sucesso)
+    MV W0, #0
+    CMP W9, W0
+    BEQ page_fault_clear_page      ; Se sucesso, vai limpar a página
+
+page_fault_kill:
+    ; ==========================================================
+    ; Tratamento de Falha: pcb_v[running_pid].w9 = 3 e kill()
+    ; ==========================================================
+    LDD W9, #@RUNNING_PID_ADDR
+
+    MV W1, #3
+    MV W2, #20
+    SHL W1, W1, W2                 ; W1 = 3 << 20 = 0x300000 (3MB)
+    MV W2, #80
+    ADD W1, W1, W2                 ; W1 = 0x300050 = 3145808 (3MB + 80)
+
+    MUL W0, W9, W1                 ; W0 = running_pid * pcb_size
+    
+    MV W1, #@PCB_V_ADDR
+    ADD W0, W0, W1                 ; W0 = endereço de pcb_v[running_pid]
+    
+    MV W1, #56                     ; Offset de W9 no PCB
+    ADD W0, W0, W1                 ; W0 = endereço de pcb_v[running_pid].W9
+    
+    MV W1, #3
+    STORE W1, W0                   ; pcb_v[running_pid].W9 = 3
+    
+    JUMP kill                      ; kill(running_pid) - não retorna
+
+page_fault_clear_page:
+    ; ==========================================================
+    ; 3. Limpeza da Página (Zero-fill)
+    ; ==========================================================
+    ; aligned_efa = (EFA >> 12) << 12
+    MV W1, #-12
+    SHL W2, EFA, W1
+    MV W1, #12
+    SHL W2, W2, W1                 ; W2 = EFA alinhado (início da página)
+
+    MV W3, #4096                   ; Tamanho da página (limit do loop)
+    MV W4, #0                      ; Offset = 0
+    MV W5, #0                      ; Valor zero para limpar memória
+    MV W7, #4                      ; Passo do loop = 4 bytes (32 bits)
+
+page_fault_clear_loop:
+    CMP W4, W3
+    BEQ page_fault_restore         ; Se offset == 4096, terminou a limpeza
+    
+    ADD W6, W2, W4                 ; W6 = aligned_EFA + offset
+    STORE W5, W6                   ; memory[aligned_EFA + offset] = 0
+    
+    ADD W4, W4, W7                 ; offset += 4
+    JUMP page_fault_clear_loop
+
+page_fault_restore:
+    ; ==========================================================
+    ; 4. Ajuste do EPC e Restauração de Contexto
+    ; ==========================================================
+    ; O exception_supervisor já salvou os registradores no PCB antes de chamar essa função.
+    ; Precisamos subtrair 4 do PC salvo no PCB (offset 60) para re-executar a instrução.
+    
+    LDD W9, #@RUNNING_PID_ADDR
+    
+    MV W1, #3
+    MV W2, #20
+    SHL W1, W1, W2                 ; W1 = 3 << 20 = 0x300000 (3MB)
+    MV W2, #80
+    ADD W1, W1, W2                 ; W1 = 0x300050 = 3145808 (3MB + 80)
+
+    MUL W0, W9, W1
+    
+    MV W1, #@PCB_V_ADDR
+    ADD W6, W0, W1                 ; W6 = base de pcb_v[running_pid]
+
+    MV W1, #60                     ; Offset do PC (EPC) no PCB
+    ADD W2, W6, W1                 ; W2 = endereço de pcb_v[running_pid].PC
+    LOAD W3, W2                    ; W3 = EPC salvo
+    
+    MV W4, #4
+    SUB W3, W3, W4                 ; EPC = EPC - 4
+    STORE W3, W2                   ; Atualiza o PC salvo no PCB
+
+    ; O label schedule_restore_context exige:
+    ; W6 = &pcb_v[running_pid]
+    ; W9 = running_pid
+    ; Como ambos já estão configurados no código acima (W9 com o LDD, W6 com a base),
+    ; basta pular diretamente para a rotina que ela irá restaurar os registradores 
+    ; deste PCB específico para a CPU e executar o MRET.
+    JUMP schedule_restore_context
 
 ; SYSCALLS
 
