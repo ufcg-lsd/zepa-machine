@@ -787,16 +787,19 @@ fork:
     fork_copy_regs_done:
 
         ; Setup UPTR and store page table addresses
+        MV W2, #0xC0000000    ; kernel mapping offset
 
         ; Child PT = &pcb_v[pid] + 80
         MV W1, #80
-        ADD W1, W0, W1
-        STRD W1, #SCRATCH_SPACE_1_ADDR; scratch_space_1 = child PT
-        LDD UPTR, #SCRATCH_SPACE_1_ADDR; UPTR = child PT
+        ADD W1, W0, W1                   ; W1 = virtual child pt addr
+        SUB W1, W1, W2                   ; W1 = physical child pt addr
+        STRD W1, #SCRATCH_SPACE_1_ADDR   ; scratch_space_1 = child PT
+        LDD UPTR, #SCRATCH_SPACE_1_ADDR  ; UPTR = child PT
 
         ; Parent PT = &pcb_v[running_pid] + 80
         MV W1, #80
-        ADD W1, W7, W1
+        ADD W1, W7, W1                   ; W1 = virtual parent pt addr
+        SUB W1, W1, W2                   ; W1 = physical parent pt addr
         STRD W1, #SCRATCH_SPACE_0_ADDR; scratch_space_0 = parent PT
 
         ; Iterate parent page table
@@ -832,12 +835,10 @@ fork:
         ADD W8, W6, W8               ; W8 = &parent_pt[pte_index]
         LOAD W5, W8                  ; W5 = PTE value
 
-        ; Check Valid bit (bit 0 of PTE)
-        MV W1, #1
-        AND W1, W5, W1
-        MV W0, #0
-        CMP W1, W0
-        BEQ fork_pte_next            ; PTE not valid, skip
+        ; Check Valid bit (bit 20 of PTE)
+        MV W1, #0x100000
+        CMP W5, W1
+        BLT fork_pte_next            ; PTE not valid, skip
 
         ; PTE is valid: map page + copy content 
 
@@ -885,8 +886,13 @@ fork:
         LOAD W0, SP                   ; W0 = child PCB addr
         ADD SP, SP, W1
 
-        ; pcb_v[pid].W9 = 3
+        ; pcb_v[parent_pid].W9 = -1
         MV W1, #56
+        ADD W8, W7, W1                ; W8 = parent.W9
+        MV W1, #-1
+        STORE W1, W8                  ; parent.W9 = -1 failed fork
+
+        ; pcb_v[pid].W9 = 3
         ADD W0, W0, W1
         MV W1, #3
         STORE W1, W0
