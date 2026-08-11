@@ -6,7 +6,7 @@ sackOS is a time-sharing operating system with virtual memory implemented throug
 
 ### 1.1 Registers
 
-* `ECR`, `ESA`, `ESR`, `EPC`, `KPTR`, `UPTR` and `EFA`kptr, uptr, efa are kernel-only registers, using them will result in a fatal illegal access fault.
+* `ECR`, `ESA`, `ESR`, `EPC`, `KPTR`, `UPTR` and `EFA` are kernel-only registers, using them will result in a fatal illegal access fault.
 * `W9` is defined as the primary register for system call identification and return values.
 
 ### 1.2 Instructions

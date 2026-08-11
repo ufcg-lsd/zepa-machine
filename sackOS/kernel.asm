@@ -795,7 +795,7 @@ fork:
 wait:
     MV W0 #@PCB_V_ADDR ; w0 points to pcb_v[0] first byte
     MV W8 #52 
-    ADD W0 W8 ; w0 points to pcb_v[0].w8
+    ADD W0, W0, W8 ; w0 points to pcb_v[0].w8
     MV W8 #3145808 ; bytes size of each pcb
 
     LDD W1 #@RUNNING_PID_ADDR ; running_pid
@@ -807,12 +807,12 @@ wait:
 status_addr_check:
 
     MV W6 #0xC0000000 
-    CMP W9 W1
+    CMP W9 W6
     BGT fault_int
     BEQ fault_int ; fault_int if status_addr in a kernel address
 
     MV W6 #0b1000000000000 ; takes the 20 most significant bits of address
-    DIV W2 W9 W3 ; w2 = page_number
+    DIV W2 W9 W6 ; w2 = page_number
 
     MV W6 #28 ; 
     ADD W0 W0 W6 ; w0 points to pcb_v[RUNNING_PID].page_table[0]
@@ -823,12 +823,12 @@ status_addr_check:
 
     LOAD W4 W3 ; w4 = pcb_v[RUNNING_PID].page_table[page_number]
     
-    MV W6 #-1
+    MV W6 #0x100000 ; 20th bit, valid
     CMP W4 W6
-    BEQ fault_int ; page_number(status_addr) is not mapped, page_fault
+    BLT fault_int ; page_number(status_addr) is not mapped, page_fault
 
 
-    MV W8 #48
+    MV W8 #76
     SUB W2 W0 W8 ; w2 points to pcb_v[RUNNING_PID].child 
     LOAD W6 W2 ; w6 = pcb_v[RUNNING_PID].child 
 
