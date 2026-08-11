@@ -383,9 +383,9 @@ input_int:
         ; Set UPTR to page table of new process
 
         MV W1, #80
-        ADD W1, W0, W1                 ; W1 = physical address of page table
-        STRD W1, #SCRATCH_SPACE_1_ADDR ; scratch_space_1 = page table addr
-        LDD UPTR, #SCRATCH_SPACE_1_ADDR; UPTR = page table addr
+        ADD W1, W0, W1                 ; W1 = virtual address of page table
+        MV UPTR, #0xC0000000
+        SUB UPTR, W1, UPTR             ; UPTR = physical address of page table
 
         ; Map pages for the program code
 
@@ -491,6 +491,33 @@ input_int:
         JUMP input_copy_loop
 
     input_copy_end:
+        ; W8 = buffer_input_size
+        ; Pad memory with zeros until the end of the 4KB boundary.
+
+        MV W5, #4095
+        AND W5, W8, W5                 ; W5 = W8 % 4096 (bytes used in last page)
+        
+        MV W6, #0
+        CMP W5, W6
+        BEQ input_schedule             ; If aligned to 4096, no padding
+
+        MV W6, #4096
+        SUB W6, W6, W5                 ; W6 = remaining bytes to zero out
+        ADD W6, W8, W6                 ; W6 = exact virtual address where padding stops
+        
+        MV W5, #0                      ; W5 = 0 (Data to write)
+        MV W2, #4                      ; Step
+
+    input_pad_loop:
+        CMP W8, W6
+        BGT input_schedule
+        BEQ input_schedule
+
+        STORE W5, W8                   ; memory[user_virtual_addr] = 0
+        ADD W8, W8, W2
+        JUMP input_pad_loop
+
+    input_schedule:
         JUMP schedule
 
     next_input_iteration:
