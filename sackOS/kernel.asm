@@ -790,7 +790,7 @@ fork:
 wait:
     MV W0 #0x102C ; w0 points to pcb_v[0] first byte
     MV W8 #52 
-    ADD W0 W8 ; w0 points to pcb_v[0].w8
+    ADD W0 W0 W8 ; w0 points to pcb_v[0].w8
     MV W8 #84 ; bytes size of each pcb
 
     LDD W1 #0x1018 ; running_pid
