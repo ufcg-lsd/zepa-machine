@@ -1089,7 +1089,9 @@ kill:
       LOAD W4, W3         ; W4 = pcb_v[parent].status_addr
 
       MV W5, #64
-      ADD UPTR, W3, W5      ; UPTR = pcb_v[parent].page_table address
+      ADD UPTR, W3, W5      ; UPTR = pcb_v[parent].page_table virtual address
+      MV W5, #0xC0000000    ; The 3GB kernel offset
+      SUB UPTR, UPTR, W5    ; UPTR = pcb_v[parent].page_table physical address
 
       MV W5, #56
       ADD W2, W2, W5      ; W2 = pcb_v[pid].W9 address
@@ -1715,10 +1717,13 @@ map_page:
           MV W1, #2
           SHL W3, W9, W1     ; W3 = page table offset of the page to be mapped
           
-          ADD W4, UPTR, W3   ; W4 = pte address to be set 
-          
+          ADD W4, UPTR, W3   ; W4 = physical pte address to be set 
+          MV W3, #0xC0000000 ; The 3GB kernel offset
+          ADD W4, W4, W3     ; W4 = virtual pte address to be set 
+
           MV W5, #4
-          SUB W5, UPTR, W5   ; W5 = process.pages_used address
+          SUB W5, UPTR, W5   ; W5 = process.pages_used physical address
+          ADD W5, W5, W3     ; W5 = process.pages_used virtual address
 
           LOAD W6, W5        ; W6 = process.pages_used
           MV W1, #1
@@ -1731,7 +1736,9 @@ map_page:
           MV W1, #2
           SHL W3, W3, W1     ; W3 = page table offset of the page to be mapped
           
-          ADD W4, KPTR, W3   ; W4 = pte address to be set 
+          ADD W4, KPTR, W3   ; W4 = physical pte address to be set 
+          MV W3, #0xC0000000 ; The 3GB kernel offset
+          ADD W4, W4, W3     ; W4 = virtual pte address to be set
 
         map_pte:
 
