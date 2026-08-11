@@ -673,11 +673,11 @@ fork:
         MV W6, #9
         STRB W6, W8
 
-        ; parent_pid = running_pid (offset 0)
-        LDD W7, #RUNNING_PID_ADDR    ; W7 = running_pid
+        ; parent_pid = -1 (offset 0)
+        ; parent_pid is only set to running_pid when fork is for sure going to work
+        ; if it returns -1 and kill the child, it must not create a zombie process
+        MV W7, #-1    ; W7 = -1
         STORE W7, W0
-
-        MV W7, #-1
 
         ; child = -1 (offset 4)
         MV W1, #4
@@ -713,48 +713,6 @@ fork:
         MUL W1, W1, W3
         MV W7, #PCB_V_ADDR
         ADD W7, W7, W1               ; W7 = &pcb_v[running_pid]
-
-        ; Set fork return values
-        ; pcb_v[running_pid].w9 = pid
-        MV W1, #56
-        ADD W8, W7, W1
-        STORE W4, W8                  ; parent gets child pid
-
-        ; pcb_v[pid].w9 = -2
-        ADD W8, W0, W1                ; W1 still 56
-        MV W1, #-2
-        STORE W1, W8                  ; child gets -2
-
-        ; Link sibling list
-        ; pcb_v[pid].next_sibling = pcb_v[running_pid].child
-        MV W1, #4
-        ADD W8, W7, W1
-        LOAD W1, W8                   ; W1 = old_child = pcb_v[running_pid].child
-
-        MV W3, #12
-        ADD W8, W0, W3
-        STORE W1, W8                  ; pcb_v[pid].next_sibling = old_child
-
-        ; if old_child != -1: pcb_v[old_child].prev_sibling = pid
-        MV W3, #-1
-        CMP W1, W3
-        BEQ skip_prev_sibling
-
-            ; Compute &pcb_v[old_child]
-            MV W3, #PCB_SIZE          ; pcb_size
-            MUL W1, W1, W3
-            MV W3, #PCB_V_ADDR
-            ADD W1, W1, W3            ; W1 = &pcb_v[old_child]
-
-            MV W3, #8
-            ADD W1, W1, W3
-            STORE W4, W1              ; pcb_v[old_child].prev_sibling = pid
-
-    skip_prev_sibling:
-        ; pcb_v[running_pid].child = pid
-        MV W1, #4
-        ADD W8, W7, W1
-        STORE W4, W8
 
         ; Copy registers from parent to child
         ; W0 = child PCB, W7 = parent PCB
@@ -820,8 +778,9 @@ fork:
         MV W1, #1024
         MUL W3, W3, W1               ; W3 = 786432
 
-        ; W6 = parent PT base addr
+        ; W6 = physical parent PT base addr
         LDD W6, #SCRATCH_SPACE_0_ADDR
+        ADD W6, W6, W2 ; W6 = virtual parent PT base addr
 
         MV W2, #0                     ; W2 = pte_index = 0
 
@@ -893,6 +852,7 @@ fork:
         STORE W1, W8                  ; parent.W9 = -1 failed fork
 
         ; pcb_v[pid].W9 = 3
+        MV W1, #56
         ADD W0, W0, W1
         MV W1, #3
         STORE W1, W0
@@ -963,6 +923,52 @@ fork:
         ADD SP, SP, W1
         LOAD W0, SP
         ADD SP, SP, W1
+
+        ; Set fork return values
+        ; pcb_v[running_pid].w9 = pid
+        MV W1, #56
+        ADD W8, W7, W1
+        STORE W4, W8                  ; parent gets child pid
+
+        ; pcb_v[pid].w9 = -2
+        ADD W8, W0, W1                ; W1 still 56
+        MV W1, #-2
+        STORE W1, W8                  ; child gets -2
+
+        ; parent_pid = running_pid (offset 0)
+        LDD W5, #RUNNING_PID_ADDR    ; W5 = running_pid
+        STORE W5, W0
+
+        ; Link sibling list
+        ; pcb_v[pid].next_sibling = pcb_v[running_pid].child
+        MV W1, #4
+        ADD W8, W7, W1
+        LOAD W1, W8                   ; W1 = old_child = pcb_v[running_pid].child
+
+        MV W3, #12
+        ADD W8, W0, W3
+        STORE W1, W8                  ; pcb_v[pid].next_sibling = old_child
+
+        ; if old_child != -1: pcb_v[old_child].prev_sibling = pid
+        MV W3, #-1
+        CMP W1, W3
+        BEQ skip_prev_sibling
+
+            ; Compute &pcb_v[old_child]
+            MV W3, #PCB_SIZE          ; pcb_size
+            MUL W1, W1, W3
+            MV W3, #PCB_V_ADDR
+            ADD W1, W1, W3            ; W1 = &pcb_v[old_child]
+
+            MV W3, #8
+            ADD W1, W1, W3
+            STORE W4, W1              ; pcb_v[old_child].prev_sibling = pid
+
+        skip_prev_sibling:
+            ; pcb_v[running_pid].child = pid
+            MV W1, #4
+            ADD W8, W7, W1
+            STORE W4, W8
 
         JUMP schedule
 
