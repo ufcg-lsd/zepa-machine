@@ -79,7 +79,7 @@ exception_supervisor:
     MV W0 #3145808 ; pcb_size
     MUL W1 W1 W0 ; W1 = RUNNING_PID * pcb_size
 
-    MV W0 #0x102C ; pcb_v
+    MV W0 #PCB_VECTOR_ADDR ; pcb_v
     ADD W0 W0 W1 ; W0 = pcb[RUNNING_PID] address
 
     MV W1 #28
@@ -158,7 +158,7 @@ exception_supervisor:
         ADD W0 W0 W1
 
         CMP ECR W0
-        BEQ @page_fault_int
+        BEQ page_fault_int
 
 
 ; INTERRUPTIONS
