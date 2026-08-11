@@ -441,27 +441,43 @@ input_int:
 
 
 kill_int:
+    ; Obtém o início físico/offset do buffer
+    LDD W9, #MEMORY_SIZE_ADDR
+    LDD W7, #BUFFER_SIZE_ADDR
+    SUB W9, W9, W7
 
-    LDD W9, #0x1010 ; memory_size
-    LDD W7, #0x100C ; buffer_size
-    SUB W9, W9, W7  ; initial buffer addr
-    LOAD W9, W9     ; pid of kill_int
+    ; +0 = tamanho
+    ; +4 = PID
+    MV  W6, #4
+    ADD W9, W9, W6
+    LOAD W9, [W9]
 
-    LDD W1, #0x1014 ; partition_number
+    LDD W1, #MAX_PROCESSES_ADDR ; verifica pid (valida)
 
     CMP W9, W1
     BGT not_valid
     BEQ not_valid
 
-    MV  W2, #84
+    ; PCB_SIZE = 0x00300050
+    MV  W2, #0x30
+    MV  W0, #16
+    SHL W2, W2, W0
+
+    MV  W0, #0x50
+    ADD W2, W2, W0
+
+    ; &pcb_v[pid]
     MUL W3, W9, W2
-    MV W4, #0x102C ; pcb_v
+
+    MV  W4, #PCB_VECTOR_ADDR
     ADD W3, W3, W4
 
-    MV  W5, #80
+    ; flags no offset 72
+    MV  W5, #72
     ADD W5, W3, W5
-    LDB W6, W5
+    LDB W6, [W5]
 
+    ; is_mapped
     MV  W8, #1
     AND W7, W6, W8
 
@@ -469,23 +485,25 @@ kill_int:
     CMP W7, W0
     BEQ not_valid
 
+    ; is_zombie
     MV  W8, #2
     AND W7, W6, W8
 
     CMP W7, W8
     BEQ not_valid
 
+    ; pcb_v[pid].w9 = 2
     MV  W5, #56
     ADD W5, W3, W5
 
     MV  W6, #2
-    STORE W6, W5
+    STORE W6, [W5]
 
+    ; W9 continua contendo o PID
     JUMP kill
 
-    not_valid:
-        JUMP schedule
-
+not_valid:
+    JUMP schedule
 
 syscall_int:
     MV W1, #0
@@ -988,22 +1006,36 @@ wait:
 
 
 exit:
-	LDD W9, #0x1018        ; W9 = running_pid
-	MV W1, #84               ; W1 = pcb_size
-	MUL W0, W9, W1           ; W0 = running_pid * pcb_size
+    MV W6, #0xC000             ; W6 = upper part of kernel boundary
+    MV W7, #16                 ; W7 = shift amount
+    SHL W6, W6, W7            ; W6 = 0xC0000000 (kernel boundary)
 
-	MV W1, #0x102C           ; W1 = pcb_v initial address
-	ADD W0, W0, W1           ; W0 = pcb_v[running_pid] initial address
+    MV W5, #0x1018             ; W5 = running_pid physical offset
+    ADD W5, W6, W5            ; W5 = running_pid virtual address
+    LOAD W9, [W5]              ; W9 = running_pid
 
-	MV W1, #52
-	ADD W0, W0, W1           ; W0 = pcb_v[running_pid].W8 address
-	LOAD W2, W0              ; W2 = pcb_v[running_pid].W8 (status_code)
+    MV W1, #0x30               ; W1 = upper part of pcb_size
+    MV W7, #16                 ; W7 = shift amount
+    SHL W1, W1, W7            ; W1 = 0x00300000 (page table size)
 
-	MV W1, #4
-	ADD W0, W0, W1           ; W0 = pcb_v[running_pid].W9 address
-	STORE W2, W0             ; pcb_v[running_pid].W9 = pcb_v[running_pid].W8
+    MV W7, #0x50               ; W7 = 80 bytes of PCB fields
+    ADD W1, W1, W7             ; W1 = 0x00300050 (pcb_size)
 
-	JUMP kill
+    MUL W0, W9, W1             ; W0 = running_pid * pcb_size
+
+    MV W1, #0x102C             ; W1 = pcb_v physical offset
+    ADD W1, W6, W1             ; W1 = pcb_v virtual initial address
+    ADD W0, W0, W1             ; W0 = pcb_v[running_pid] initial address
+
+    MV W1, #52                 ; W1 = W8 offset inside PCB
+    ADD W0, W0, W1             ; W0 = pcb_v[running_pid].W8 address
+    LOAD W2, [W0]              ; W2 = pcb_v[running_pid].W8 (status_code)
+
+    MV W1, #4                  ; W1 = distance from W8 to W9
+    ADD W0, W0, W1             ; W0 = pcb_v[running_pid].W9 address
+    STORE W2, [W0]             ; pcb_v[running_pid].W9 = status_code
+
+    JUMP kill                  ; kill(running_pid), with PID still in W9
 
 
 getPID:
