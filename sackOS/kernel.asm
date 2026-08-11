@@ -571,7 +571,7 @@ syscall_int:
     BEQ rele
 
     ; Invalid Syscall: pcb_v[running_pid].w9 = -1
-    MV W0, #PCB_SIZE            ; W0 = pcb_size
+    MV W0, #3145808             ; W0 = pcb_size
     LDD W1, #RUNNING_PID_ADDR   ; W1 = running_pid
     MUL W1, W1, W0              ; W1 = running_pid * pcb_size
     MV W0, #PCB_V_ADDR          ; W0 = pcb_v base address
