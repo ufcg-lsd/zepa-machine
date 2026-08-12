@@ -86,15 +86,15 @@ setup:
 JUMP #0
 
 exception_supervisor:
-    STRD W0 #0x201C ; scratch_space_0
-    STRD W1 #0x2020 ; scratch_space_1
+    STRD W0 #@SCRATCH_SPACE_0_ADDR ; scratch_space_0
+    STRD W1 #@SCRATCH_SPACE_1_ADDR ; scratch_space_1
 
     MV W0 #0
     CMP ECR W0 ; if ECR = 0 (clock interruption)
     BEQ clock_int
 
     MV W0 #-1
-    LDD W1 #0x2010 ; running_pid
+    LDD W1 #@RUNNING_PID_ADDR ; running_pid
 
     CMP W0 W1
     BEQ jumpToHandler
@@ -146,14 +146,14 @@ exception_supervisor:
     MV W3 #48
     SUB W0 W0 W3 ; w0 points to pcb[RUNNING_PID].w0
 
-    LDD W2 #0x201C ; scratch_space_0
+    LDD W2 #@SCRATCH_SPACE_0_ADDR ; scratch_space_0
 
     STORE W2 W0
 
     MV W8 #4
     ADD W0 W0 W8 ; w0 points to pcb[RUNNING_PID].w1
 
-    LDD W2 #0x2020 ; scratch_space_1
+    LDD W2 #@SCRATCH_SPACE_1_ADDR ; scratch_space_1
     STORE W2 W0
 
     jumpToHandler:
@@ -721,7 +721,7 @@ page_fault_kill:
     ; ==========================================================
     ; Tratamento de Falha: pcb_v[running_pid].w9 = 3 e kill()
     ; ==========================================================
-    LDD W9, #0x2010 ; running_pid
+    LDD W9, #@RUNNING_PID_ADDR
 
     MV W1, #3
     MV W2, #20
@@ -731,7 +731,7 @@ page_fault_kill:
 
     MUL W0, W9, W1                 ; W0 = running_pid * pcb_size
     
-    MV W1, #0x2024            ; pcb_v_addr
+    MV W1, #@PCB_V_ADDR
     ADD W0, W0, W1                 ; W0 = endereço de pcb_v[running_pid]
     
     MV W1, #56                     ; Offset de W9 no PCB
@@ -774,7 +774,7 @@ page_fault_restore:
     ; O exception_supervisor já salvou os registradores no PCB antes de chamar essa função.
     ; Precisamos subtrair 4 do PC salvo no PCB (offset 60) para re-executar a instrução.
     
-    LDD W9, #0x2010 ; running_pid
+    LDD W9, #@RUNNING_PID_ADDR
     
     MV W1, #3
     MV W2, #20
@@ -784,7 +784,7 @@ page_fault_restore:
 
     MUL W0, W9, W1
     
-    MV W1, #0x2024            ; pcb_v_addr
+    MV W1, #@PCB_V_ADDR
     ADD W6, W0, W1                 ; W6 = base de pcb_v[running_pid]
 
     MV W1, #60                     ; Offset do PC (EPC) no PCB
@@ -1163,12 +1163,12 @@ fork:
         JUMP schedule
 
 wait:
-    MV W0 #0x2024 ; w0 points to pcb_v[0] first byte
+    MV W0 #@PCB_V_ADDR ; w0 points to pcb_v[0] first byte
     MV W8 #52 
     ADD W0, W0, W8 ; w0 points to pcb_v[0].w8
     MV W8 #3145808 ; bytes size of each pcb
 
-    LDD W1 #0x2010 ; running_pid
+    LDD W1 #@RUNNING_PID_ADDR ; running_pid
     MUL W1 W1 W8 ; W1 = RUNNING_PID * pcb_size bytes
     ADD W0 W0 W1 ; w0 points to pcb_v[RUNNING_PID].w8
     
@@ -1215,7 +1215,7 @@ status_addr_check:
         JUMP schedule
 
     LOAD W3 W2 ; w3 = curr_child = pcb_v[running_pid].childPID
-    MV W0 #0x2024 ;  w0 points to pcb_v[0] first byte
+    MV W0 #@PCB_V_ADDR ;  w0 points to pcb_v[0] first byte
 
 ; w0 points to pcb_v[0] first byte
 ; w1  = RUNNING_PID * pcb_size bytes
@@ -1401,8 +1401,8 @@ exit:
 
 
 getPID:
-    LDD W0 #0x2010 ; running_pid
-    MV W1 #0x2024 ; pcb_v
+    LDD W0 #@RUNNING_PID_ADDR ; running_pid
+    MV W1 #@PCB_V_ADDR ; pcb_v
 
     MV W8 #3145808 ; pcb_size 
     MUL W2 W0 W8 ; RUNNING_PID * pcb_size get the offset of bytes to acess pcb[RUNNING_PID]
