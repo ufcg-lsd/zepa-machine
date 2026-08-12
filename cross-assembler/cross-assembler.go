@@ -451,10 +451,14 @@ func parseRegister(register string) (byte, error) {
 func parseImmediate(immediate string) (uint16, error) {
 	immediate = strings.TrimPrefix(immediate, "#")
 
-	var intValue, err = strconv.ParseInt(immediate, 0, 16)
+	var intValue, err = strconv.ParseInt(immediate, 0, 32)
 
 	if err != nil {
 		return 0, fmt.Errorf("Invalid immediate value: %s", immediate)
+	}
+
+	if intValue < -32768 || intValue > 65535 {
+		return 0, fmt.Errorf("immediate out of 16-bit bounds: %d", intValue)
 	}
 
 	return uint16(intValue), nil
