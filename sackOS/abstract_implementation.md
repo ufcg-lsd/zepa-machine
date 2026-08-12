@@ -58,7 +58,7 @@ schedule()
 
 ## input_int()
 ```
-Extract the size from buffer and schedule() if its bigger than the partition
+Extract the size from buffer
 
 for pid in range(0, MAX_PROCESSES):
   if pcb_v[pid].is_mapped = 0:
