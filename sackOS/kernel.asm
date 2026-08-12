@@ -73,6 +73,8 @@ setup:
     STRD W0, #running_pid ; running_pid = -1
 
     MV SP, #0
+    LDD W0, #BUFFER_SIZE_ADDR
+    SUB SP, SP, W0                 ; SP = 4GB - buffer_size
     STRD SP, #kernel_stack_pointer ; sets kernel_stack_pointer
 
     MV ESA, #exception_supervisor ; the exception_supervisor initial address

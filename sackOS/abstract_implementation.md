@@ -330,7 +330,7 @@ jump back to return address
 
 ### Constants (set by the OS developer) (32 bits)
 
-- **MAX_PROCESSES**: maximum number of processes
+- **MAX_PROCESSES**: maximum number of processes (normally defaulted to 256 processes)
 - **TIME_SLICE**: defined as the amount of clock interrupts to trigger the scheduler
 - **BUFFER_SIZE**: size of the input buffer 
 
@@ -385,22 +385,23 @@ Array that will tell whether a page frame is being used or not [2^20 bits = 128 
 Similar to the Xv6 scheduler, the PCB vector is the queue itself, with the scheduler iterating it continuously until it finds a ready process.
 
 # Addresses
-Note: The specific memory layout addresses below are placeholders and subject to adjustment.
+The kernel code has approximately 5KB, for simplicity purposes, there will be 8KB dedicated for the kernel's code. 
+Take caution when using these addresses, when using virutal kernel addresses, these values need to be offset by the user memory size (3 GB).
 
 ### Constants (set by the OS developer) (32 bits)
-- **MAX_PROCESSES**: MAX_PROCESSES_ADDR
-- **TIME_SLICE**: TIME_SLICE_ADDR
-- **BUFFER_SIZE**: BUFFER_SIZE_ADDR
+- **MAX_PROCESSES**: 0x2000
+- **TIME_SLICE**: 0x2004
+- **BUFFER_SIZE**: 0x2008
 
 ### Singular values (32 bits)
-- **memory_size**: MEMORY_SIZE_ADDR
-- **running_pid**: RUNNING_PID_ADDR
-- **clock_interrupt_count**: CLOCK_INTERRUPT_COUNT_ADDR
-- **kernel_stack_pointer**: KERNEL_STACK_POINTER_ADDR
-- **scratch_space_0**: SCRATCH_SPACE_0_ADDR
-- **scratch_space_1**: SCRATCH_SPACE_1_ADDR
+- **memory_size**: 0x200C
+- **running_pid**: 0x2010
+- **clock_interrupt_count**: 0x2014
+- **kernel_stack_pointer**: 0x2018
+- **scratch_space_0**: 0x201C
+- **scratch_space_1**: 0x2020
 
 ### Data Structures
-- **pcb_vector**: PCB_VECTOR_ADDR
-- **kernel_page_table**: KERNEL_PAGE_TABLE_ADDR
-- **bitmap**: BITMAP_ADDR
+- **pcb_vector**: 0x2024
+- **kernel_page_table**: 0x30007024
+- **bitmap**: 0x30107024
