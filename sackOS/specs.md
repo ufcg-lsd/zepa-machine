@@ -2,11 +2,11 @@
 
 ## 1. Execution Environment
 
-sackOS is a fixed-partition, time-sharing operating system. It provides a restricted execution environment for user programs, preemptively scheduling them using a round-robin approach.
+sackOS is a time-sharing operating system with virtual memory implemented through paging. It provides a restricted execution environment for user programs, preemptively scheduling them using a round-robin approach.
 
 ### 1.1 Registers
 
-* `ECR`, `ESA`, `ESR`, `EPC`, `BASE` and `LIMIT` are kernel-only registers, using them will result in a fatal illegal access fault.
+* `ECR`, `ESA`, `ESR`, `EPC`, `KPTR`, `UPTR` and `EFA` are kernel-only registers, using them will result in a fatal illegal access fault.
 * `W9` is defined as the primary register for system call identification and return values.
 
 ### 1.2 Instructions

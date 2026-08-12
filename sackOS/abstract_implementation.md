@@ -108,7 +108,7 @@ pcb_v[running_pid].w9 = 1
 kill(running_pid)
 ```
 
-## page_fault_int()
+## page_fault_exc()
 ```
   if efa >= kernelBoundary and esr not in kernel mode:
     pcb_v[running_pid].w9 = 3
@@ -183,7 +183,7 @@ else:
     if pcb_v[curr_child].is_zombie:
       pcb_v[curr_child].is_mapped = 0
       pcb_v[running_pid].w9 = curr_child
-      memory[status_addr] = pcb_v[curr_child].w9
+      running_pid_virtual_memory[status_addr] = pcb_v[curr_child].w9
 
       if pcb_v[running_pid].child = curr_child:
         pcb_v[running_pid].child = pcb_v[curr_child].next_sibling
@@ -368,7 +368,7 @@ jump back to return address
   - **is_waiting**: 1 bit [2]
   - **scheduler_state (running, ready, blocked)**: 2 bits [3:4]
   **Pages_Used**: 4 bytes [76]
-  **PAGE TABLE**: (3 MB)
+  **PAGE TABLE**: (3 MB) [80]
   - 3*2^18 PTEs, each PTE has 4 bytes
 - **total_size**: 3MB + 80 bytes = 3145808 bytes 
 

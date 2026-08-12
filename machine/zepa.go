@@ -484,7 +484,7 @@ func (m *Machine) decode() (Instruction, bool) {
 	opcode := m.getOpcode(instruction)
 
 	switch opcode {
-	case AND, OR, XOR, ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE, LDB, LDSB, STRB:
+	case AND, OR, XOR, ADD, SUB, MUL, UDIV, SDIV, CMP, JMPR, LOAD, STORE, LDB, LDSB, STRB, SHL, SHA:
 		return m.decodeRTypeInst(instruction), true
 	case MV, JUMP, BEQ, BLT, BGT, LDD, STRD, SYSCALL, MRET:
 		return m.decodeITypeInst(instruction), true

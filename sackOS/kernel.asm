@@ -84,23 +84,23 @@ setup:
 JUMP #0
 
 exception_supervisor:
-    STRD W0 #0x1024 ; scratch_space_0
-    STRD W1 #0x1028 ; scratch_space_1
+    STRD W0 #@SCRATCH_SPACE_0_ADDR ; scratch_space_0
+    STRD W1 #@SCRATCH_SPACE_1_ADDR ; scratch_space_1
 
     MV W0 #0
     CMP ECR W0 ; if ECR = 0 (clock interruption)
     BEQ clock_int
 
     MV W0 #-1
-    LDD W1 #0x1018 ; running_pid
+    LDD W1 #@RUNNING_PID_ADDR ; running_pid
 
     CMP W0 W1
     BEQ jumpToHandler
 
-    MV W0 #84 ; pcb_size
+    MV W0 #3145808 ; pcb_size
     MUL W1 W1 W0 ; W1 = RUNNING_PID * pcb_size
 
-    MV W0 #0x102C ; pcb_v
+    MV W0 #PCB_VECTOR_ADDR ; pcb_v
     ADD W0 W0 W1 ; W0 = pcb[RUNNING_PID] address
 
     MV W1 #28
@@ -144,14 +144,14 @@ exception_supervisor:
     MV W3 #48
     SUB W0 W0 W3 ; w0 points to pcb[RUNNING_PID].w0
 
-    LDD W2 #0x1024 ; scratch_space_0
+    LDD W2 #@SCRATCH_SPACE_0_ADDR ; scratch_space_0
 
     STORE W2 W0
 
     MV W8 #4
     ADD W0 W0 W8 ; w0 points to pcb[RUNNING_PID].w1
 
-    LDD W2 #0x1028 ; scratch_space_1
+    LDD W2 #@SCRATCH_SPACE_1_ADDR ; scratch_space_1
     STORE W2 W0
 
     jumpToHandler:
@@ -175,6 +175,11 @@ exception_supervisor:
         
         CMP ECR W0
         BEQ fault_int    
+
+        ADD W0 W0 W1
+
+        CMP ECR W0
+        BEQ page_fault_exc
 
 
 ; INTERRUPTIONS
@@ -669,7 +674,132 @@ fault_int:
 
   JUMP kill            ; kill(running_pid)
 
+; exceptions
 
+page_fault_exc:
+    ; ==========================================================
+    ; 1. Verificação de Segurança (Kernel Boundary)
+    ; ==========================================================
+
+    MV W0, #3
+    MV W2, #30
+    SHL W0, W0, W2                 ; W0 = 3 << 30 = 0xC0000000
+    
+    CMP EFA, W0
+    BLT page_fault_valid_address   ; Se EFA < 0xC0000000, é endereço de usuário válido
+    
+    ; Se EFA >= 0xC0000000, checa se ESR indica modo usuário (bit 3 == 1)
+    MV W1, #8                      ; bit 3 (0b1000)
+    AND W2, ESR, W1
+    CMP W2, W1
+    BEQ page_fault_kill            ; Se for modo usuário e acessou kernel, mata o processo
+
+page_fault_valid_address:
+    ; ==========================================================
+    ; 2. Cálculo do page_id e chamada do map_page
+    ; ==========================================================
+    ; page_id = EFA >> 12 (Em ZEPA, SHL negativo faz shift right)
+    MV W1, #-12
+    SHL W9, EFA, W1
+    
+    MV W0 #12
+    ADD W0 PC W0 ; W0 = return_from_map_page
+
+    MV W1 #0
+    ADD W8 W0 W1  ; Endereço de retorno exigido pela map_page
+    JUMP map_page
+
+return_from_map_page:
+    ; W9 contém o retorno de map_page (0 = sucesso)
+    MV W0, #0
+    CMP W9, W0
+    BEQ page_fault_clear_page      ; Se sucesso, vai limpar a página
+
+page_fault_kill:
+    ; ==========================================================
+    ; Tratamento de Falha: pcb_v[running_pid].w9 = 3 e kill()
+    ; ==========================================================
+    LDD W9, #@RUNNING_PID_ADDR
+
+    MV W1, #3
+    MV W2, #20
+    SHL W1, W1, W2                 ; W1 = 3 << 20 = 0x300000 (3MB)
+    MV W2, #80
+    ADD W1, W1, W2                 ; W1 = 0x300050 = 3145808 (3MB + 80)
+
+    MUL W0, W9, W1                 ; W0 = running_pid * pcb_size
+    
+    MV W1, #@PCB_V_ADDR
+    ADD W0, W0, W1                 ; W0 = endereço de pcb_v[running_pid]
+    
+    MV W1, #56                     ; Offset de W9 no PCB
+    ADD W0, W0, W1                 ; W0 = endereço de pcb_v[running_pid].W9
+    
+    MV W1, #3
+    STORE W1, W0                   ; pcb_v[running_pid].W9 = 3
+    
+    JUMP kill                      ; kill(running_pid) - não retorna
+
+page_fault_clear_page:
+    ; ==========================================================
+    ; 3. Limpeza da Página (Zero-fill)
+    ; ==========================================================
+    ; aligned_efa = (EFA >> 12) << 12
+    MV W1, #-12
+    SHL W2, EFA, W1
+    MV W1, #12
+    SHL W2, W2, W1                 ; W2 = EFA alinhado (início da página)
+
+    MV W3, #4096                   ; Tamanho da página (limit do loop)
+    MV W4, #0                      ; Offset = 0
+    MV W5, #0                      ; Valor zero para limpar memória
+    MV W7, #4                      ; Passo do loop = 4 bytes (32 bits)
+
+page_fault_clear_loop:
+    CMP W4, W3
+    BEQ page_fault_restore         ; Se offset == 4096, terminou a limpeza
+    
+    ADD W6, W2, W4                 ; W6 = aligned_EFA + offset
+    STORE W5, W6                   ; memory[aligned_EFA + offset] = 0
+    
+    ADD W4, W4, W7                 ; offset += 4
+    JUMP page_fault_clear_loop
+
+page_fault_restore:
+    ; ==========================================================
+    ; 4. Ajuste do EPC e Restauração de Contexto
+    ; ==========================================================
+    ; O exception_supervisor já salvou os registradores no PCB antes de chamar essa função.
+    ; Precisamos subtrair 4 do PC salvo no PCB (offset 60) para re-executar a instrução.
+    
+    LDD W9, #@RUNNING_PID_ADDR
+    
+    MV W1, #3
+    MV W2, #20
+    SHL W1, W1, W2                 ; W1 = 3 << 20 = 0x300000 (3MB)
+    MV W2, #80
+    ADD W1, W1, W2                 ; W1 = 0x300050 = 3145808 (3MB + 80)
+
+    MUL W0, W9, W1
+    
+    MV W1, #@PCB_V_ADDR
+    ADD W6, W0, W1                 ; W6 = base de pcb_v[running_pid]
+
+    MV W1, #60                     ; Offset do PC (EPC) no PCB
+    ADD W2, W6, W1                 ; W2 = endereço de pcb_v[running_pid].PC
+    LOAD W3, W2                    ; W3 = EPC salvo
+    
+    MV W4, #4
+    SUB W3, W3, W4                 ; EPC = EPC - 4
+    STORE W3, W2                   ; Atualiza o PC salvo no PCB
+
+    ; O label schedule_restore_context exige:
+    ; W6 = &pcb_v[running_pid]
+    ; W9 = running_pid
+    ; Como ambos já estão configurados no código acima (W9 com o LDD, W6 com a base),
+    ; basta pular diretamente para a rotina que ela irá restaurar os registradores 
+    ; deste PCB específico para a CPU e executar o MRET.
+    JUMP schedule_restore_context
 
 
 ; SYSCALLS
@@ -1031,43 +1161,42 @@ fork:
         JUMP schedule
 
 wait:
-    MV W0 #0x102C ; w0 points to pcb_v[0] first byte
+    MV W0 #@PCB_V_ADDR ; w0 points to pcb_v[0] first byte
     MV W8 #52 
-    ADD W0 W8 ; w0 points to pcb_v[0].w8
-    MV W8 #84 ; bytes size of each pcb
+    ADD W0, W0, W8 ; w0 points to pcb_v[0].w8
+    MV W8 #3145808 ; bytes size of each pcb
 
-    LDD W1 #0x1018 ; running_pid
-    MUL W1 W1 W8 ; W1 = RUNNING_PID * 84 bytes
+    LDD W1 #@RUNNING_PID_ADDR ; running_pid
+    MUL W1 W1 W8 ; W1 = RUNNING_PID * pcb_size bytes
     ADD W0 W0 W1 ; w0 points to pcb_v[RUNNING_PID].w8
     
     LOAD W9 W0 ; w9 = status_addr
 
-    MV W8 #20
-    ADD W0 W8 ; w0 points to pcb_v[running_pid].BASE
+status_addr_check:
 
-    LOAD W2 W0 ; w2 = pcb_v[RUNNING_PID].BASE
+    MV W6 #0xC0000000 
+    CMP W9 W6
+    BGT fault_int
+    BEQ fault_int ; fault_int if status_addr in a kernel address
+
+    MV W6 #0b1000000000000 ; takes the 20 most significant bits of address
+    DIV W2 W9 W6 ; w2 = page_number
+
+    MV W6 #28 ; 
+    ADD W0 W0 W6 ; w0 points to pcb_v[RUNNING_PID].page_table[0]
+
+    MV W6 #4
+    MUL W6 W2 W6 
+    ADD W3 W0 W6 ; w3 points to pcb_v[RUNNING_PID].page_table[page_number]
+
+    LOAD W4 W3 ; w4 = pcb_v[RUNNING_PID].page_table[page_number]
     
-    MV W8 #4
-    ADD W0 W0 W8 ; w0 points to pcb_v[RUNNING_PID].LIMIT
-    
-    LOAD W3 W0 ; w3 = pcb_v[RUNNING_PID].LIMIT
-
-    ADD W7 W2 W9 ; w7 = pcb_v[running_pid].BASE + status_addr
-    ADD W2 W2 W9 ; w2 = pcb_v[running_pid].BASE + status_addr
-    
-    MV W8 #4
-    ADD W2 W2 W8 ; w2 = pcb_v[running_pid].BASE + status_addr + 4
+    MV W6 #0x100000 ; 20th bit, valid
+    CMP W4 W6
+    BLT fault_int ; page_number(status_addr) is not mapped, page_fault
 
 
-    ; if  pcb_v[running_pid].BASE + status_addr + 4 > pcb_v[RUNNING_PID].LIMIT
-    ; fault_int()
-
-
-    CMP W2 W3
-    BGT fault_int 
-
-
-    MV W8 #72
+    MV W8 #76
     SUB W2 W0 W8 ; w2 points to pcb_v[RUNNING_PID].child 
     LOAD W6 W2 ; w6 = pcb_v[RUNNING_PID].child 
 
@@ -1077,25 +1206,31 @@ wait:
 
     JUMP #6
 
-        MV W8 #20
-        SUB W3 W0 W8 ; w3 points to pcb_v[RUNNING_PID].w9
+        MV W8 #52
+        ADD W6 W2 W8 ; w6 points to pcb_v[RUNNING_PID].w9
         MV W8 #-1
-        STORE W8 W3
+        STORE W8 W6
         JUMP schedule
 
     LOAD W3 W2 ; w3 = curr_child = pcb_v[running_pid].childPID
-    MV W0 #0x102C ;  w0 points to pcb_v[0] first byte
+    MV W0 #@PCB_V_ADDR ;  w0 points to pcb_v[0] first byte
+
+; w0 points to pcb_v[0] first byte
+; w1  = RUNNING_PID * pcb_size bytes
+; w2 points to pcb_v[RUNNING_PID].child 
+; w3 = pcb_v[running_pid].childPID
+; w4 = pcb_v[RUNNING_PID].page_table[page_number]
 
     waitLoop:
         ;calculate pcb_v[curr_child]
         ; w3 = curr_child
 
-        MV W8 #84
+        MV W8 #3145808
         MUL W1 W3 W8
 
         ADD W1 W0 W1 ;W1 points to pcb_v[curr_child] first byte
 
-        MV W8 #80
+        MV W8 #72
         ADD W1 W1 W8 ; w1 points to pcb_v[curr_child].flags
         LDB W6 W1 ; w6 = pcb_v[curr_child].flags
 
@@ -1107,7 +1242,7 @@ wait:
             ;if !pcb_v[curr_child].is_zombie:
             ; curr_child = pcb_v[curr_child].next_sibling
 
-            MV W8 #68
+            MV W8 #60
             SUB W3 W1 W8 ; w3 points to pcb_v[curr_child].next_siblingPID
             LOAD W6 W3 ; w6 = pcb_v[curr_child].next_siblingPID
 
@@ -1122,7 +1257,7 @@ wait:
 
         curr_child_is_zombie:
             MV W8  #-2 ;0b11111111111111111111111111111110
-            LDB W6 W1
+            LDB W6 W1 ; w6 = pcb_v[curr_child].flags
             AND W8 W8 W6 
             STRB W8 W1 ; sets pcb_v[curr_child].is_mapped = 0
 
@@ -1132,17 +1267,17 @@ wait:
             ; w1 points to pcb_v[curr_child].flags
             ; w2 points to pcb_v[running_pid].child
             ; w3 = curr_child
-            ; w7 = pcb_v[running_pid].BASE + status_addr
+            
 
             MV W8 #52
             ADD W4 W2 W8 ; w4 points to pcb_v[running_pid].w9
             STORE W3 W4 ; pcb_v[running_pid].w9 = curr_child
 
-            MV W8 #24 
+            MV W8 #16 
             SUB W1 W1 W8 ; w1 points to pcb_v[curr_child].w9
             LOAD W6 W1 ; w6 = pcb_v[curr_child].w9
 
-            STORE W6 W7 ; memory[pcb_v[running_pid].BASE+status_addr] = pcb_v[curr_child].w9
+            STORE W6 W9 ; running_pid_virtual_memory[status_addr] = pcb_v[curr_child].w9
 
             MV W8 #44
             SUB W1 W1 W8 ; w1 points to pcb_v[curr_child].next_sibling
@@ -1165,7 +1300,7 @@ wait:
             SUB W4 W1 W8 ; w4 points to pcb_v[curr_child].prev_sibling
             LOAD W7 W4   ; w7 = pcb_v[curr_child].prev_sibling
 
-            MV W6 #84 ; 84 bytes each pcb
+            MV W6 #3145808 ; pcb_size
             MUL W5 W7 W6 ; 
             ADD W5 W0 W5 ; w5 points to pcb_v[pcb_v[running_pid].prev_sibling] first byte
 
@@ -1186,7 +1321,7 @@ wait:
             CMP W7 W8 ; if pcb_v[curr_child].next_sibling == -1 
             BEQ schedule
 
-            MV W6 #84 ; 84 bytes each pcb
+            MV W6 #3145808 ; pcb_size
             MUL W5 W7 W6 
             ADD W5 W0 W5 ; w5 points to pcb_v[pcb_v[running_pid].next_sibling] first byte
 
@@ -1207,7 +1342,7 @@ wait:
         ADD W2 W2 W8 ; w2 = pcb_v[running_pid].status_add
         STORE W9 W2 ; pcb_v[running_pid].status_addr = status_addr
 
-        MV W8 #64
+        MV W8 #56
         ADD W2 W2 W8 ; w2 points to pcb_v[running_pid].flags
 
         LDB W4 W2 ; w4 = pcb_v[running_pid].flags
@@ -1264,16 +1399,16 @@ exit:
 
 
 getPID:
-    LDD W0 #0x1018 ; running_pid
-    MV W1 #0x102C ; pcb_v
+    LDD W0 #@RUNNING_PID_ADDR ; running_pid
+    MV W1 #@PCB_V_ADDR ; pcb_v
 
-    MV W8 #84
-    MUL W2 W0 W8 ; RUNNING_PID * 84 get the offset of bytes to acess pcb[RUNNING_PID]
+    MV W8 #3145808 ; pcb_size 
+    MUL W2 W0 W8 ; RUNNING_PID * pcb_size get the offset of bytes to acess pcb[RUNNING_PID]
     
-    ADD W1 W1 W2 ; stores on W1 the first address of pcb[RUNNING_PID]
+    ADD W1 W1 W2 ; W1 = pcb[RUNNING_PID] addr
 
     MV W8 #56
-    ADD W1 W1 W8 ; W1 = pcb[RUNNING_PID].w9 address bytes
+    ADD W1 W1 W8 ; W1 = pcb[RUNNING_PID].w9 addr
 
     STORE W0 W1 ; stores RUNNING_PID on pcb[RUNNING_PID].w9
 
