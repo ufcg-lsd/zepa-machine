@@ -572,7 +572,11 @@ page_fault_valid_address:
     MV W1, #-12
     SHL W9, EFA, W1
     
-    MV W8, #@return_from_map_page   ; Endereço de retorno exigido pela map_page
+    MV W0 #12
+    ADD W0 PC W0 ; W0 = return_from_map_page
+
+    MV W1 #0
+    ADD W8 W0 W1  ; Endereço de retorno exigido pela map_page
     JUMP map_page
 
 return_from_map_page:
