@@ -1,16 +1,25 @@
 setup:
-    STRD W0, #memory_size ; memory_size
+    STRD W0, #0x200C ; memory_size low addr
 
-    MV UPTR, #pcb_v_low    ; pcb_v low addr
+    MV UPTR, #0x2024    ; pcb_v low addr
     MV W1, #80           ; page_table offset
 
     ADD UPTR, UPTR, W1       ; UPTR = pcb_v[0].page_table address
 
-    MV W9, #0x100000         ; W9 = sets bit 20 (valid) to 1
+    MV W1, #20
+    MV W9, #1
+    SHL W9, W9, W1           ; W9 = sets bit 20 (valid) to 1
     STORE W9, UPTR           ; identity mapping, allocates the first frame to the first page
 
-    MV KPTR, #kernel_page_table_low ; KPTR = kernel_page_table low address
-    MV W0, #kernel_page_table_low   ; W0 = kernel_page_table low first address
+    MV W0, #0x3000
+    MV W1, #16
+    SHL W0, W0, W1
+
+    MV W1, #0x7024
+    ADD W0, W0, W1       ; W0 = 0x30007024 = kernel_page_table low first address
+
+    MV W2, #0
+    ADD KPTR, W0, W2     ; KPTR = 0x30007024 = kernel_page_table low first address
 
     MV W1, #1
     MV W2, #20
@@ -40,19 +49,28 @@ setup:
 
     ; now using virtual addresses
 
-    MV W0, #0xC0000004   ; 3GB mark + 4 bytes 
+    MV W9, #3
+    MV W1, #30
+    SHL W9, W9, W1       ; W9 = 3GB mark
+    
+    MV W1, #4
+    ADD W0, W9, W1       ; W0 = 3GB mark + 4 bytes
     ADD W0, W0, PC       ; W0 points to the instruction after the jump, but on high addresses
     JMPR W0
 
     ; now in high addresses
-
-    MV W0, #0
-    MV W1, #0xC0000000 ; W1 = 3GB offset
-    ADD W1, W1, UPTR   ; W1 = uptr virtual address
+    MV W0 #0
+    ADD W1, W9, UPTR   ; W1 = uptr virtual address
     STORE W0, W1       ; unmaps the identity, sets the pcb_v[0].page_table[0] to invalid
 
-    MV W0, #bitmap     ; W0 = bitmap addr
-    MV W1, #0x8000     ; W1 = 2^18 frames / 8 bits = bytes of the bitmap to populate
+    MV W0, #0x3010
+    MV W1, #16
+    SHL W0, W0, W1
+    MV W1, #0x7024
+    ADD W0, W0, W1     ; W0 = physical bitmap addr
+    ADD W0, W0, W9     ; W0 = virtual bitmap addr
+
+    MV W1, #0x8000     ; W1 = 2^18 frames / 8 bits = 2^15 bytes of the bitmap to populate
     ADD W1, W1, W0     ; W1 = the end of the bitmap populate portion
     
     MV W2, #-1         ; W2 = all ones, to populate the bitmap
@@ -70,16 +88,26 @@ setup:
     setup_end_populate_bitmap:
 
     MV W0, #-1
-    STRD W0, #running_pid ; running_pid = -1
+    MV W1, #0x2010
+    ADD W1, W1, W9        ; W1 = running_pid virtual addr
+    STORE W0, W1          ; running_pid = -1
 
     MV SP, #0
-    LDD W0, #BUFFER_SIZE_ADDR
-    SUB SP, SP, W0                 ; SP = 4GB - buffer_size
-    STRD SP, #kernel_stack_pointer ; sets kernel_stack_pointer
+    MV W0, #0x2008
+    ADD W0, W0, W9                 ; W0 = buffer_size virtual addr
+    LOAD W0, W0
 
-    MV ESA, #exception_supervisor ; the exception_supervisor initial address
-    MV EPC, #infinite_loop ; the infinite loop below
-    MV ESR, #48 ; enable interruptions and mmu
+    SUB SP, SP, W0                 ; SP = 4GB - buffer_size
+    MV W0, #0x2018
+    ADD W0, W0, W9                 ; W0 = kernel_stack_pointer virtual addr
+    STORE SP, W0                   ; sets kernel_stack_pointer
+
+
+    MV W0, #8       ; 2 instructions offset 
+
+    MV ESR, #48     ; enable interruptions and mmu
+    ADD EPC, PC, W0 ; the infinite loop below
+    ADD ESA, PC, W0 ; the exception_supervisor initial address
     
     MRET ; go to infinite loop, waiting for program inputs
 
