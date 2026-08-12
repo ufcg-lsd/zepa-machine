@@ -462,27 +462,43 @@ input_int:
 
 
 kill_int:
+    ; Obtém o início físico/offset do buffer
+    LDD W9, #MEMORY_SIZE_ADDR
+    LDD W7, #BUFFER_SIZE_ADDR
+    SUB W9, W9, W7
 
-    LDD W9, #0x1010 ; memory_size
-    LDD W7, #0x100C ; buffer_size
-    SUB W9, W9, W7  ; initial buffer addr
-    LOAD W9, W9     ; pid of kill_int
+    ; +0 = tamanho
+    ; +4 = PID
+    MV  W6, #4
+    ADD W9, W9, W6
+    LOAD W9, [W9]
 
-    LDD W1, #0x1014 ; partition_number
+    LDD W1, #MAX_PROCESSES_ADDR ; verifica pid (valida)
 
     CMP W9, W1
     BGT not_valid
     BEQ not_valid
 
-    MV  W2, #84
+    ; PCB_SIZE = 0x00300050
+    MV  W2, #0x30
+    MV  W0, #16
+    SHL W2, W2, W0
+
+    MV  W0, #0x50
+    ADD W2, W2, W0
+
+    ; &pcb_v[pid]
     MUL W3, W9, W2
-    MV W4, #0x102C ; pcb_v
+
+    MV  W4, #PCB_VECTOR_ADDR
     ADD W3, W3, W4
 
-    MV  W5, #80
+    ; flags no offset 72
+    MV  W5, #72
     ADD W5, W3, W5
-    LDB W6, W5
+    LDB W6, [W5]
 
+    ; is_mapped
     MV  W8, #1
     AND W7, W6, W8
 
@@ -490,23 +506,25 @@ kill_int:
     CMP W7, W0
     BEQ not_valid
 
+    ; is_zombie
     MV  W8, #2
     AND W7, W6, W8
 
     CMP W7, W8
     BEQ not_valid
 
+    ; pcb_v[pid].w9 = 2
     MV  W5, #56
     ADD W5, W3, W5
 
     MV  W6, #2
-    STORE W6, W5
+    STORE W6, [W5]
 
+    ; W9 continua contendo o PID
     JUMP kill
 
-    not_valid:
-        JUMP schedule
-
+not_valid:
+    JUMP schedule
 
 syscall_int:
     MV W1, #0
@@ -1009,22 +1027,36 @@ wait:
 
 
 exit:
-	LDD W9, #0x1018        ; W9 = running_pid
-	MV W1, #84               ; W1 = pcb_size
-	MUL W0, W9, W1           ; W0 = running_pid * pcb_size
+    MV W6, #0xC000             ; W6 = upper part of kernel boundary
+    MV W7, #16                 ; W7 = shift amount
+    SHL W6, W6, W7            ; W6 = 0xC0000000 (kernel boundary)
 
-	MV W1, #0x102C           ; W1 = pcb_v initial address
-	ADD W0, W0, W1           ; W0 = pcb_v[running_pid] initial address
+    MV W5, #0x1018             ; W5 = running_pid physical offset
+    ADD W5, W6, W5            ; W5 = running_pid virtual address
+    LOAD W9, [W5]              ; W9 = running_pid
 
-	MV W1, #52
-	ADD W0, W0, W1           ; W0 = pcb_v[running_pid].W8 address
-	LOAD W2, W0              ; W2 = pcb_v[running_pid].W8 (status_code)
+    MV W1, #0x30               ; W1 = upper part of pcb_size
+    MV W7, #16                 ; W7 = shift amount
+    SHL W1, W1, W7            ; W1 = 0x00300000 (page table size)
 
-	MV W1, #4
-	ADD W0, W0, W1           ; W0 = pcb_v[running_pid].W9 address
-	STORE W2, W0             ; pcb_v[running_pid].W9 = pcb_v[running_pid].W8
+    MV W7, #0x50               ; W7 = 80 bytes of PCB fields
+    ADD W1, W1, W7             ; W1 = 0x00300050 (pcb_size)
 
-	JUMP kill
+    MUL W0, W9, W1             ; W0 = running_pid * pcb_size
+
+    MV W1, #0x102C             ; W1 = pcb_v physical offset
+    ADD W1, W6, W1             ; W1 = pcb_v virtual initial address
+    ADD W0, W0, W1             ; W0 = pcb_v[running_pid] initial address
+
+    MV W1, #52                 ; W1 = W8 offset inside PCB
+    ADD W0, W0, W1             ; W0 = pcb_v[running_pid].W8 address
+    LOAD W2, [W0]              ; W2 = pcb_v[running_pid].W8 (status_code)
+
+    MV W1, #4                  ; W1 = distance from W8 to W9
+    ADD W0, W0, W1             ; W0 = pcb_v[running_pid].W9 address
+    STORE W2, [W0]             ; pcb_v[running_pid].W9 = status_code
+
+    JUMP kill                  ; kill(running_pid), with PID still in W9
 
 
 getPID:
@@ -1308,354 +1340,384 @@ kill:
     JUMP schedule
 
 
-
 schedule:
 
-    ; valida running_pid
+    ; W8 = kernel boundary = 0xC0000000
 
-    LDD W9, #0x1018 ; running_pid
+    MV W8, #0xC000
+    MV W0, #16
+    SHL W8, W8, W0
 
-    MV W0, #-1
-    CMP W9, W0
-    BEQ schedule_reset_running_pid
+    ; clock_interrupt_count = 0
 
-    ; valida running_pid
+    MV W0, #CLOCK_INTERRUPT_COUNT_ADDR
+    ADD W0, W8, W0
 
-    LDD W0, #0x1014 ; partition_number
+    MV W5, #0
+    STORE W5, W0
 
-    CMP W9, W0
+    ; W7 = MAX_PROCESSES
+
+    MV W0, #MAX_PROCESSES_ADDR
+    ADD W0, W8, W0
+    LOAD W7, W0
+
+    ; W6 = PCB_SIZE
+
+    MV W6, #0x30
+    MV W0, #16
+    SHL W6, W6, W0     ; W6 = 0x300000
+
+    MV W0, #0x50
+    ADD W6, W6, W0     ; W6 = 0x300050
+
+    ; if running_pid >= MAX_PROCESSES:
+    ;     running_pid = 0
+
+    MV W0, #RUNNING_PID_ADDR
+    ADD W0, W8, W0
+    LOAD W9, W0
+
+    CMP W9, W7
     BEQ schedule_reset_running_pid
     BGT schedule_reset_running_pid
 
     JUMP schedule_check_current_process
 
-
     schedule_reset_running_pid:
+    MV W9, #0
 
-        MV W9, #0
 
+    ; if pcb_v[running_pid].scheduler_state == running:
+    ;     pcb_v[running_pid].scheduler_state = ready
 
     schedule_check_current_process:
+    MUL W1, W9, W6
 
-        ; verifica se processo atual esta running
-        ; W1 = pcb_v[running_pid]
+    MV W0, #PCB_VECTOR_ADDR
+    ADD W0, W8, W0
+    ADD W1, W0, W1
 
-        MV W0, #84
-        MUL W1, W9, W0
+    MV W0, #72
+    ADD W0, W1, W0
+    LDB W2, W0
 
-        MV W0, #0x102C ; pcb_v
-        ADD W1, W0, W1
+    MV W5, #0x18
+    AND W5, W2, W5
 
-        ; W2 = pcb_v[running_pid].flags
+    MV W0, #0
+    CMP W5, W0
+    BEQ schedule_set_current_ready
 
-        MV W0, #80
-        ADD W0, W1, W0
-
-        LDB W2, W0
-
-        MV W5, #0x18
-        AND W5, W2, W5
-
-        MV W0, #0
-        CMP W5, W0
-        BEQ schedule_set_current_ready
-
-        JUMP schedule_calculate_limit_pid
+    JUMP schedule_calculate_limit_pid
 
 
     schedule_set_current_ready:
 
-        ; marca como ready
+    MV W5, #-25
+    AND W2, W2, W5
 
-        MV W5, #-25
-        AND W2, W2, W5
+    MV W5, #0x08
+    OR W2, W2, W5
 
-        MV W5, #0x08
-        OR W2, W2, W5
-
-        MV W0, #80
-        ADD W0, W1, W0
-
-        STRB W2, W0
-
+    MV W0, #72
+    ADD W0, W1, W0
+    STRB W2, W0
 
     schedule_calculate_limit_pid:
+    ; limit_pid = running_pid + 1
+    ; limit_pid shitty name? @cartaxo
 
-        ; limit_pid = running_pid + 1
+    MV W0, #1
+    ADD W3, W9, W0
 
-        MV W0, #1
-        ADD W3, W9, W0
 
-        ; wrap limit_pid se necessario
+    ; if limit_pid == MAX_PROCESSES:
+    ;     limit_pid = 0
 
-        LDD W0, #0x1014 ; partition_number
+    CMP W3, W7
+    BEQ schedule_limit_pid_zero
 
-        CMP W3, W0
-        BEQ schedule_limit_pid_zero
-
-        JUMP schedule_limit_pid_ready
+    JUMP schedule_limit_pid_ready
 
 
     schedule_limit_pid_zero:
+    MV W3, #0
 
-        MV W3, #0
 
+    ; curr_pid = limit_pid
 
     schedule_limit_pid_ready:
 
-        ; curr_pid = limit_pid
+    MV W4, #0
+    ADD W4, W4, W3
 
-        MV W4, #0
-        ADD W4, W4, W3
 
     schedule_search_loop:
 
-        ; busca processo ready
-        ; W1 = &pcb_v[curr_pid]
+    ; if pcb_v[curr_pid].is_mapped == 1:
 
-        MV W0, #84
-        MUL W1, W4, W0
+    MUL W1, W4, W6
 
-        MV W0, #0x102C ; pcb_v
-        ADD W1, W0, W1
+    MV W0, #PCB_VECTOR_ADDR
+    ADD W0, W8, W0
+    ADD W1, W0, W1
 
-        ; W2 = pcb_v[curr_pid].flags
+    MV W0, #72
+    ADD W0, W1, W0
+    LDB W2, W0
 
-        MV W0, #80
-        ADD W0, W1, W0
+    MV W5, #0x01
+    AND W5, W2, W5
 
-        LDB W2, W0
+    MV W0, #0x01
+    CMP W5, W0
+    BEQ schedule_check_zombie
 
-        ; esta mapeado?
-
-        MV W5, #0x01
-        AND W5, W2, W5
-
-        MV W0, #0x01
-        CMP W5, W0
-        BEQ schedule_check_zombie
-
-        JUMP schedule_next_pid
+    JUMP schedule_next_pid
 
 
     schedule_check_zombie:
 
-        ; eh zombie?
+    ; if pcb_v[curr_pid].is_zombie == 0:
 
-        MV W5, #0x02
-        AND W5, W2, W5
+    MV W5, #0x02
+    AND W5, W2, W5
 
-        MV W0, #0
-        CMP W5, W0
-        BEQ schedule_check_ready
+    MV W0, #0
+    CMP W5, W0
+    BEQ schedule_check_ready
 
-        JUMP schedule_next_pid
+    JUMP schedule_next_pid
 
 
     schedule_check_ready:
 
-        ; esta ready?
+    ; if pcb_v[curr_pid].scheduler_state == ready:
 
-        MV W5, #0x18
-        AND W5, W2, W5
+    MV W5, #0x18
+    AND W5, W2, W5
 
-        MV W0, #0x08
-        CMP W5, W0
-        BEQ schedule_process_found
+    MV W0, #0x08
+    CMP W5, W0
+    BEQ schedule_process_found
 
-        JUMP schedule_next_pid
+    JUMP schedule_next_pid
 
 
     schedule_process_found:
 
-        ; processo encontrado, seta running e restaura
+    ; pcb_v[curr_pid].scheduler_state = running
 
-        MV W5, #-25
-        AND W2, W2, W5
+    MV W5, #-25
+    AND W2, W2, W5
 
-        MV W0, #80
-        ADD W0, W1, W0
+    MV W0, #72
+    ADD W0, W1, W0
+    STRB W2, W0
 
-        STRB W2, W0
 
-        ; W9 = curr_pid
+    ; running_pid = curr_pid
 
-        MV W9, #0
-        ADD W9, W9, W4
-        STRD W9, #0x1018 ; running_pid = curr_pid
+    MV W9, #0
+    ADD W9, W9, W4
 
-        ; W6 = &pcb_v[running_pid]
+    MV W0, #RUNNING_PID_ADDR
+    ADD W0, W8, W0
+    STORE W9, [W0]
 
-        MV W6, #0
-        ADD W6, W6, W1
 
-        JUMP schedule_restore_context
+    ; UPTR = pcb_v[running_pid].page_table address
+
+
+    MV W6, #0
+    ADD W6, W6, W1
+
+    SUB W0, W6, W8
+
+    MV W5, #80
+    ADD W0, W0, W5
+
+    MV W5, #0
+    ADD UPTR, W0, W5
+
+
+    ; load every register of pcb_v[running_pid] into the CPU
+
+    JUMP schedule_restore_context
+
+    schedule_restore_context:
+
+
+    MV W0, #24
+    ADD W0, W1, W0
+    LOAD W5, W0              
+
+    MV W0, #SCRATCH_SPACE_0_ADDR
+    ADD W0, W8, W0
+    STORE W5, W0
+
+
+
+
+    MV W0, #52
+    ADD W0, W1, W0
+    LOAD W5, W0              
+
+    MV W0, #SCRATCH_SPACE_1_ADDR
+    ADD W0, W8, W0
+    STORE W5, W0
+
+
+    ; restore PC -> EPC
+
+    MV W0, #60
+    ADD W0, W1, W0
+    LOAD W5, W0
+
+    MV EPC, W5
+
+
+    ; restore SP
+
+    MV W0, #64
+    ADD W0, W1, W0
+    LOAD W5, W0
+
+    MV SP, W5
+
+
+
+    MV W0, #68
+    ADD W0, W1, W0
+    LOAD W5, W0
+
+    MV ESR, W5
+
+
+    ; restore W2
+
+    MV W0, #28
+    ADD W0, W1, W0
+    LOAD W2, W0
+
+
+    ; restore W3
+
+    MV W0, #32
+    ADD W0, W1, W0
+    LOAD W3, W0
+
+
+    ; restore W4
+
+    MV W0, #36
+    ADD W0, W1, W0
+    LOAD W4, W0
+
+
+    ; restore W5
+
+    MV W0, #40
+    ADD W0, W1, W0
+    LOAD W5, W0
+
+
+    ; restore W6
+
+    MV W0, #44
+    ADD W0, W1, W0
+    LOAD W6, W0
+
+
+    ; restore W7
+
+    MV W0, #48
+    ADD W0, W1, W0
+    LOAD W7, W0
+
+    ; restore W9
+
+    MV W0, #56
+    ADD W0, W1, W0
+    LOAD W9, W0
+
+
+    ; restore W0
+
+    MV W0, #20
+    ADD W0, W1, W0
+    LOAD W0, W0
+
+
+
+    MV W1, #SCRATCH_SPACE_0_ADDR
+    ADD W1, W8, W1
+    LOAD W1, W1
+
+
+
+    ADD W8, W8, #SCRATCH_SPACE_1_ADDR
+    LOAD W8, W8
+
+
+
+    MRET
 
 
     schedule_next_pid:
 
-        ; curr_pid++
+    ; curr_pid++
 
-        MV W0, #1
-        ADD W4, W4, W0
+    MV W0, #1
+    ADD W4, W4, W0
 
-        ; wrap curr_pid se necessario
 
-        LDD W0, #0x1014 ; partition_number
+    ; if curr_pid == MAX_PROCESSES:
+    ;     curr_pid = 0
 
-        CMP W4, W0
-        BEQ schedule_wrap_pid
+    CMP W4, W7
+    BEQ schedule_wrap_pid
 
-        JUMP schedule_check_search_end
+    JUMP schedule_check_search_end
 
 
     schedule_wrap_pid:
 
-        MV W4, #0
+    MV W4, #0
 
 
     schedule_check_search_end:
 
-        ; while curr_pid != limit_pid
+    ; while curr_pid != limit_pid
 
-        CMP W4, W3
-        BEQ schedule_no_ready_process
+    CMP W4, W3
+    BEQ schedule_no_ready_process
 
-        JUMP schedule_search_loop
+    JUMP schedule_search_loop
 
 
-    ; precisa de futuro review a partir daqui
     schedule_no_ready_process:
 
-        ; nenhum pronto, idle loop
+    ; running_pid = -1
 
-        MV W9, #-1
-        STRD W9, #0x1018 ; running_pid = -1
+    MV W9, #-1
 
-        MV EPC, #0x90 ; infinite_loop
-
-        MV ESR, #16
-
-        MRET
+    MV W0, #RUNNING_PID_ADDR
+    ADD W0, W8, W0
+    STORE W9, W0
 
 
-    ; W6 = endereco inicial do PCB selecionado
-    ; W9 = running_pid (nao restaurado do PCB)
-    schedule_restore_context:
+    MV W0, #LOOP_ADDR
+    ADD W0, W8, W0
 
-        ; carrega registros do PCB
-        ; W0 (20) -> scratch
+    MV W5, #0
+    ADD EPC, W0, W5
 
-        MV W0, #20
-        ADD W8, W6, W0
+    MV ESR, #48
 
-        LOAD W0, W8
+    MRET
 
-        STRD W0, #0x1024 ; scratch_space_0
-
-        ; PC (60)
-
-        MV W0, #60
-        ADD W8, W6, W0
-
-        LOAD EPC, W8
-
-        ; SP (64)
-
-        MV W0, #64
-        ADD W8, W6, W0
-
-        LOAD SP, W8
-
-        ; SR (68)
-
-        MV W0, #68
-        ADD W8, W6, W0
-
-        LOAD ESR, W8
-
-        ; BASE (72)
-
-        MV W0, #72
-        ADD W8, W6, W0
-
-        LOAD BASE, W8
-
-        ; LIMIT (76)
-
-        MV W0, #76
-        ADD W8, W6, W0
-
-        LOAD LIMIT, W8
-
-        ; W1 (24)
-
-        MV W0, #24
-        ADD W8, W6, W0
-
-        LOAD W1, W8
-
-        ; W2 (28)
-
-        MV W0, #28
-        ADD W8, W6, W0
-
-        LOAD W2, W8
-
-        ; W3 (32)
-
-        MV W0, #32
-        ADD W8, W6, W0
-
-        LOAD W3, W8
-
-        ; W4 (36)
-
-        MV W0, #36
-        ADD W8, W6, W0
-
-        LOAD W4, W8
-
-        ; W5 (40)
-
-        MV W0, #40
-        ADD W8, W6, W0
-
-        LOAD W5, W8
-
-        ; W7 (48) -- restaura antes de W6 (W6 ainda tem endereco do PCB)
-
-        MV W0, #48
-        ADD W8, W6, W0
-
-        LOAD W7, W8
-
-        ; W9 (56) -- restaura antes de W8 (W8 ainda tem endereco do registrador)
-
-        MV W0, #56
-        ADD W8, W6, W0
-
-        LOAD W9, W8
-
-        ; W8 (52) -- usa W0 como temporario para nao perder o endereco
-
-        MV W0, #52
-        ADD W0, W6, W0
-
-        LOAD W8, W0
-
-        ; W6 (44) -- restaurado por ultimo entre W1-W9
-
-        MV W0, #44
-        ADD W0, W6, W0
-
-        LOAD W6, W0
-
-        ; W0 <- scratch (ultimo registrador antes do MRET)
-
-        LDD W0, 0x1024 ; scratch_space_0
-
-        MRET
 
 map_page:
   MV W0, #bitmap       ; W0 = bitmap start address
