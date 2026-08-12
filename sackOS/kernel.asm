@@ -1,64 +1,85 @@
 setup:
-    MV W0 #2048  
-    MV W1 #4096
-    MUL W1, W0, W1   ; 8MB of full kernel memory
-    STRD W1 #0x1008 ; kernel_max_memory
-    STRD W1, #0x1020 ; initilizes the kernel stack pointer as the kernel_max_memory
-    LDD W2 #0x100C ; buffer_size
-    STRD LIMIT #0x1010 ; memory_size
-    ADD W3 W1 W2 ; W3 -> KERNEL_MAX_MEMORY + BUFFER
+    STRD W0, #memory_size ; memory_size
 
-    SUB W0 LIMIT W3 ; W0 -> USER_MEMORY = limit - (KERNEL_MAX_MEMORY + BUFFER)
-    LDD W2 #0x1000 ; partition_size
+    MV UPTR, #pcb_v_low    ; pcb_v low addr
+    MV W1, #80           ; page_table offset
 
-    UDIV W3 W0 W2 ; W3 -> NUM_PARTITIONS = user_memory / PARTITION_SIZE
-    STRD W3, #0x1014 ; partition_number
+    ADD UPTR, UPTR, W1       ; UPTR = pcb_v[0].page_table address
+
+    MV W9, #0x100000         ; W9 = sets bit 20 (valid) to 1
+    STORE W9, UPTR           ; identity mapping, allocates the first frame to the first page
+
+    MV KPTR, #kernel_page_table_low ; KPTR = kernel_page_table low address
+    MV W0, #kernel_page_table_low   ; W0 = kernel_page_table low first address
+
+    MV W1, #1
+    MV W2, #20
+    SHL W1, W1, W2           ; W1 = 2^20, the size of the kernel page_table
+
+    ADD W1, W1, W0           ; W1 = the end of the kernel page_table
+
+    MV W2, #4                ; W2 = byte step
+    MV W3, #1                ; W3 = one step
+    setup_kernel_mapping_loop:
+        CMP W0, W1
+        BEQ setup_end_kernel_mapping
+
+        STORE W9, W0      ; maps the high address page to the low frame
+        ADD W0, W0, W2    ; W0 = next pte address
+        ADD W9, W9, W3        ; W9 = next page frame id
+        JUMP setup_kernel_mapping_loop
+
+
+    setup_end_kernel_mapping:
+
+    MV ESR, #32     ; enable MMU
+    MV EPC, #4
+    ADD EPC, EPC, PC ; EPC points to next instruction, since fetch already updates PC
+
+    MRET
+
+    ; now using virtual addresses
+
+    MV W0, #0xC0000004   ; 3GB mark + 4 bytes 
+    ADD W0, W0, PC       ; W0 points to the instruction after the jump, but on high addresses
+    JMPR W0
+
+    ; now in high addresses
+
+    MV W0, #0
+    MV W1, #0xC0000000 ; W1 = 3GB offset
+    ADD W1, W1, UPTR   ; W1 = uptr virtual address
+    STORE W0, W1       ; unmaps the identity, sets the pcb_v[0].page_table[0] to invalid
+
+    MV W0, #bitmap     ; W0 = bitmap addr
+    MV W1, #0x8000     ; W1 = 2^18 frames / 8 bits = bytes of the bitmap to populate
+    ADD W1, W1, W0     ; W1 = the end of the bitmap populate portion
+    
+    MV W2, #-1         ; W2 = all ones, to populate the bitmap
+    MV W3, #4          ; byte step
+
+    setup_populate_bitmap_loop:
+        CMP W0, W1
+        BEQ setup_end_populate_bitmap
+
+        STORE W2, W0   ; populate the bitmap
+
+        ADD W0, W0, W3 ; W0 goes to the next byte
+        JUMP setup_populate_bitmap_loop
+    
+    setup_end_populate_bitmap:
 
     MV W0, #-1
-    STRD W0, #0x1018 ; running_pid = -1
+    STRD W0, #running_pid ; running_pid = -1
 
-    MV W4 #0x102C ; pcb_v
+    MV SP, #0
+    STRD SP, #kernel_stack_pointer ; sets kernel_stack_pointer
 
-    MV W8 #72
-    ADD W4 W4 W8 ; gets W4 to pcb_v[0].BASE address
-
-   ; W1 will acumulate PARTITION_SIZE * i through the loop
-
-    MV W6 #0 ; W6 -> pid = 0
-    ; for (int pid = 0, pid < NUM_PARTITIONS; pid++)
-
-    CMP W6 W3 
-    BEQ setup_registers ; loop conditions
-
-        STORE W1 W4 ; pcb_v[pid].BASE = KERNEL_MAX_MEMORY + pid * PARTITION_SIZE
-        
-        MV W8 #4
-        ADD W4 W4 W8 ; W4 = pcb_v[pid].LIMIT address
-
-        ADD W7 W1 W2 ; W7 = BASE + PARTITION_SIZE
-
-        STORE W7 W4 ; pcb_v[pid].LIMIT = BASE + PARTITION_SIZE
-
-        MV W8 #1
-        ADD W6 W6 W8 ; pid += 1 
-
-
-        ; setup variables to next Iteration
-
-        MV W8 #80
-        ADD W4 W4 W8 ; W4 = pcb_v[pid+1].BASE address
-        ADD W1 W1 W2 ; W1 += PARTITION_SIZE
-
-        JUMP #-12
-
-
-        setup_registers:
-            LDD SP #0x1020 ; kernel_stack_pointer
-            MV ESA #0x94 ; the exception_supervisor initial address
-            MV EPC #0x90 ; the infinite loop below
-            MV ESR #16 ; enable interruptions
-            
-            MRET ; go to infinite loop, waiting for program inputs
+    MV ESA, #exception_supervisor ; the exception_supervisor initial address
+    MV EPC, #infinite_loop ; the infinite loop below
+    MV ESR, #48 ; enable interruptions and mmu
+    
+    MRET ; go to infinite loop, waiting for program inputs
 
 JUMP #0
 
@@ -160,36 +181,36 @@ exception_supervisor:
 
 
 clock_int:
-  LDD W0, #0x101C    ; w0 = clock_interrupt_count
+  LDD W0, #clock_interrupt_count    ; w0 = clock_interrupt_count
 
   MV W1, #1
   ADD W0, W0, W1                    ; clock_interrupt_count += 1
 
-  LDD W1, #0x1004 ; time_slice 
+  LDD W1, #time_slice ; time_slice 
   CMP W0, W1
   BEQ clock_reset                   ; if clock_interrupt_count == TIME_SLICE, reset and check running
 
-    STRD W0, #0x101C ; clock_interrupt_count
+    STRD W0, #clock_interrupt_count ; clock_interrupt_count
   clock_return:
-    LDD W0, #0x1024 ; scratch_space_0
-    LDD W1, #0x1028 ; scratch_space_1
+    LDD W0, #scratch_space_0 ; scratch_space_0
+    LDD W1, #scratch_space_1 ; scratch_space_1
     MRET
 
   clock_reset:
     MV W0, #0
-    STRD W0, #0x101C ; clock_interrupt_count = 0
+    STRD W0, #clock_interrupt_count ; clock_interrupt_count = 0
 
-  LDD W0, #0x1018 ; running_pid
+  LDD W0, #running_pid ; running_pid
   MV W1, #-1
   CMP W0, W1
   BEQ clock_return                   ; if running_pid == -1, clock_return
 
   ; saving registers
-  LDD W1, #0x1018 ; running_pid    
-  MV W0, #84                      ; pcb_size
+  LDD W1, #running_pid ; running_pid    
+  MV W0, #0x300050                      ; pcb_size
   MUL W1, W0, W1                  ; W1 = running_pid * pcb_size
   
-  MV W0, #0x102C ; pcb_v
+  MV W0, #pcb_v ; pcb_v
   ADD W1, W0, W1                  ; W1 = pcb_v[running_pid] initial address
 
   MV W0, #68
@@ -227,11 +248,11 @@ clock_int:
   SUB W1, W1, W0
   STORE W2, W1                    ; saving W2
 
-  LDD W3, #0x1028 ; scratch_space_1
+  LDD W3, #scratch_space_1 ; scratch_space_1
   SUB W1, W1, W0
   STORE W3, W1                    ; saving W1
 
-  LDD W3, #0x1024 ; scratch_space_0
+  LDD W3, #scratch_space_0 ; scratch_space_0
   SUB W1, W1, W0
   STORE W3, W1                    ; saving W0
 
@@ -542,9 +563,9 @@ syscall_int:
 
 
 fault_int:
-  MV W0, #0x102C       ; pcb_v initial address
-  LDD W9, #0x1018      ; running_pid
-  MV W1, #84           ; pcb_size
+  MV W0, #pcb_v        ; pcb_v initial address
+  LDD W9, #running_pid      ; running_pid
+  MV W1, #0x300050     ; pcb_size
 
   MUL W1, W9, W1       ; W1 = running_pid * pcb_size
   ADD W0, W0, W1       ; W0 = pcb_v[running_pid] initial address
@@ -1063,8 +1084,8 @@ rele:
 
 
 kill:
-  MV W0, #0x102C          ; W0 = pcb_v initial address
-  MV W1, #84              ; W1 = pcb_size
+  MV W0, #pcb_v           ; W0 = pcb_v initial address
+  MV W1, #0x300050        ; W1 = pcb_size
   MUL W2, W1, W9
   ADD W2, W0, W2          ; W2 = pcb_v[pid].parent_pid address
 
@@ -1077,7 +1098,7 @@ kill:
     MUL W3, W3, W1
     ADD W3, W3, W0        ; W3 = pcb_v[parent] initial address
 
-    MV W4, #80
+    MV W4, #72
     ADD W3, W3, W4        ; W3 = pcb_v[parent].flags address
 
     LDB W4, W3           ; W4 = pcb_v[parent].flags
@@ -1091,21 +1112,24 @@ kill:
       MV W4, #9           ; mapped = 1, zombie = 0, waiting = 0, state = ready
       STRB W4, W3
 
-      MV W4, #8
-      SUB W3, W3, W4      ; W3 = pcb_v[parent].BASE address
-      LOAD W4, W3         ; W4 = pcb_v[parent].BASE
+      MV W5, #16
+      SUB W3, W3, W5      ; W3 = pcb_v[parent].W9 address
+      STORE W9, W3        ; pcb_v[parent].W9 = pid
 
-      MV W5, #56
+      MV W5, #40
       SUB W3, W3, W5      ; W3 = pcb_v[parent].status_addr address
-      LOAD W5, W3         ; W5 = pcb_v[parent].status_addr
+      LOAD W4, W3         ; W4 = pcb_v[parent].status_addr
 
-      ADD W4, W4, W5      ; W4 = base+status_addr address
+      MV W5, #64
+      ADD UPTR, W3, W5      ; UPTR = pcb_v[parent].page_table virtual address
+      MV W5, #0xC0000000    ; The 3GB kernel offset
+      SUB UPTR, UPTR, W5    ; UPTR = pcb_v[parent].page_table physical address
 
       MV W5, #56
       ADD W2, W2, W5      ; W2 = pcb_v[pid].W9 address
       LOAD W5, W2         ; W5 = pcb_v[pid].W9
 
-      STORE W5, W4        ; memory[pcb_v[parent].BASE+pcb_v[parent].status_addr] = pcb_v[pid].w9
+      STORE W5, W4        ; memory[pcb_v[parent].status_addr] = pcb_v[pid].w9
 
       MV W5, #12
       SUB W3, W3, W5      ; W3 = pcb_v[parent].child address
@@ -1155,7 +1179,7 @@ kill:
         STORE W3, W5      ; pcb_v[pcb_v[pid].next_sibling].prev_sibling = pcb_v[pid].prev_sibling
 
       
-      MV W3, #68
+      MV W3, #60
       ADD W2, W2, W3      ; W2 = pcb_v[pid].flags address
       LDB W3, W2         ; W3 = pcb_v[pid].flags
 
@@ -1167,7 +1191,7 @@ kill:
 
     kill_not_waiting:
       ; here W2 = pcb_v[pid].parent_pid address
-      MV W3, #80
+      MV W3, #72
       ADD W2, W2, W3      ; W2 = pcb_v[pid].flags address
       LDB W3, W2         ; W3 = pcb_v[pid].flags
 
@@ -1179,7 +1203,7 @@ kill:
 
   kill_no_parent:
     ; here W2 = pcb_v[pid].parent_pid address
-    MV W3, #80
+    MV W3, #72
     ADD W2, W2, W3      ; W2 = pcb_v[pid].flags address
     LDB W3, W2         ; W3 = pcb_v[pid].flags
 
@@ -1191,14 +1215,14 @@ kill:
   kill_orphanize:
     ; here W2 = pcb_v[pid].flags address
 
-    MV W3, #76
+    MV W3, #68
     SUB W2, W2, W3      ; W2 = pcb_v[pid].child address
     LOAD W3, W2          ; W3 = pcb_v[pid].child (curr_child)
     MV W7, #-1
 
     orphanize_loop:
       CMP W3, W7
-      BEQ kill_end
+      BEQ orphanize_end
 
       MUL W4, W3, W1
       ADD W4, W4, W0    ; W4 = pcb_v[curr_child].parent_pid address
@@ -1216,6 +1240,101 @@ kill:
       MV W8, #0
       ADD W3, W5, W8    ; W3 = curr_child = next
       JUMP orphanize_loop
+
+
+  orphanize_end:
+    MV W0, #bitmap      ; W0 = bitmap address
+
+    MV W1, #72
+    ADD W1, W2, W1      ; W1 = pcb_v[pid].pages_used address
+    LOAD W2, W1         ; W2 = pcb_v[pid].pages_used
+
+    MV W3, #4
+    ADD W3, W1, W3      ; W3 = pcb_v[pid].page_table first address (pointer i)
+    MV W4, #0x2FFFFC    ; 3MB - 1B
+    ADD W4, W4, W3      ; W4 = pcb_v[pid].page_table last address (pointer j)
+
+    MV W5, #0x100000    ; W5 = mask of valid (bit 20)
+    MV W6, #0xFFFFF     ; W6 = mask of page frame id (bits 0-19)
+
+    kill_free_memory_loop:
+      MV W7, #0
+      CMP W2, W7
+      BEQ kill_end      ; while pages_used != 0
+
+      LOAD W7, W3       ; W7 = pte_i
+      AND W8, W7, W5    ; W8 = pte_i.valid
+      CMP W8, W5
+      BLT kill_skip_i   ; if pte_i is valid, enter block
+
+        MV W8, #0
+        STORE W8, W3    ; set pte_i invalid
+
+        AND W8, W7, W6  ; W8 = pte_i.page_frame_id
+        
+        ; unmap the bitmap
+        MV W9, #-5          ; W9 = -5
+        SHL W9, W8, W9      ; W9 = word offset (W8 >> 5)
+        
+        MV W7, #2
+        SHL W9, W9, W7      ; W9 = byte address offset (W9 * 4)
+
+        ADD W9, W0, W9      ; W9 = address of the word in the bitmap
+        
+        MV W7, #31
+        AND W8, W8, W7      ; W8 = bit index (0 to 31)
+        
+        MV W7, #1
+        SHL W7, W7, W8      ; W7 = 1 << bit_index (clear mask)
+        
+        LOAD W8, W9         ; Load bitmap word into W8
+        XOR W8, W8, W7      ; Clear the frame's bit
+        STORE W8, W9        ; Store the updated word back to memory
+        
+        MV W7, #1
+        SUB W2, W2, W7      ; W2 = W2 - 1 (pages_used--)
+
+      kill_skip_i:
+
+      LOAD W7, W4       ; W7 = pte_j
+      AND W8, W7, W5    ; W8 = pte_j.valid
+      CMP W8, W5
+      BLT kill_skip_j   ; if pte_j is valid, enter block
+
+        MV W8, #0
+        STORE W8, W4    ; set pte_j invalid
+
+        AND W8, W7, W6  ; W8 = pte_j.page_frame_id
+        
+        ; unmap the bitmap
+        MV W9, #-5          ; W9 = -5
+        SHL W9, W8, W9      ; W9 = word offset (W8 >> 5)
+        
+        MV W7, #2
+        SHL W9, W9, W7  
+
+        ADD W9, W0, W9      ; W9 = address of the word in the bitmap
+        
+        MV W7, #31
+        AND W8, W8, W7      ; W8 = bit index (0 to 31)
+        
+        MV W7, #1
+        SHL W7, W7, W8      ; W7 = 1 << bit_index (clear mask)
+        
+        LOAD W8, W9         ; Load bitmap word into W8
+        XOR W8, W8, W7      ; Clear the frame's bit
+        STORE W8, W9        ; Store the updated word back to memory
+        
+        MV W7, #1
+        SUB W2, W2, W7      ; W2 = W2 - 1 (pages_used--)
+
+      kill_skip_j:
+
+      MV W7, #4
+      ADD W3, W3, W7        ; pte_i += 1
+      SUB W4, W4, W7        ; pte_j -= 1
+
+      JUMP kill_free_memory_loop
 
   kill_end:
     JUMP schedule
@@ -1598,3 +1717,109 @@ schedule:
     MV ESR, #48
 
     MRET
+
+
+map_page:
+  MV W0, #bitmap       ; W0 = bitmap start address
+  
+  LDD W1, #memory_size ; W1 = memory_size
+  MV W2, #-12
+  SHL W1, W1, W2       ; W1 = frame_number (memory/4KB)    
+  
+  MV W7, #0            ; W7 = current frame_id
+
+  map_find_word_loop:
+    CMP W7, W1
+    BEQ map_frame_not_found
+    BGT map_frame_not_found     ; if current frame_id >= frame_number
+
+    LOAD W2, W0                 ; W2 = current word of the bitmap
+    MV W3, #-1                  ; mask of a fully occupied bitmap word
+    CMP W2, W3
+    BLT map_found_free_word     ; if there is a bit = 0 in the word, jump
+
+      MV W2, #4                 
+      ADD W0, W0, W2
+      MV W2, #32
+      ADD W7, W7, W2            ;update current bitmap word address and current frame id
+      JUMP map_find_word_loop   ; go to next word if there is no bit = 0
+
+    
+    map_found_free_word:
+
+      MV W3, #1            ; current bit to be checked
+
+      map_find_bit_loop:
+
+        MV W5, #1
+        AND W4, W2, W3     ; W4 = current bit of the bitmap word
+        CMP W4, W3
+        BLT map_found_free_bit    ; if the bitmap is free at the set bit in W3, jump
+
+          SHL W3, W3, W5
+          ADD W7, W7, W5          ; update current bit and page frame id
+
+          CMP W7, W1
+          BEQ map_frame_not_found
+          BGT map_frame_not_found     ; if current frame_id >= frame_number
+
+          JUMP map_find_bit_loop  ; go to next bit
+
+      map_found_free_bit:
+
+        OR W2, W2, W3
+        STORE W2, W0       ; set the found free bit to 1 and save it to the bitmap
+
+        MV W1, #0xC0000    ; id of the first kernel page
+        CMP W9, W1
+        BGT map_kernel_pte
+        BEQ map_kernel_pte       ; jump if it is a kernel page
+
+          ; if it is an user page:
+          MV W1, #2
+          SHL W3, W9, W1     ; W3 = page table offset of the page to be mapped
+          
+          ADD W4, UPTR, W3   ; W4 = physical pte address to be set 
+          MV W3, #0xC0000000 ; The 3GB kernel offset
+          ADD W4, W4, W3     ; W4 = virtual pte address to be set 
+
+          MV W5, #4
+          SUB W5, UPTR, W5   ; W5 = process.pages_used physical address
+          ADD W5, W5, W3     ; W5 = process.pages_used virtual address
+
+          LOAD W6, W5        ; W6 = process.pages_used
+          MV W1, #1
+          ADD W6, W6, W1
+          STORE W6, W5       ; process.pages_used += 1
+          JUMP map_pte
+        
+        map_kernel_pte:
+          SUB W3, W9, W1     ; page_id -= 0xC0000 (normalize to the start of KPTR)
+          MV W1, #2
+          SHL W3, W3, W1     ; W3 = page table offset of the page to be mapped
+          
+          ADD W4, KPTR, W3   ; W4 = physical pte address to be set 
+          MV W3, #0xC0000000 ; The 3GB kernel offset
+          ADD W4, W4, W3     ; W4 = virtual pte address to be set
+
+        map_pte:
+
+          MV W1, #0x100000   ; to set the valid bit = 1 of the pte
+          ADD W7, W7, W1     ; W7 = pte (valid = 1 and page frame id)
+          STORE W7, W4       ; mapping the page to the frame
+
+          MV W9, #0
+          JUMPR W8           ; return
+
+  map_frame_not_found:
+
+    MV W1, #0xC0000    ; id of the first kernel page
+    CMP W9, W1
+    BLT map_frame_not_found_user ; jump if it is an user page
+
+      ; kernel page and not found, panic
+      JUMP #0
+    
+    map_frame_not_found_user:
+      MV W9, #1
+      JUMPR W8   ; return

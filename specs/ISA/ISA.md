@@ -57,7 +57,7 @@ Triggered by the use of privileged instruction/register when in user mode.
 Triggered by accessing a page table not mapped by the page table (Valid = 0), by accessing a kernel table when in user mode, or by accessing a misaligned address for a 32 bit word. The address used is stored in the exception fault address.
 
 ## Buffer
-Buffer is a part of the memory designed to receive outside data. Buffer is defined as the last 64KB of the memory and receives the byte size of the input in the first 32 bits of the buffer.
+Buffer is a part of the memory designed to receive outside data. Buffer is defined as the last 64KB of the first GB of memory and receives the byte size of the input in the first 32 bits of the buffer.
 
 
 ## Encoding

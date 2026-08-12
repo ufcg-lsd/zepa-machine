@@ -359,13 +359,15 @@ func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
 	}
 
 	var ptr uint32
+	var pageNumber uint32
 	if addr >= kernelBoundary {
 		ptr = uint32(m.registers[kptr])
+		pageNumber = (addr - kernelBoundary) / pageSize
 	} else {
 		ptr = uint32(m.registers[uptr])
+		pageNumber = addr / pageSize
 	}
 
-	pageNumber := addr / pageSize
 	pteAddr := ptr + (pageNumber * 4)
 
 	pte := binary.LittleEndian.Uint32(m.memory[pteAddr : pteAddr+4])
@@ -598,11 +600,11 @@ func (m *Machine) LoadBuffer(buffer []byte) bool {
 		return false
 	}
 
-	bufferIndex := len(m.memory) - bufferSize
-	clear(m.memory[bufferIndex:])
-
+	const oneGB = 1 << 30
+	bufferIndex := oneGB - bufferSize
+	clear(m.memory[bufferIndex:oneGB])
 	binary.LittleEndian.PutUint32(m.memory[bufferIndex:bufferIndex+4], uint32(len(buffer)))
-	copy(m.memory[bufferIndex+4:], buffer)
+	copy(m.memory[bufferIndex+4:oneGB], buffer)
 
 	return true
 }
