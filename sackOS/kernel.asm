@@ -2227,9 +2227,13 @@ loop:
 
 
 map_page:
-  MV W0, #bitmap       ; W0 = bitmap start address
-  
-  LDD W1, #memory_size ; W1 = memory_size
+  MV W0, #0x30107024   ; #0x30107024 bitmap
+  MV W3, #0xC0000000   ; 3GB kernel boundary
+  ADD W0, W0, W3       ; W0 = bitmap virtual address
+
+  MV W1, #0x200C       ; #0x200C memory_size
+  ADD W1, W1, W3       ; W1 = memory_size virtual address
+  LOAD W1, W1          ; W1 = memory_size
   MV W2, #-12
   SHL W1, W1, W2       ; W1 = frame_number (memory/4KB)    
   
