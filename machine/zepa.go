@@ -25,8 +25,8 @@ const (
 	sp
 	ir
 	sr
-	mdr
-	mar
+	k0
+	k1
 	ecr
 	esa
 	esr
@@ -396,7 +396,7 @@ func (m *Machine) exception(cause uint32) {
 }
 
 func (m *Machine) checkIllegalRegisterAccess(inst Instruction) bool {
-	priviligedRegisters := []Register{ecr, esa, esr, epc, kptr, uptr, efa}
+	priviligedRegisters := []Register{ecr, esa, esr, epc, kptr, uptr, efa, k0, k1}
 	return !m.isKernelMode() && (slices.Contains(priviligedRegisters, inst.rd) || slices.Contains(priviligedRegisters, inst.rs1) || slices.Contains(priviligedRegisters, inst.rs2))
 }
 

@@ -28,8 +28,8 @@ const (
 	SP
 	_
 	_
-	_
-	_
+	K0
+	K1
 	ECR
 	ESA
 	ESR
@@ -83,6 +83,8 @@ var registerMap = map[string]Register{
 	"W9":   W9,
 	"PC":   PC,
 	"SP":   SP,
+	"K0":   K0,
+	"K1":   K1,
 	"ECR":  ECR,
 	"ESA":  ESA,
 	"ESR":  ESR,

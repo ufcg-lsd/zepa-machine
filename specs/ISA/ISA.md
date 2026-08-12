@@ -14,8 +14,8 @@ The special registers have specific purposes and exist to handle essential funct
 
 - **Program Counter (PC) [31:0]:**: Stores the address of the next instruction to be executed. It is automatically incremented after every instruction cycle, unless modified by a control flow instruction (like a branch or jump).
 - **Instruction Register (IR) [31:0]:** Contains the current instruction being decoded and executed.
-- **Memory Data Register (MDR) [31:0]:** Holds the data being transferred from or to memory.
-- **Memory Address Register (MAR) [31:0]:** Stores the memory address where reading or writing operations will be executed.
+- **Kernel Scratch Register 0 (K0) [31:0]:** A dedicated hardware register reserved exclusively for the operating system kernel. It acts as a temporary safe haven to save user register state immediately upon entering an exception or interrupt handler, preventing data corruption.
+- **Kernel Scratch Register 1 (K1) [31:0]:** A second dedicated hardware register reserved for the OS kernel. Working alongside K0, it provides the kernel with the necessary temporary workspace to bootstrap 32-bit memory addresses without clobbering the user's CPU context.
 - **Stack Pointer (SP) [31:0]:** Points to the top of the stack, used to manage function calls and local variable storage.
 - **Status Register (SR) [31:0]:** Stores flags that indicate the result of test operations executed and current CPU state. 
     - **Bits 0-2:** Reserved for the comparison flags: Equal (Z) at bit 0, Less (L) at bit 1, and Greater (G) at bit 2. 
