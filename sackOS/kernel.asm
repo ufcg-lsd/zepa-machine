@@ -514,8 +514,7 @@ input_int:
 
         MV W1, #80
         ADD W1, W0, W1                 ; W1 = virtual address of page table
-        MV UPTR, #0xC0000000
-        SUB UPTR, W1, UPTR             ; UPTR = physical address of page table
+        SUB UPTR, W1, K0               ; UPTR = physical address of page table
 
         ; Map pages for the program code
 
@@ -682,7 +681,7 @@ kill_int:
     ; +4 = PID
     MV  W6, #4
     ADD W9, W9, W6
-    LOAD W9, [W9]
+    LOAD W9, W9
 
     LDD W1, #0x2000 ; #0x2000 MAX_PROCESSES (verifica pid)
 
@@ -707,7 +706,7 @@ kill_int:
     ; flags no offset 72
     MV  W5, #72
     ADD W5, W3, W5
-    LDB W6, [W5]
+    LDB W6, W5
 
     ; is_mapped
     MV  W8, #1
@@ -729,7 +728,7 @@ kill_int:
     ADD W5, W3, W5
 
     MV  W6, #2
-    STORE W6, [W5]
+    STORE W6, W5
 
     ; W9 continua contendo o PID
     JUMP kill
@@ -1087,7 +1086,8 @@ fork:
     fork_copy_regs_done:
 
         ; Setup UPTR and store page table addresses
-        MV W2, K0             ; W2 = 0xC0000000 (kernel mapping offset)
+        MV W2, #0
+        ADD W2, W2, K0             ; W2 = 0xC0000000 (kernel mapping offset)
 
         ; Child PT = &pcb_v[pid] + 80
         MV W1, #80
@@ -1097,7 +1097,8 @@ fork:
         MV W8, #0x2020
         ADD W8, K0, W8                   ; W8 = 0xC0002020 (&scratch_space_1)
         STORE W1, W8                     ; scratch_space_1 = child PT (physical)
-        MV UPTR, W1                      ; UPTR = child PT (physical)
+        MV UPTR, #0
+        ADD UPTR, UPTR, W1               ; UPTR = child PT (physical)
 
         ; Parent PT = &pcb_v[running_pid] + 80
         MV W1, #80
@@ -1145,7 +1146,9 @@ fork:
         LOAD W5, W8                  ; W5 = PTE value
 
         ; Check Valid bit (bit 20 of PTE)
-        MV W1, #0x100000
+        MV W1, #1
+        MV K1, #20
+        SHL W1, W1, K1
         CMP W5, W1
         BLT fork_pte_next            ; PTE not valid, skip
 
@@ -1359,29 +1362,39 @@ fork:
         JUMP schedule
 
 wait:
+    MV K0, #3
+    MV K1, #30
+    SHL K0, K0, K1      ; K0 = 3GB kernel offset
+
     MV W8, #0x2024
     ADD W0, K0, W8                ; W0 points to pcb_v first byte
     MV W8 #52 
     ADD W0, W0, W8 ; w0 points to pcb_v[0].w8
-    MV W8 #3145808 ; bytes size of each pcb
+
+    MV K1, #0x30
+    MV W8, #16
+    SHL K1, K1, W8
+    MV W8, #50
+    ADD K1, K1, W8 ; K1 = bytes size of each pcb
 
     MV W2, #0x2010
     ADD W2, K0, W2
     LOAD W1, W2  ; W1 = running_pid
-    MUL W1 W1 W8 ; W1 = RUNNING_PID * pcb_size bytes
+    MUL W1 W1 K1 ; W1 = RUNNING_PID * pcb_size bytes
     ADD W0 W0 W1 ; w0 points to pcb_v[RUNNING_PID].w8
     
     LOAD W9 W0 ; w9 = status_addr
 
 status_addr_check:
 
-    MV W6 #0xC0000000 
-    CMP W9 W6
+    CMP W9 K0     ; compares status_addr with 3GB kernel offset
     BGT fault_int
     BEQ fault_int ; fault_int if status_addr in a kernel address
 
-    MV W6 #0b1000000000000 ; takes the 20 most significant bits of address
-    DIV W2 W9 W6 ; w2 = page_number
+    MV W7, #1
+    MV W6, #20
+    SHL W7, W7, W6 ; takes the 20 most significant bits of address
+    UDIV W2 W9 W7 ; w2 = page_number
 
     MV W6 #28 ; 
     ADD W0 W0 W6 ; w0 points to pcb_v[RUNNING_PID].page_table[0]
@@ -1392,8 +1405,8 @@ status_addr_check:
 
     LOAD W4 W3 ; w4 = pcb_v[RUNNING_PID].page_table[page_number]
     
-    MV W6 #0x100000 ; 20th bit, valid
-    CMP W4 W6
+    ; W7 = 20th bit, valid
+    CMP W4 W7
     BLT fault_int ; page_number(status_addr) is not mapped, page_fault
 
 
@@ -1415,7 +1428,7 @@ status_addr_check:
 
     LOAD W3 W2 ; w3 = curr_child = pcb_v[running_pid].childPID
     MV W8, #0x2024
-    ADD W0,K0,W8                ; W0 = pcb_v base
+    ADD W0, K0, W8                ; W0 = pcb_v base
 
 ; w0 points to pcb_v[0] first byte
 ; w1  = RUNNING_PID * pcb_size bytes
@@ -1427,8 +1440,7 @@ status_addr_check:
         ;calculate pcb_v[curr_child]
         ; w3 = curr_child
 
-        MV W8 #3145808
-        MUL W1 W3 W8
+        MUL W1 W3 K1
 
         ADD W1 W0 W1 ;W1 points to pcb_v[curr_child] first byte
 
@@ -1502,8 +1514,7 @@ status_addr_check:
             SUB W4 W1 W8 ; w4 points to pcb_v[curr_child].prev_sibling
             LOAD W7 W4   ; w7 = pcb_v[curr_child].prev_sibling
 
-            MV W6 #3145808 ; pcb_size
-            MUL W5 W7 W6 ; 
+            MUL W5 W7 K1 ; 
             ADD W5 W0 W5 ; w5 points to pcb_v[pcb_v[running_pid].prev_sibling] first byte
 
             MV W8 #12
@@ -1523,8 +1534,7 @@ status_addr_check:
             CMP W7 W8 ; if pcb_v[curr_child].next_sibling == -1 
             BEQ schedule
 
-            MV W6 #3145808 ; pcb_size
-            MUL W5 W7 W6 
+            MUL W5 W7 K1 
             ADD W5 W0 W5 ; w5 points to pcb_v[pcb_v[running_pid].next_sibling] first byte
 
             MV W8 #8
@@ -1574,7 +1584,7 @@ exit:
 
     MV W5, #0x2010             ; #0x2010 running_pid
     ADD W5, W6, W5            ; W5 = running_pid virtual address
-    LOAD W9, [W5]              ; W9 = running_pid
+    LOAD W9, W5               ; W9 = running_pid
 
     MV W1, #0x30               ; W1 = upper part of pcb_size
     MV W7, #16                 ; W7 = shift amount
@@ -1591,11 +1601,11 @@ exit:
 
     MV W1, #52                 ; W1 = W8 offset inside PCB
     ADD W0, W0, W1             ; W0 = pcb_v[running_pid].W8 address
-    LOAD W2, [W0]              ; W2 = pcb_v[running_pid].W8 (status_code)
+    LOAD W2, W0                ; W2 = pcb_v[running_pid].W8 (status_code)
 
     MV W1, #4                  ; W1 = distance from W8 to W9
     ADD W0, W0, W1             ; W0 = pcb_v[running_pid].W9 address
-    STORE W2, [W0]             ; pcb_v[running_pid].W9 = status_code
+    STORE W2, W0               ; pcb_v[running_pid].W9 = status_code
 
     JUMP kill                  ; kill(running_pid), with PID still in W9
 
@@ -1608,7 +1618,12 @@ getPID:
     MV W8, #0x2024
     ADD W1, K0, W8                ; W1 = pcb_v base
 
-    MV W8 #3145808 ; pcb_size 
+    MV W8, #0x30
+    MV W7, #16
+    SHL W8, W8, W7
+    MV W7, 0x30
+    ADD W8, W8, W7 ; W8 = pcb_size
+
     MUL W2 W0 W8 ; RUNNING_PID * pcb_size get the offset of bytes to acess pcb[RUNNING_PID]
     
     ADD W1 W1 W2 ; W1 = pcb[RUNNING_PID] addr
@@ -1637,7 +1652,13 @@ kill:
 
   MV W0, #0x2024          ; #0x2024 pcb_vector
   ADD W0, K0, W0          ; W0 = pcb_v virtual initial address
-  MV W1, #0x300050        ; W1 = pcb_size
+
+  MV W1, #0x30
+  MV W2, #16
+  SHL W1, W1, W2
+  MV W2, #0x50
+  ADD W1, W1, W2          ; W1 = pcb_size
+  
   MUL W2, W1, W9
   ADD W2, W0, W2          ; W2 = pcb_v[pid].parent_pid address
 
@@ -1794,7 +1815,12 @@ kill:
 
 
   orphanize_end:
-    MV W0, #0x30107024  ; #0x30107024 bitmap
+    MV W0, #0x3010
+    MV W1, #16
+    SHL W0, W0, W1
+    MV W1, #0x7024
+    ADD W0, W0, W1      ; W0 = #0x30107024 bitmap physical address
+
     ADD W0, K0, W0      ; W0 = bitmap virtual address
 
     MV W1, #72
@@ -1803,11 +1829,22 @@ kill:
 
     MV W3, #4
     ADD W3, W1, W3      ; W3 = pcb_v[pid].page_table first address (pointer i)
-    MV W4, #0x2FFFFC    ; 3MB - 1B
+    MV W4, #0x2F
+    MV W5, #16
+    SHL W4, W4, W5
+    MV W5, #0xFFFC
+    ADD W4, W4, W5      ; W4 = 3MB - 1B
     ADD W4, W4, W3      ; W4 = pcb_v[pid].page_table last address (pointer j)
 
-    MV W5, #0x100000    ; W5 = mask of valid (bit 20)
-    MV W6, #0xFFFFF     ; W6 = mask of page frame id (bits 0-19)
+    MV W5, #1
+    MV W6, #20
+    SHL W5, W5, W6      ; W5 = mask of valid (bit 20)
+
+    MV W6, #0xF
+    MV W7, #16
+    SHL W6, W6, W7
+    MV W7, #0xFFFF
+    ADD W6, W6, W7      ; W6 = mask of page frame id (bits 0-19)
 
     kill_free_memory_loop:
       MV W7, #0
@@ -2076,7 +2113,7 @@ schedule:
 
     MV W0, #0x2010 ; #0x2010 running_pid
     ADD W0, W8, W0
-    STORE W9, [W0]
+    STORE W9, W0
 
 
     ; UPTR = pcb_v[running_pid].page_table address
@@ -2127,7 +2164,8 @@ schedule:
     ADD W0, W1, W0
     LOAD W5, W0
 
-    MV EPC, W5
+    MV EPC, #0
+    ADD EPC, EPC, W5
 
 
     ; restore SP
@@ -2136,7 +2174,8 @@ schedule:
     ADD W0, W1, W0
     LOAD W5, W0
 
-    MV SP, W5
+    MV SP, #0
+    ADD SP, SP, W5
 
 
 
@@ -2144,7 +2183,8 @@ schedule:
     ADD W0, W1, W0
     LOAD W5, W0
 
-    MV ESR, W5
+    MV ESR, #0
+    ADD ESR, ESR, W5
 
 
     ; restore W2
@@ -2208,8 +2248,8 @@ schedule:
     LOAD W1, W1
 
 
-
-    ADD W8, W8, #0x2020 ; #0x2020 scratch_space_1
+    MV K0, #0x2020      ; K0 = scratch_space_1 virtual address
+    ADD W8, W8, K0      ; W8 = scratch_space_1 physical address
     LOAD W8, W8
 
 
@@ -2260,14 +2300,9 @@ schedule:
     STORE W9, W0
 
 
-    MV W0, loop
-    ADD W0, W8, W0
-
-    MV W5, #0
-    ADD EPC, W0, W5
-
     MV ESR, #48
-
+    MV EPC, #4
+    ADD EPC, EPC, PC  ; EPC points to the JUMP loop
     MRET
 
 loop:
@@ -2275,12 +2310,19 @@ loop:
 
 
 map_page:
-  MV W0, #0x30107024   ; #0x30107024 bitmap
-  MV W3, #0xC0000000   ; 3GB kernel boundary
-  ADD W0, W0, W3       ; W0 = bitmap virtua l address
+  MV W0, #0x3010
+  MV W1, #16
+  SHL W0, W0, W1
+  MV W1, #0x7024
+  ADD W0, W0, W1       ; W0 = bitmap physical address
+
+  MV K0, #3
+  MV K1, #30
+  SHL K0, K0, K1       ; K0 = 3GB kernel boundary
+  ADD W0, W0, K0       ; W0 = bitmap virtua l address
 
   MV W1, #0x200C       ; #0x200C memory_size
-  ADD W1, W1, W3       ; W1 = memory_size virtual address
+  ADD W1, W1, K0       ; W1 = memory_size virtual address
   LOAD W1, W1          ; W1 = memory_size
   MV W2, #-12
   SHL W1, W1, W2       ; W1 = frame_number (memory/4KB)    
@@ -2329,7 +2371,8 @@ map_page:
         OR W2, W2, W3
         STORE W2, W0       ; set the found free bit to 1 and save it to the bitmap
 
-        MV W1, #0xC0000    ; id of the first kernel page
+        MV W1, #-12
+        SHL W1, K0, W1     ; id of the first kernel page (0xC0000)
         CMP W9, W1
         BGT map_kernel_pte
         BEQ map_kernel_pte       ; jump if it is a kernel page
@@ -2339,12 +2382,11 @@ map_page:
           SHL W3, W9, W1     ; W3 = page table offset of the page to be mapped
           
           ADD W4, UPTR, W3   ; W4 = physical pte address to be set 
-          MV W3, #0xC0000000 ; The 3GB kernel offset
-          ADD W4, W4, W3     ; W4 = virtual pte address to be set 
+          ADD W4, W4, K0     ; W4 = virtual pte address to be set 
 
           MV W5, #4
           SUB W5, UPTR, W5   ; W5 = process.pages_used physical address
-          ADD W5, W5, W3     ; W5 = process.pages_used virtual address
+          ADD W5, W5, K0     ; W5 = process.pages_used virtual address
 
           LOAD W6, W5        ; W6 = process.pages_used
           MV W1, #1
@@ -2358,21 +2400,23 @@ map_page:
           SHL W3, W3, W1     ; W3 = page table offset of the page to be mapped
           
           ADD W4, KPTR, W3   ; W4 = physical pte address to be set 
-          MV W3, #0xC0000000 ; The 3GB kernel offset
-          ADD W4, W4, W3     ; W4 = virtual pte address to be set
+          ADD W4, W4, K0     ; W4 = virtual pte address to be set
 
         map_pte:
 
-          MV W1, #0x100000   ; to set the valid bit = 1 of the pte
+          MV W1, #1
+          MV W2, #20
+          SHL W1, W1, W2     ; to set the valid bit = 1 of the pte (bit 20)
           ADD W7, W7, W1     ; W7 = pte (valid = 1 and page frame id)
           STORE W7, W4       ; mapping the page to the frame
 
           MV W9, #0
-          JUMPR W8           ; return
+          JMPR W8           ; return
 
   map_frame_not_found:
 
-    MV W1, #0xC0000    ; id of the first kernel page
+    MV W1, #-12
+    SHL W1, K0, W1     ; id of the first kernel page (0xC0000)
     CMP W9, W1
     BLT map_frame_not_found_user ; jump if it is an user page
 
@@ -2381,4 +2425,4 @@ map_page:
     
     map_frame_not_found_user:
       MV W9, #1
-      JUMPR W8   ; return
+      JMPR W8   ; return
