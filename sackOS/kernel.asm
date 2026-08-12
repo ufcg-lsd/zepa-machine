@@ -1243,6 +1243,8 @@ schedule:
     ADD W0, W8, W0
     LOAD W7, W0
 
+    ; W6 = PCB_SIZE
+
     MV W6, #0x30
     MV W0, #16
     SHL W6, W6, W0     ; W6 = 0x300000
