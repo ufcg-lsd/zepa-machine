@@ -737,9 +737,22 @@ syscall_int:
 
 
 fault_int:
-  MV W0, #pcb_v        ; pcb_v initial address
-  LDD W9, #running_pid      ; running_pid
-  MV W1, #0x300050     ; pcb_size
+  MV W8, #3
+  MV W7, #30
+  SHL W8, W8, W7        ; W8 = 3GB kernel offset
+
+  MV W0, #0x2024        ; pcb_v initial physical address
+  ADD W0, W0, W8        ; pcb_v initial virtual address
+
+  MV W9, #0x2010        ; running_pid physical address
+  ADD W9, W9, W8        ; W9 = running_pid virtual address
+  LOAD W9, W9           ; W9 = running_pid
+
+  MV W1, #0x30
+  MV W2, #16
+  SHL W1, W1, W2
+  MV W2, #0x50
+  ADD W1, W1, W2        ; pcb_size
 
   MUL W1, W9, W1       ; W1 = running_pid * pcb_size
   ADD W0, W0, W1       ; W0 = pcb_v[running_pid] initial address
