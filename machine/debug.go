@@ -333,7 +333,7 @@ func (m *Machine) debugRegistersTo(out io.Writer) {
 
 	registerOrder := []Register{
 		w0, w1, w2, w3, w4, w5, w6, w7, w8, w9,
-		pc, sp, ir, sr, mdr, mar, ecr, esa, esr, epc, efa, uptr, kptr,
+		pc, sp, ir, sr, k0, k1, ecr, esa, esr, epc, efa, uptr, kptr,
 	}
 
 	type cell struct {

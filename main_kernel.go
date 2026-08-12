@@ -15,13 +15,13 @@ import (
 )
 
 const (
-	buffer = 64 * 1024 // 64KB
+	buffer        = 64 * 1024       // 64KB
 	minKernelSize = 8 * 1024 * 1024 // 8MB
 )
 
 func main() {
-	if len(os.Args) < 4 {
-		fmt.Println("Usage: go run -tags kernel . <memory_size> <partition_size> <time_slice> [--tui] [--no-debug]")
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: go run -tags kernel . <memory_size> <time_slice> [--tui] [--no-debug]")
 		return
 	}
 
@@ -40,21 +40,11 @@ func main() {
 	if memorySize%4 != 0 {
 		log.Fatalf("memory_size must be a multiple of 4, got %d", memorySize)
 	}
-
-	partitionSize, err := strconv.Atoi(os.Args[2])
-	if err != nil {
-		log.Fatalf("Conversion failed: %v", err)
+	if memorySize < (1<<30)+(1<<12) {
+		log.Fatalf("memory_size must be at least 1GB + 4KB, got %d", memorySize)
 	}
 
-	if partitionSize%4 != 0 {
-		log.Fatalf("partition_size must be a multiple of 4, got %d", partitionSize)
-	}
-
-	if memorySize < minKernelSize + buffer + partitionSize {
-		log.Fatalf("memory_size must be at least 8MB + 6KB + partition_size, got %d", memorySize)
-	}
-
-	timeSlice, err := strconv.Atoi(os.Args[3])
+	timeSlice, err := strconv.Atoi(os.Args[2])
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
@@ -62,7 +52,7 @@ func main() {
 	// Parse optional flags
 	useTUI := false
 	debugMode := true
-	for _, arg := range os.Args[4:] {
+	for _, arg := range os.Args[3:] {
 		switch arg {
 		case "--tui":
 			useTUI = true
@@ -79,14 +69,14 @@ func main() {
 	machine := machine.NewMachine(memorySize, debugMode)
 	machine.LoadProgram(binaryCode)
 
-	memSlice := machine.GetMemory()[4096:4100]
-	binary.LittleEndian.PutUint32(memSlice, uint32(partitionSize))
+	memSlice := machine.GetMemory()[0x2000:0x2004]
+	binary.LittleEndian.PutUint32(memSlice, uint32(256)) // max processes
 
-	memSlice = machine.GetMemory()[4100:4104]
+	memSlice = machine.GetMemory()[0x2004:0x2008]
 	binary.LittleEndian.PutUint32(memSlice, uint32(timeSlice))
 
-	memSlice = machine.GetMemory()[4108:4112]
-	binary.LittleEndian.PutUint32(memSlice, uint32(0x10000))
+	memSlice = machine.GetMemory()[0x2008:0x200C]
+	binary.LittleEndian.PutUint32(memSlice, uint32(0x10000)) // buffer size
 
 	go machine.Boot()
 
