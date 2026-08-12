@@ -1196,6 +1196,12 @@ kill:
 
 schedule:
 
+    ; clock_interrupt_count = 0
+    ; Every process selected by the scheduler starts with a new time slice
+
+    MV W0, #0
+    STRD W0, #0x101C ; clock_interrupt_count
+
     ; valida running_pid
 
     LDD W9, #0x1018 ; running_pid
