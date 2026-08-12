@@ -267,6 +267,8 @@ schedule()
 
 ## schedule()
 ```
+clock_interrupt_count = 0
+
 if running_pid >= MAX_PROCESSES:
   running_pid = 0
 
