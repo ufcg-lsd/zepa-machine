@@ -86,23 +86,47 @@ setup:
 JUMP #0
 
 exception_supervisor:
-    STRD W0 #@SCRATCH_SPACE_0_ADDR ; scratch_space_0
-    STRD W1 #@SCRATCH_SPACE_1_ADDR ; scratch_space_1
+    ; store w0 and w1 in scratch_space
+
+    MV K0 #3
+    MV K1 #30
+    SHL K1 K0 K1          ; K1 = 3 << 30 = 3GB
+
+    MV K0 #0x201C
+    ADD K1 K1 K0 ; k1 points to scratch_space_0
+    STORE W0 K1 ; saves w0 in scratch_space_0
+
+    MV W0 #4
+    ADD K1 K1 W0 ; k1 points to scratch_space_1
+    STORE W1 K1 ; saves w1 in scratch_space_1
 
     MV W0 #0
     CMP ECR W0 ; if ECR = 0 (clock interruption)
     BEQ clock_int
 
+    MV W0 #3
+    MV W1 #30
+    SHL K0 W0 W1 ; K0 = 3GB
+
+    MV W1 #0x2010 ; 
+    ADD W1 K0 W1 ;
+    LOAD W1 W1 ; w1 = running_pid 
+
     MV W0 #-1
-    LDD W1 #@RUNNING_PID_ADDR ; running_pid
 
     CMP W0 W1
     BEQ jumpToHandler
 
-    MV W0 #3145808 ; pcb_size
+
+    MV W0 #3
+    MV K1 #20
+    SHL W0 W0 K1          ; W0 = 3 << 20 = 0x300000 (3MB)
+    MV K1 #0x50
+    ADD W0 W0 K1          ; W0 = 0x300050 = 3145808 (3MB + 80)
     MUL W1 W1 W0 ; W1 = RUNNING_PID * pcb_size
 
-    MV W0 #PCB_VECTOR_ADDR ; pcb_v
+    MV W0 #0x2024 ; 
+    ADD W0 K0 W0 ; w0 = pcb_v_addr
     ADD W0 W0 W1 ; W0 = pcb[RUNNING_PID] address
 
     MV W1 #28
@@ -146,15 +170,18 @@ exception_supervisor:
     MV W3 #48
     SUB W0 W0 W3 ; w0 points to pcb[RUNNING_PID].w0
 
-    LDD W2 #@SCRATCH_SPACE_0_ADDR ; scratch_space_0
-
-    STORE W2 W0
+    MV W2 #0x201C
+    ADD W2 W2 K0          ; w2 = 3GB + 0x201C = scratch_space_0
+    LOAD W2 W2            ; w2 = w0 salvo
+    STORE W2 W0           ; pcb[running_pid].w0 = w0
 
     MV W8 #4
     ADD W0 W0 W8 ; w0 points to pcb[RUNNING_PID].w1
 
-    LDD W2 #@SCRATCH_SPACE_1_ADDR ; scratch_space_1
-    STORE W2 W0
+    MV W2 #0x2020
+    ADD W2 W2 K0          ; w2 = 3GB + 0x2020 = scratch_space_1
+    LOAD W2 W2            ; w2 = w1 salvo
+    STORE W2 W0           ; pcb[running_pid].w1 = w1
 
     jumpToHandler:
         MV W0 #1
