@@ -243,37 +243,60 @@ exception_supervisor:
 
 
 clock_int:
-  LDD W0, #clock_interrupt_count    ; w0 = clock_interrupt_count
+  MV K0, #3
+  MV K1, #30
+  SHL K0, K0, K1                    ; K0 = 3GB kernel offset
+
+  MV K1, #0x2014
+  ADD K1, K1, K0                     ; k1 = clock_interrupt_count address
+  LOAD W0, K1                        ; w0 = clock_interrupt_count
 
   MV W1, #1
   ADD W0, W0, W1                    ; clock_interrupt_count += 1
 
-  LDD W1, #time_slice ; time_slice 
+  MV W1, #0x2004
+  ADD W1, W1, K0      ; W1 = time_slice address
+  LOAD W1, W1         ; W1 = time_slice 
   CMP W0, W1
   BEQ clock_reset                   ; if clock_interrupt_count == TIME_SLICE, reset and check running
 
-    STRD W0, #clock_interrupt_count ; clock_interrupt_count
+
+    STORE W0, K1              ; clock_interrupt_count
   clock_return:
-    LDD W0, #scratch_space_0 ; scratch_space_0
-    LDD W1, #scratch_space_1 ; scratch_space_1
+    MV W0, #0x201C
+    ADD W0, W0, K0            ; W0 = scratch_space_0 addr
+    LOAD W0, W0               ; scratch_space_0
+
+    MV W1, #0x2020
+    ADD W1, W1, K0            ; W1 = scratch_space_0 addr
+    LOAD W1, W1               ; scratch_space_1
     MRET
 
   clock_reset:
     MV W0, #0
-    STRD W0, #clock_interrupt_count ; clock_interrupt_count = 0
+    STORE W0, K1       ; clock_interrupt_count = 0
 
-  LDD W0, #running_pid ; running_pid
+  MV K1, #0x2010
+  ADD K1, K1, K0       ; K1 = running_pid addr
+
+  LOAD W0, K1          ; running_pid
   MV W1, #-1
   CMP W0, W1
   BEQ clock_return                   ; if running_pid == -1, clock_return
 
   ; saving registers
-  LDD W1, #running_pid ; running_pid    
-  MV W0, #0x300050                      ; pcb_size
-  MUL W1, W0, W1                  ; W1 = running_pid * pcb_size
+  MV W0, #0x30
+  MV W1, #16
+  SHL W0, W0, W1
+  MV W1, #0x50
+  ADD W0, W0, W1      ; W0 = pcb_size
+  LOAD W1, K1         ; running_pid    
+  MUL W1, W0, W1      ; W1 = running_pid * pcb_size
   
-  MV W0, #pcb_v ; pcb_v
-  ADD W1, W0, W1                  ; W1 = pcb_v[running_pid] initial address
+  MV W0, #0x2024
+  ADD W0, W0, K0      ; W0 = pcb_v address
+  
+  ADD W1, W0, W1      ; W1 = pcb_v[running_pid] initial address
 
   MV W0, #68
   ADD W1, W0, W1
@@ -310,11 +333,15 @@ clock_int:
   SUB W1, W1, W0
   STORE W2, W1                    ; saving W2
 
-  LDD W3, #scratch_space_1 ; scratch_space_1
+  MV W3, #0x2020
+  ADD W3, W3, K0           ; W3 = scratch_space_1 address
+  LOAD W3, W3              ; W3 = scratch_space_1
   SUB W1, W1, W0
   STORE W3, W1                    ; saving W1
 
-  LDD W3, #scratch_space_0 ; scratch_space_0
+  MV W3, #0x201C
+  ADD W3, W3, K0           ; W3 = scratch_space_0 address
+  LOAD W3, W3              ; W3 = scratch_space_0
   SUB W1, W1, W0
   STORE W3, W1                    ; saving W0
 
