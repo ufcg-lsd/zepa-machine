@@ -2172,7 +2172,7 @@ schedule:
     STORE W9, W0
 
 
-    MV W0, #LOOP_ADDR
+    MV W0, loop
     ADD W0, W8, W0
 
     MV W5, #0
@@ -2181,6 +2181,9 @@ schedule:
     MV ESR, #48
 
     MRET
+
+loop:
+    JUMP loop
 
 
 map_page:
