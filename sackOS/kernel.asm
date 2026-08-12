@@ -1427,6 +1427,124 @@ schedule:
 
     JUMP schedule_restore_context
 
+    schedule_restore_context:
+
+
+    MV W0, #24
+    ADD W0, W1, W0
+    LOAD W5, W0              
+
+    MV W0, #SCRATCH_SPACE_0_ADDR
+    ADD W0, W8, W0
+    STORE W5, W0
+
+
+
+
+    MV W0, #52
+    ADD W0, W1, W0
+    LOAD W5, W0              
+
+    MV W0, #SCRATCH_SPACE_1_ADDR
+    ADD W0, W8, W0
+    STORE W5, W0
+
+
+    ; restore PC -> EPC
+
+    MV W0, #60
+    ADD W0, W1, W0
+    LOAD W5, W0
+
+    MV EPC, W5
+
+
+    ; restore SP
+
+    MV W0, #64
+    ADD W0, W1, W0
+    LOAD W5, W0
+
+    MV SP, W5
+
+
+
+    MV W0, #68
+    ADD W0, W1, W0
+    LOAD W5, W0
+
+    MV ESR, W5
+
+
+    ; restore W2
+
+    MV W0, #28
+    ADD W0, W1, W0
+    LOAD W2, W0
+
+
+    ; restore W3
+
+    MV W0, #32
+    ADD W0, W1, W0
+    LOAD W3, W0
+
+
+    ; restore W4
+
+    MV W0, #36
+    ADD W0, W1, W0
+    LOAD W4, W0
+
+
+    ; restore W5
+
+    MV W0, #40
+    ADD W0, W1, W0
+    LOAD W5, W0
+
+
+    ; restore W6
+
+    MV W0, #44
+    ADD W0, W1, W0
+    LOAD W6, W0
+
+
+    ; restore W7
+
+    MV W0, #48
+    ADD W0, W1, W0
+    LOAD W7, W0
+
+    ; restore W9
+
+    MV W0, #56
+    ADD W0, W1, W0
+    LOAD W9, W0
+
+
+    ; restore W0
+
+    MV W0, #20
+    ADD W0, W1, W0
+    LOAD W0, W0
+
+
+
+    MV W1, #SCRATCH_SPACE_0_ADDR
+    ADD W1, W8, W1
+    LOAD W1, W1
+
+
+
+    ADD W8, W8, #SCRATCH_SPACE_1_ADDR
+    LOAD W8, W8
+
+
+
+    MRET
+
 
     schedule_next_pid:
 
@@ -1470,10 +1588,6 @@ schedule:
     ADD W0, W8, W0
     STORE W9, W0
 
-
-    ; EPC = LOOP_ADDR
-    ; ESR = 48
-    ; MRET
 
     MV W0, #LOOP_ADDR
     ADD W0, W8, W0
