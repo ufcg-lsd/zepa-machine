@@ -559,8 +559,8 @@ input_int:
 
 kill_int:
     ; Obtém o início físico/offset do buffer
-    LDD W9, #MEMORY_SIZE_ADDR
-    LDD W7, #BUFFER_SIZE_ADDR
+    LDD W9, #0x200C ; #0x200C memory_size
+    LDD W7, #0x2008 ; #0x2008 BUFFER_SIZE
     SUB W9, W9, W7
 
     ; +0 = tamanho
@@ -569,7 +569,7 @@ kill_int:
     ADD W9, W9, W6
     LOAD W9, [W9]
 
-    LDD W1, #MAX_PROCESSES_ADDR ; verifica pid (valida)
+    LDD W1, #0x2000 ; #0x2000 MAX_PROCESSES (verifica pid)
 
     CMP W9, W1
     BGT not_valid
@@ -586,7 +586,7 @@ kill_int:
     ; &pcb_v[pid]
     MUL W3, W9, W2
 
-    MV  W4, #PCB_VECTOR_ADDR
+    MV  W4, #0x2024 ; #0x2024 pcb_vector
     ADD W3, W3, W4
 
     ; flags no offset 72
@@ -1372,7 +1372,7 @@ exit:
     MV W7, #16                 ; W7 = shift amount
     SHL W6, W6, W7            ; W6 = 0xC0000000 (kernel boundary)
 
-    MV W5, #0x1018             ; W5 = running_pid physical offset
+    MV W5, #0x2010             ; #0x2010 running_pid
     ADD W5, W6, W5            ; W5 = running_pid virtual address
     LOAD W9, [W5]              ; W9 = running_pid
 
@@ -1385,7 +1385,7 @@ exit:
 
     MUL W0, W9, W1             ; W0 = running_pid * pcb_size
 
-    MV W1, #0x102C             ; W1 = pcb_v physical offset
+    MV W1, #0x2024             ; #0x2024 pcb_vector
     ADD W1, W6, W1             ; W1 = pcb_v virtual initial address
     ADD W0, W0, W1             ; W0 = pcb_v[running_pid] initial address
 
@@ -1691,7 +1691,7 @@ schedule:
 
     ; clock_interrupt_count = 0
 
-    MV W0, #CLOCK_INTERRUPT_COUNT_ADDR
+    MV W0, #0x2014 ; #0x2014 clock_interrupt_count
     ADD W0, W8, W0
 
     MV W5, #0
@@ -1699,7 +1699,7 @@ schedule:
 
     ; W7 = MAX_PROCESSES
 
-    MV W0, #MAX_PROCESSES_ADDR
+    MV W0, #0x2000 ; #0x2000 MAX_PROCESSES
     ADD W0, W8, W0
     LOAD W7, W0
 
@@ -1715,7 +1715,7 @@ schedule:
     ; if running_pid >= MAX_PROCESSES:
     ;     running_pid = 0
 
-    MV W0, #RUNNING_PID_ADDR
+    MV W0, #0x2010 ; #0x2010 running_pid
     ADD W0, W8, W0
     LOAD W9, W0
 
@@ -1735,7 +1735,7 @@ schedule:
     schedule_check_current_process:
     MUL W1, W9, W6
 
-    MV W0, #PCB_VECTOR_ADDR
+    MV W0, #0x2024 ; #0x2024 pcb_vector
     ADD W0, W8, W0
     ADD W1, W0, W1
 
@@ -1800,7 +1800,7 @@ schedule:
 
     MUL W1, W4, W6
 
-    MV W0, #PCB_VECTOR_ADDR
+    MV W0, #0x2024 ; #0x2024 pcb_vector
     ADD W0, W8, W0
     ADD W1, W0, W1
 
@@ -1863,7 +1863,7 @@ schedule:
     MV W9, #0
     ADD W9, W9, W4
 
-    MV W0, #RUNNING_PID_ADDR
+    MV W0, #0x2010 ; #0x2010 running_pid
     ADD W0, W8, W0
     STORE W9, [W0]
 
@@ -1894,7 +1894,7 @@ schedule:
     ADD W0, W1, W0
     LOAD W5, W0              
 
-    MV W0, #SCRATCH_SPACE_0_ADDR
+    MV W0, #0x201C ; #0x201C scratch_space_0
     ADD W0, W8, W0
     STORE W5, W0
 
@@ -1905,7 +1905,7 @@ schedule:
     ADD W0, W1, W0
     LOAD W5, W0              
 
-    MV W0, #SCRATCH_SPACE_1_ADDR
+    MV W0, #0x2020 ; #0x2020 scratch_space_1
     ADD W0, W8, W0
     STORE W5, W0
 
@@ -1992,13 +1992,13 @@ schedule:
 
 
 
-    MV W1, #SCRATCH_SPACE_0_ADDR
+    MV W1, #0x201C ; #0x201C scratch_space_0
     ADD W1, W8, W1
     LOAD W1, W1
 
 
 
-    ADD W8, W8, #SCRATCH_SPACE_1_ADDR
+    ADD W8, W8, #0x2020 ; #0x2020 scratch_space_1
     LOAD W8, W8
 
 
@@ -2044,7 +2044,7 @@ schedule:
 
     MV W9, #-1
 
-    MV W0, #RUNNING_PID_ADDR
+    MV W0, #0x2010 ; #0x2010 running_pid
     ADD W0, W8, W0
     STORE W9, W0
 
