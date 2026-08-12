@@ -1588,7 +1588,14 @@ rele:
 
 
 kill:
-  MV W0, #pcb_v           ; W0 = pcb_v initial address
+
+  ; K0 = kernel boundary = 0xC0000000
+  MV K0, #0xC000
+  MV W1, #16
+  SHL K0, K0, W1
+
+  MV W0, #0x2024          ; #0x2024 pcb_vector
+  ADD W0, K0, W0          ; W0 = pcb_v virtual initial address
   MV W1, #0x300050        ; W1 = pcb_size
   MUL W2, W1, W9
   ADD W2, W0, W2          ; W2 = pcb_v[pid].parent_pid address
@@ -1626,8 +1633,7 @@ kill:
 
       MV W5, #64
       ADD UPTR, W3, W5      ; UPTR = pcb_v[parent].page_table virtual address
-      MV W5, #0xC0000000    ; The 3GB kernel offset
-      SUB UPTR, UPTR, W5    ; UPTR = pcb_v[parent].page_table physical address
+      SUB UPTR, UPTR, K0    ; UPTR = pcb_v[parent].page_table physical address
 
       MV W5, #56
       ADD W2, W2, W5      ; W2 = pcb_v[pid].W9 address
@@ -1747,7 +1753,8 @@ kill:
 
 
   orphanize_end:
-    MV W0, #bitmap      ; W0 = bitmap address
+    MV W0, #0x30107024  ; #0x30107024 bitmap
+    ADD W0, K0, W0      ; W0 = bitmap virtual address
 
     MV W1, #72
     ADD W1, W2, W1      ; W1 = pcb_v[pid].pages_used address
@@ -2229,7 +2236,7 @@ loop:
 map_page:
   MV W0, #0x30107024   ; #0x30107024 bitmap
   MV W3, #0xC0000000   ; 3GB kernel boundary
-  ADD W0, W0, W3       ; W0 = bitmap virtual address
+  ADD W0, W0, W3       ; W0 = bitmap virtua l address
 
   MV W1, #0x200C       ; #0x200C memory_size
   ADD W1, W1, W3       ; W1 = memory_size virtual address
