@@ -70,7 +70,9 @@ setup:
     ADD W0, W0, W1     ; W0 = physical bitmap addr
     ADD W0, W0, W9     ; W0 = virtual bitmap addr
 
-    MV W1, #0x8000     ; W1 = 2^18 frames / 8 bits = 2^15 bytes of the bitmap to populate
+    MV W1, #1
+    MV W2, #15
+    SHL W1, W1, W2     ; W1 = 2^18 frames / 8 bits = 2^15 bytes of the bitmap to populate
     ADD W1, W1, W0     ; W1 = the end of the bitmap populate portion
     
     MV W2, #-1         ; W2 = all ones, to populate the bitmap
@@ -238,7 +240,7 @@ exception_supervisor:
         CMP ECR W0
         BEQ page_fault_exc
 
-
+        JUMP #0   ; invalid exception cause, panic
 ; INTERRUPTIONS
 
 
@@ -355,10 +357,8 @@ input_int:
     SHL K0, K0, W0
 
     ; Get buffer_input_size from buffer
-    ; BUFFER_START = memory_size - BUFFER_SIZE
-    MV W3, #0x200C
-    ADD W3, K0, W3
-    LOAD W3, W3                      ; W3 = memory_size
+    ; BUFFER_START = VIRTUAL_MEMORY_LIMIT - BUFFER_SIZE
+    MV W3, #0                      ; W3 = VIRTUAL_MEMORY_LIMIT
 
     MV W2, #0x2008
     ADD W2, K0, W2
@@ -601,9 +601,7 @@ input_int:
         ADD SP, SP, W1
 
         ; Copy buffer content to user virtual memory
-        MV W3, #0x200C
-        ADD W3, K0, W3
-        LOAD W3, W3                    ; W3 = memory_size
+        MV W3, #0                    ; W3 = virtual_memory_limit
 
         MV W2, #0x2008
         ADD W2, K0, W2
@@ -672,10 +670,17 @@ input_int:
 
 
 kill_int:
-    ; Obtém o início físico/offset do buffer
-    LDD W9, #0x200C ; #0x200C memory_size
-    LDD W7, #0x2008 ; #0x2008 BUFFER_SIZE
-    SUB W9, W9, W7
+    MV K0, #3
+    MV K1, #30
+    SHL K0, K0, K1  ; K0 = 3GB kernel offset
+
+    ; Obtém o início do buffer
+    MV W9, #0       ; W9 = virtual_memory_limit
+
+    MV W7, #0x2008  ; #0x2008 BUFFER_SIZE
+    ADD W7, W7, K0  ; W7 = buffer_size virtual address
+    LOAD W7, W7     ; W7 = buffer_Size
+    SUB W9, W9, W7  ; W9 = buffer address
 
     ; +0 = tamanho
     ; +4 = PID
@@ -683,7 +688,9 @@ kill_int:
     ADD W9, W9, W6
     LOAD W9, W9
 
-    LDD W1, #0x2000 ; #0x2000 MAX_PROCESSES (verifica pid)
+    MV W1, #0x2000 ; MAX_PROCESSES (verifica pid)
+    ADD W1, W1, K0 ; W1 = max_processes virtual addr
+    LOAD W1, W1    ; W1 = max_processes
 
     CMP W9, W1
     BGT not_valid
@@ -700,7 +707,8 @@ kill_int:
     ; &pcb_v[pid]
     MUL W3, W9, W2
 
-    MV  W4, #0x2024 ; #0x2024 pcb_vector
+    MV  W4, #0x2024 ; #0x2024 pcb_vector physical address
+    ADD W4, W4, K0  ; W4 = pcb_vector virtual address
     ADD W3, W3, W4
 
     ; flags no offset 72
@@ -944,11 +952,15 @@ page_fault_restore:
     STORE W3, W2                   ; Atualiza o PC salvo no PCB
 
     ; O label schedule_restore_context exige:
-    ; W6 = &pcb_v[running_pid]
-    ; W9 = running_pid
-    ; Como ambos já estão configurados no código acima (W9 com o LDD, W6 com a base),
-    ; basta pular diretamente para a rotina que ela irá restaurar os registradores 
-    ; deste PCB específico para a CPU e executar o MRET.
+    ; W1 = &pcb_v[running_pid]
+    ; W8 = 3GB kernel offset
+
+    MV W1, #0
+    ADD W1, W1, W6    ; W1 = pcb_v[running_pid] addr
+    
+    MV W8, #0
+    ADD W8, W8, K0    ; W8 = 3GB kernel offset
+
     JUMP schedule_restore_context
 
 
@@ -1350,10 +1362,15 @@ fork:
         SHL W0, W0, W1
         MV W1, #0x50
         ADD W0, W0, W1               ; W0 = pcb_size (0x300050)
-        LDD W1, #0x2010    ; W1 = running_pid
+        
+        MV W1, #0x2010
+        ADD W1, W1, K0     ; W1 = running_pid virtual address
+        LOAD W1, W1        ; W1 = running_pid
+
         MUL W1, W1, W0
-        MV W0, #0x2024
-        ADD W0, W0, W1               ; &pcb_v[running_pid]
+        MV W0, #0x2024               ; W0 = pcb_v physical address
+        ADD W0, W0, W1               ; &pcb_v[running_pid] physical address
+        ADD W0, W0, K0               ; W0 = pcb_v[running_pid] virtual address
 
         MV W1, #56
         ADD W0, W0, W1               ; &pcb_v[running_pid].w9
@@ -1374,7 +1391,7 @@ wait:
     MV K1, #0x30
     MV W8, #16
     SHL K1, K1, W8
-    MV W8, #50
+    MV W8, #0x50
     ADD K1, K1, W8 ; K1 = bytes size of each pcb
 
     MV W2, #0x2010
@@ -1391,10 +1408,14 @@ status_addr_check:
     BGT fault_int
     BEQ fault_int ; fault_int if status_addr in a kernel address
 
-    MV W7, #1
-    MV W6, #20
-    SHL W7, W7, W6 ; takes the 20 most significant bits of address
-    UDIV W2 W9 W7 ; w2 = page_number
+    MV W7, #3
+    AND W7, W7, W9  ; checks if status_addr is 4 byte aligned
+    MV W6, #0
+    CMP W7, W6
+    BGT fault_int   ; fault_int if status_addr is not 4 byte aligned
+
+    MV W7, #-12
+    SHL W2 W9 W7 ; w2 = page_number (takes off offset from status_addr)
 
     MV W6 #28 ; 
     ADD W0 W0 W6 ; w0 points to pcb_v[RUNNING_PID].page_table[0]
@@ -1406,6 +1427,9 @@ status_addr_check:
     LOAD W4 W3 ; w4 = pcb_v[RUNNING_PID].page_table[page_number]
     
     ; W7 = 20th bit, valid
+    MV W7, #1
+    MV W6, #20
+    SHL W7, W7, W6
     CMP W4 W7
     BLT fault_int ; page_number(status_addr) is not mapped, page_fault
 
@@ -1418,7 +1442,7 @@ status_addr_check:
     CMP W6 W8 ; if pcb_v[RUNNING_PID].child  == -1:
     BEQ #2
 
-    JUMP #6
+    JUMP wait_skip_no_child
 
         MV W8 #52
         ADD W6 W2 W8 ; w6 points to pcb_v[RUNNING_PID].w9
@@ -1426,6 +1450,7 @@ status_addr_check:
         STORE W8 W6
         JUMP schedule
 
+    wait_skip_no_child:
     LOAD W3 W2 ; w3 = curr_child = pcb_v[running_pid].childPID
     MV W8, #0x2024
     ADD W0, K0, W8                ; W0 = pcb_v base
@@ -1621,7 +1646,7 @@ getPID:
     MV W8, #0x30
     MV W7, #16
     SHL W8, W8, W7
-    MV W7, 0x30
+    MV W7, #0x50
     ADD W8, W8, W7 ; W8 = pcb_size
 
     MUL W2 W0 W8 ; RUNNING_PID * pcb_size get the offset of bytes to acess pcb[RUNNING_PID]
@@ -1829,22 +1854,23 @@ kill:
 
     MV W3, #4
     ADD W3, W1, W3      ; W3 = pcb_v[pid].page_table first address (pointer i)
-    MV W4, #0x2F
+    
+    MV W4, #0x30
     MV W5, #16
-    SHL W4, W4, W5
-    MV W5, #0xFFFC
-    ADD W4, W4, W5      ; W4 = 3MB - 1B
+    SHL W4, W4, W5      ; W4 = 3MB
+    MV W5, #4
+    SUB W4, W4, W5      ; W4 = 3MB - 1B
     ADD W4, W4, W3      ; W4 = pcb_v[pid].page_table last address (pointer j)
 
     MV W5, #1
     MV W6, #20
     SHL W5, W5, W6      ; W5 = mask of valid (bit 20)
 
-    MV W6, #0xF
-    MV W7, #16
+    MV W6, #1
+    MV W7, #20
     SHL W6, W6, W7
-    MV W7, #0xFFFF
-    ADD W6, W6, W7      ; W6 = mask of page frame id (bits 0-19)
+    MV W7, #1
+    SUB W6, W6, W7      ; W6 = mask of page frame id (bits 0-19) 2^20 - 1
 
     kill_free_memory_loop:
       MV W7, #0

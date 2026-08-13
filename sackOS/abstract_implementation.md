@@ -405,3 +405,4 @@ Take caution when using these addresses, when using virutal kernel addresses, th
 - **pcb_vector**: 0x2024
 - **kernel_page_table**: 0x30007024
 - **bitmap**: 0x30107024
+(these addresses assume at most 256 processes at a time)

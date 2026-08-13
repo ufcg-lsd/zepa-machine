@@ -380,7 +380,7 @@ func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
 
 	physicalFrame := pte & 0xFFFFF
 	offset := addr % pageSize
-	physicalAddr := physicalFrame + offset
+	physicalAddr := physicalFrame*pageSize + offset
 
 	return physicalAddr, true
 }
@@ -418,13 +418,13 @@ func (m *Machine) isMmuEnabled() bool {
 }
 
 func (m *Machine) fetch() bool {
-	addr, ok := m.translate(m.registers[pc], 4)
+	m.registers[pc] += 4
+	addr, ok := m.translate(m.registers[pc]-4, 4)
 	if !ok {
 		return false
 	}
 
 	m.registers[ir] = binary.BigEndian.Uint32(m.memory[addr : addr+4])
-	m.registers[pc] += 4
 	return true
 }
 
