@@ -445,7 +445,9 @@ kill_int:
     LDD W9, #0x1010 ; memory_size
     LDD W7, #0x100C ; buffer_size
     SUB W9, W9, W7  ; initial buffer addr
-    LOAD W9, W9     ; pid of kill_int
+    MV  W2, #4      ; skip size field (LoadBuffer writes size at +0, pid at +4)
+    ADD W9, W9, W2
+    LOAD W9, W9     ; pid of kill_int (BUFFER_START+4)
 
     LDD W1, #0x1014 ; partition_number
 

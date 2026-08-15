@@ -75,7 +75,7 @@ schedule()
 
 ## kill_int()
 ```
-pid = buffer
+pid = memory[buffer + 4] //+4 skips the size field written by LoadBuffer
 if pid >= partition_number or pcb_v[pid].is_mapped = 0 or pcb_v[pid].is_zombie = 1:
   schedule()
 
