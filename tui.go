@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,12 @@ func runTUIWithMachine(m *machine.Machine) {
 	pcbVectorView.SetTitle(" PCB Vector ")
 	pcbVectorView.SetBorder(true)
 
+	outputView := tview.NewTextView()
+	outputView.SetDynamicColors(true)
+	outputView.SetScrollable(true)
+	outputView.SetTitle(" Output ")
+	outputView.SetBorder(true)
+
 	inputField := tview.NewInputField()
 	inputField.SetLabel("cmd> ")
 	inputField.SetFieldWidth(60)
@@ -52,6 +59,15 @@ func runTUIWithMachine(m *machine.Machine) {
 		pcbVectorView.SetText(m.GetProcessTableString())
 	}
 
+	appendOutput := func(text string) {
+		current := outputView.GetText(false)
+		if current != "" {
+			current += "\n"
+		}
+		current += text
+		outputView.SetText(current)
+		outputView.ScrollToEnd()
+	}
 
 	refreshAll()
 
@@ -68,6 +84,7 @@ func runTUIWithMachine(m *machine.Machine) {
 		switch parts[0] {
 		case "d", "step":
 			if !m.IsDebugMode() {
+				appendOutput("Machine is not in debug mode!")
 				return
 			}
 			steps := 1
@@ -89,27 +106,33 @@ func runTUIWithMachine(m *machine.Machine) {
 
 		case "kill":
 			if len(parts) < 2 {
+				appendOutput("usage: kill <pid>")
 				return
 			}
 			pid, err := strconv.Atoi(parts[1])
 			if err != nil {
+				appendOutput("invalid PID")
 				return
 			}
 			var buf [4]byte
 			binary.LittleEndian.PutUint32(buf[:], uint32(pid))
 			m.LoadBuffer(buf[:])
 			m.SetKillFlag()
+			appendOutput(fmt.Sprintf("kill %d sent", pid))
 
 		case "input":
 			if len(parts) < 2 {
+				appendOutput("usage: input <path>")
 				return
 			}
 			code, err := assembler.RunAssembler(parts[1])
 			if err != nil {
+				appendOutput(fmt.Sprintf("Error: %v", err))
 				return
 			}
 			m.LoadBuffer(code)
 			m.SetInputFlag()
+			appendOutput(fmt.Sprintf("input sent (%d bytes)", len(code)))
 
 		case "reg":
 			registersView.SetText(m.DebugRegistersString())
@@ -139,24 +162,26 @@ func runTUIWithMachine(m *machine.Machine) {
 		}
 	}()
 
-	// Top row: registers + processes
 	topRow := tview.NewFlex()
 	topRow.SetDirection(tview.FlexColumn)
 	topRow.AddItem(registersView, 0, 1, false)
 	topRow.AddItem(pcbView, 0, 1, false)
 
-	// Middle row: memory + pcb vector
 	middleRow := tview.NewFlex()
 	middleRow.SetDirection(tview.FlexColumn)
 	middleRow.AddItem(memoryView, 0, 1, false)
 	middleRow.AddItem(pcbVectorView, 0, 1, false)
 
-	// Full layout: top, middle, cmd
+	outputAndCmd := tview.NewFlex()
+	outputAndCmd.SetDirection(tview.FlexRow)
+	outputAndCmd.AddItem(outputView, 0, 1, false)
+	outputAndCmd.AddItem(inputField, 3, 0, true)
+
 	root := tview.NewFlex()
 	root.SetDirection(tview.FlexRow)
 	root.AddItem(topRow, 0, 3, false)
 	root.AddItem(middleRow, 0, 2, false)
-	root.AddItem(inputField, 3, 0, true)
+	root.AddItem(outputAndCmd, 5, 0, true)
 
 	app.SetRoot(root, true)
 	app.SetFocus(inputField)

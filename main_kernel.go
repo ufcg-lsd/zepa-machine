@@ -109,7 +109,7 @@ func main() {
 			binary.LittleEndian.PutUint32(buffer, uint32(pid))
 			machine.LoadBuffer(buffer)
 			machine.SetKillFlag()
-			fmt.Printf("kill %d sent\n", pid)
+			fmt.Printf("[sys] kill %d sent\n", pid)
 
 		case "input":
 			if len(parts) < 2 {
@@ -118,12 +118,12 @@ func main() {
 			}
 			code, err := assembler.RunAssembler(parts[1])
 			if err != nil {
-				fmt.Printf("Error: %v\n", err)
+				fmt.Printf("[err] %v\n", err)
 				continue
 			}
 			machine.LoadBuffer(code)
 			machine.SetInputFlag()
-			fmt.Printf("input sent\n")
+			fmt.Printf("[sys] input sent (%d bytes)\n", len(code))
 
 		case "d":
 			if !machine.IsDebugMode() {
