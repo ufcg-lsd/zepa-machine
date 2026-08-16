@@ -1,0 +1,9 @@
+{
+  "memory_size": 2147483648,
+  "partition_size": 100000,
+  "time_slice": 128,
+  "timeout_seconds": 30,
+  "programs": [
+    { "file": "../programs/a3_bitwise_shift.asm", "expected": { "w2": 8, "w3": 4294967295, "w4": 4294967287, "w6": 268435455, "w7": 4294967295, "w9": 1 } }
+  ]
+}

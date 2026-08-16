@@ -1,0 +1,16 @@
+{
+  "memory_size": 100000000,
+  "partition_size": 100000,
+  "time_slice": 128,
+  "timeout_seconds": 30,
+  "programs": [
+    {
+      "file": "examples/ok.asm",
+      "expected": { "w5": 1, "w0": 7 }
+    },
+    {
+      "file": "examples/bad.asm",
+      "expected": { "w5": 1 }
+    }
+  ]
+}

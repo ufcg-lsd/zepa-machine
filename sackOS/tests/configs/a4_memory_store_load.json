@@ -1,0 +1,9 @@
+{
+  "memory_size": 2147483648,
+  "partition_size": 100000,
+  "time_slice": 128,
+  "timeout_seconds": 30,
+  "programs": [
+    { "file": "../programs/a4_memory_store_load.asm", "expected": { "w4": 23130, "w5": 90, "w6": 90, "w7": 23130, "w9": 2 } }
+  ]
+}
