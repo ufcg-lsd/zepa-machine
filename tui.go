@@ -54,6 +54,8 @@ func runTUIWithMachine(m *machine.Machine) {
 	}
 	var currentPageTable pageTableTarget
 	var pageTableActive bool
+	var playStop chan struct{}
+	var playing bool
 
 	outputView := tview.NewTextView()
 	outputView.SetDynamicColors(true)
@@ -128,6 +130,13 @@ func runTUIWithMachine(m *machine.Machine) {
 		refreshAll()
 	}
 
+	stopPlay := func() {
+		if playing {
+			close(playStop)
+			playing = false
+		}
+	}
+
 	appendOutput := func(text string) {
 		current := outputView.GetText(false)
 		if current != "" {
@@ -159,6 +168,7 @@ func runTUIWithMachine(m *machine.Machine) {
 
 		switch parts[0] {
 		case "d", "step":
+			stopPlay()
 			if !m.IsDebugMode() {
 				appendOutput("Machine is not in debug mode!")
 				return
@@ -183,6 +193,7 @@ func runTUIWithMachine(m *machine.Machine) {
 			}()
 
 		case "b", "breakpoint":
+			stopPlay()
 			if !m.IsDebugMode() {
 				appendOutput("Machine is not in debug mode!")
 				return
@@ -224,6 +235,43 @@ func runTUIWithMachine(m *machine.Machine) {
 				return
 			}
 			appendOutput(fmt.Sprintf("Instructions executed since boot: %d", m.GetInstructionsExecuted()))
+
+		case "play":
+			if !m.IsDebugMode() {
+				appendOutput("Machine is not in debug mode!")
+				return
+			}
+			if playing {
+				appendOutput("Already playing (use 'stop')")
+				return
+			}
+			playing = true
+			playStop = make(chan struct{})
+			appendOutput("play started (100ms/step)")
+			go func() {
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-playStop:
+						return
+					case <-ticker.C:
+					}
+					m.StepChan <- struct{}{}
+					<-m.DoneChan
+					app.QueueUpdateDraw(func() {
+						refreshAll()
+					})
+				}
+			}()
+
+		case "stop":
+			if !playing {
+				appendOutput("Not playing")
+				return
+			}
+			stopPlay()
+			appendOutput("play stopped")
 
 		case "kill":
 			if len(parts) < 2 {
