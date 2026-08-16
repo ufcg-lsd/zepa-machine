@@ -2345,14 +2345,28 @@ map_page:
   MV K0, #3
   MV K1, #30
   SHL K0, K0, K1       ; K0 = 3GB kernel boundary
-  ADD W0, W0, K0       ; W0 = bitmap virtua l address
+  ADD W0, W0, K0       ; W0 = bitmap virtual address
 
   MV W1, #0x200C       ; #0x200C memory_size
   ADD W1, W1, K0       ; W1 = memory_size virtual address
   LOAD W1, W1          ; W1 = memory_size
+
+  MV W2, #0
+  CMP W1, W2
+  BEQ memory_is_4gb    ; If memory_size == 0, it overflowed from 4GB
+
+  ; normal case
   MV W2, #-12
-  SHL W1, W1, W2       ; W1 = frame_number (memory/4KB)    
-  
+  SHL W1, W1, W2       ; W1 = frame_number (memory/4KB)
+  JUMP memory_calculation_done
+
+  memory_is_4gb:
+    ; Build 0x100000 (1,048,576 frames)
+    MV W1, #1
+    MV W2, #20
+    SHL W1, W1, W2       ; W1 = 1 << 20 = 0x100000 frames
+
+  memory_calculation_done:
   MV W7, #0            ; W7 = current frame_id
 
   map_find_word_loop:
