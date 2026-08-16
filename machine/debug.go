@@ -712,19 +712,19 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 		pagesUsed := int32(readUint32(memory, pcbAddress+72))
 
 		registerValues := [13]int32{
-			int32(readUint32(memory, pcbAddress+20)),  // W0
-			int32(readUint32(memory, pcbAddress+24)),  // W1
-			int32(readUint32(memory, pcbAddress+28)),  // W2
-			int32(readUint32(memory, pcbAddress+32)),  // W3
-			int32(readUint32(memory, pcbAddress+36)),  // W4
-			int32(readUint32(memory, pcbAddress+40)),  // W5
-			int32(readUint32(memory, pcbAddress+44)),  // W6
-			int32(readUint32(memory, pcbAddress+48)),  // W7
-			int32(readUint32(memory, pcbAddress+52)),  // W8
-			int32(readUint32(memory, pcbAddress+56)),  // W9
-			int32(readUint32(memory, pcbAddress+60)),  // PC
-			int32(readUint32(memory, pcbAddress+64)),  // SP
-			int32(readUint32(memory, pcbAddress+68)),  // SR
+			int32(readUint32(memory, pcbAddress+20)), // W0
+			int32(readUint32(memory, pcbAddress+24)), // W1
+			int32(readUint32(memory, pcbAddress+28)), // W2
+			int32(readUint32(memory, pcbAddress+32)), // W3
+			int32(readUint32(memory, pcbAddress+36)), // W4
+			int32(readUint32(memory, pcbAddress+40)), // W5
+			int32(readUint32(memory, pcbAddress+44)), // W6
+			int32(readUint32(memory, pcbAddress+48)), // W7
+			int32(readUint32(memory, pcbAddress+52)), // W8
+			int32(readUint32(memory, pcbAddress+56)), // W9
+			int32(readUint32(memory, pcbAddress+60)), // PC
+			int32(readUint32(memory, pcbAddress+64)), // SP
+			int32(readUint32(memory, pcbAddress+68)), // SR
 		}
 
 		marker := " "
@@ -942,12 +942,11 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 
 var opNames = map[byte]string{
 	0: "MV", 1: "AND", 2: "OR", 3: "XOR",
-	4: "ADD", 5: "SUB", 6: "MUL", 7: "UDIV",
-	8: "SDIV", 9: "CMP", 10: "JUMP", 11: "JMPR",
-	12: "BEQ", 13: "BLT", 14: "BGT",
-	15: "LOAD", 16: "STORE", 17: "LDD", 18: "STRD",
-	19: "LDB", 20: "LDSB", 21: "STRB", 22: "MRET",
-	23: "SYSCALL",
+	4: "SHL", 5: "SHA", 6: "ADD", 7: "SUB",
+	8: "MUL", 9: "UDIV", 10: "SDIV", 11: "CMP",
+	12: "JUMP", 13: "JMPR", 14: "BEQ", 15: "BLT", 16: "BGT",
+	17: "LOAD", 18: "STORE", 19: "LDD", 20: "STRD",
+	21: "LDB", 22: "LDSB", 23: "STRB", 24: "MRET", 25: "SYSCALL",
 }
 
 var regNames = [23]string{
@@ -963,40 +962,35 @@ func decodeInstruction(inst uint32) string {
 		return ".word 0x" + fmt.Sprintf("%08X", inst)
 	}
 
-	rType := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 15, 16, 19, 20, 21}
-	isRType := false
-	for _, op := range rType {
-		if opcode == op {
-			isRType = true
-			break
-		}
-	}
+	rd := byte((inst >> 21) & 0x1F)
+	rs1 := byte((inst >> 16) & 0x1F)
+	rs2 := byte((inst >> 11) & 0x1F)
+	imm := (inst >> 5) & 0xFFFF
 
-	if isRType {
-		rd := byte((inst >> 21) & 0x1F)
-		rs1 := byte((inst >> 16) & 0x1F)
-		rs2 := byte((inst >> 11) & 0x1F)
-		if opcode == 9 {
-			return fmt.Sprintf("%s %s, %s", name, regNames[rs1], regNames[rs2])
-		}
-		if opcode == 11 || opcode == 15 || opcode == 16 || opcode == 19 || opcode == 20 || opcode == 21 {
-			return fmt.Sprintf("%s %s, [%s]", name, regNames[rd], regNames[rs1])
-		}
+	switch opcode {
+	// R-Type arithmetic: rd, rs1, rs2
+	case 1, 2, 3, 4, 5, 6, 7, 8, 9, 10: // AND, OR, XOR, SHL, SHA, ADD, SUB, MUL, UDIV, SDIV
 		return fmt.Sprintf("%s %s, %s, %s", name, regNames[rd], regNames[rs1], regNames[rs2])
-	}
-
-	rs1rd := byte((inst >> 21) & 0x1F)
-	imm := int16((inst >> 5) & 0xFFFF)
-	if opcode == 10 || opcode == 12 || opcode == 13 || opcode == 14 {
-		return fmt.Sprintf("%s %+d", name, imm)
-	}
-	if opcode == 22 {
+	case 11: // CMP
+		return fmt.Sprintf("%s %s, %s", name, regNames[rs1], regNames[rs2])
+	case 13: // JMPR
+		return fmt.Sprintf("%s %s", name, regNames[rs1])
+	// R-Type memory: value, [address register]
+	case 17, 18, 21, 22, 23: // LOAD, STORE, LDB, LDSB, STRB
+		return fmt.Sprintf("%s %s, [%s]", name, regNames[rs1], regNames[rs2])
+	// I-Type branches: relative immediate
+	case 12, 14, 15, 16: // JUMP, BEQ, BLT, BGT
+		return fmt.Sprintf("%s %+d", name, int16(imm))
+	// I-Type with destination register and immediate
+	case 0, 19, 20: // MV, LDD, STRD
+		return fmt.Sprintf("%s %s, #%d", name, regNames[rd], imm)
+	case 24: // MRET
 		return "MRET"
-	}
-	if opcode == 23 {
+	case 25: // SYSCALL
 		return fmt.Sprintf("SYSCALL #%d", imm)
+	default:
+		return ".word 0x" + fmt.Sprintf("%08X", inst)
 	}
-	return fmt.Sprintf("%s %s, #%d", name, regNames[rs1rd], imm)
 }
 
 func (m *Machine) GetMemoryViewString() string {
