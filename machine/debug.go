@@ -15,6 +15,30 @@ func readUint32(memory []byte, addr uint32) uint32 {
 		uint32(memory[addr+3])<<24
 }
 
+const (
+	debugMaxProcessesAddr    = 0x2000
+	debugRunningPidAddr      = 0x2010
+	debugPCBVectorAddr       = 0x2024
+	debugKernelPageTableAddr = 0x30007024
+	debugPCBByteSize         = 0x300050
+	debugKernelPTEStride     = 0x4
+	debugMemorySizeAddr      = 0x200C
+	debugBitmapAddr          = 0x30107024
+
+	debugBitmapBitsPerGroup = 8
+	debugBitmapFramesPerRow = 32
+
+	debugPCBFlagsOffset     = 0x48
+	debugPCBPagesUsedOffset = 0x4C
+	debugPCBPageTableOffset = 0x50
+
+	debugKernelPTECount = 1 << 18
+)
+
+func physicalFrameOfPTE(pte uint32) uint32 {
+	return pte & 0xFFFFF
+}
+
 func getRegisterName(reg Register) string {
 	switch reg {
 	case 0:
@@ -572,18 +596,18 @@ func (m *Machine) debugKernelVarsTo(out io.Writer) {
 		extra string
 	}
 
-	maxProcesses := readUint32(memory, 0x2000)
+	maxProcesses := readUint32(memory, debugMaxProcessesAddr)
 	timeSlice := readUint32(memory, 0x2004)
 	bufferSize := readUint32(memory, 0x2008)
 	memorySize := readUint32(memory, 0x200C)
-	runningPid := readUint32(memory, 0x2010)
+	runningPid := readUint32(memory, debugRunningPidAddr)
 	clockInterruptCount := readUint32(memory, 0x2014)
 	kernelStackPointer := readUint32(memory, 0x2018)
 	scratchSpace0 := readUint32(memory, 0x201C)
 	scratchSpace1 := readUint32(memory, 0x2020)
-	pcbVector := readUint32(memory, 0x2024)
+	pcbVector := readUint32(memory, debugPCBVectorAddr)
 
-	const pcbSize uint32 = 0x300050
+	const pcbSize uint32 = debugPCBByteSize
 
 	runningPidExtra := ""
 	if runningPid == 0xFFFFFFFF {
@@ -678,8 +702,8 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 	defer m.mu.RUnlock()
 	memory := m.memory
 
-	maxProcesses := readUint32(memory, 0x2000)
-	runningPid := readUint32(memory, 0x2010)
+	maxProcesses := readUint32(memory, debugMaxProcessesAddr)
+	runningPid := readUint32(memory, debugRunningPidAddr)
 
 	if maxProcesses == 0 {
 		fmt.Fprintln(out, "No processes (MAX_PROCESSES = 0).")
@@ -698,8 +722,8 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 	var processes []pcbRow
 
 	for pid := uint32(0); pid < maxProcesses; pid++ {
-		pcbAddress := 0x2024 + pid*0x300050
-		flags := memory[pcbAddress+76]
+		pcbAddress := debugPCBVectorAddr + pid*debugPCBByteSize
+		flags := memory[pcbAddress+debugPCBFlagsOffset]
 
 		if flags&1 == 0 {
 			continue
@@ -709,7 +733,7 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 			readUint32(memory, pcbAddress+0),
 		)
 
-		pagesUsed := int32(readUint32(memory, pcbAddress+72))
+		pagesUsed := int32(readUint32(memory, pcbAddress+debugPCBPagesUsedOffset))
 
 		registerValues := [13]int32{
 			int32(readUint32(memory, pcbAddress+20)), // W0
@@ -1103,8 +1127,8 @@ func (m *Machine) GetPCBVectorString() string {
 	w := &buf
 
 	memory := m.memory
-	maxProcesses := readUint32(memory, 0x2000)
-	runningPid := readUint32(memory, 0x2010)
+	maxProcesses := readUint32(memory, debugMaxProcessesAddr)
+	runningPid := readUint32(memory, debugRunningPidAddr)
 
 	if maxProcesses == 0 {
 		fmt.Fprintln(w, "No processes.")
@@ -1131,8 +1155,8 @@ func (m *Machine) GetPCBVectorString() string {
 	var entries []pcbEntry
 
 	for pid := uint32(0); pid < maxProcesses; pid++ {
-		pcbAddr := 0x2024 + pid*0x300050
-		flags := memory[pcbAddr+76]
+		pcbAddr := debugPCBVectorAddr + pid*debugPCBByteSize
+		flags := memory[pcbAddr+debugPCBFlagsOffset]
 		if flags&1 == 0 {
 			continue
 		}
@@ -1157,7 +1181,7 @@ func (m *Machine) GetPCBVectorString() string {
 			pc:         int32(readUint32(memory, pcbAddr+60)),
 			sp:         int32(readUint32(memory, pcbAddr+64)),
 			sr:         int32(readUint32(memory, pcbAddr+68)),
-			pages:      int32(readUint32(memory, pcbAddr+72)),
+			pages:      int32(readUint32(memory, pcbAddr+debugPCBPagesUsedOffset)),
 			flags:      flags,
 			state:      pcbState(flags),
 		})
