@@ -90,7 +90,9 @@ func runTUIWithMachine(m *machine.Machine) {
 			steps := 1
 			if len(parts) > 1 {
 				parsedSteps, err := strconv.Atoi(parts[1])
-				if err == nil && parsedSteps > 0 {
+				if err != nil || parsedSteps <= 0 {
+					appendOutput("Invalid number of steps. Running 1 step.")
+				} else {
 					steps = parsedSteps
 				}
 			}
@@ -103,6 +105,44 @@ func runTUIWithMachine(m *machine.Machine) {
 					refreshAll()
 				})
 			}()
+
+		case "b", "breakpoint":
+			if !m.IsDebugMode() {
+				appendOutput("Machine is not in debug mode!")
+				return
+			}
+			if len(parts) < 2 {
+				appendOutput("usage: b <pc>")
+				return
+			}
+			pcValue, err := strconv.Atoi(parts[1])
+			if err != nil || pcValue < 0 {
+				appendOutput("Invalid PC.")
+				return
+			}
+			go func() {
+				instructionCount := 0
+				for {
+					m.StepChan <- struct{}{}
+					<-m.DoneChan
+					instructionCount++
+
+					if m.GetRegisters()[10] == uint32(pcValue) {
+						break
+					}
+				}
+				app.QueueUpdateDraw(func() {
+					appendOutput(fmt.Sprintf("Breakpoint reached at pc=%d after %d instructions", pcValue, instructionCount))
+					refreshAll()
+				})
+			}()
+
+		case "c", "count":
+			if !m.IsDebugMode() {
+				appendOutput("Machine is not in debug mode!")
+				return
+			}
+			appendOutput(fmt.Sprintf("Instructions executed since boot: %d", m.GetInstructionsExecuted()))
 
 		case "kill":
 			if len(parts) < 2 {
@@ -118,7 +158,7 @@ func runTUIWithMachine(m *machine.Machine) {
 			binary.LittleEndian.PutUint32(buf[:], uint32(pid))
 			m.LoadBuffer(buf[:])
 			m.SetKillFlag()
-			appendOutput(fmt.Sprintf("kill %d sent", pid))
+			appendOutput(fmt.Sprintf("[sys] kill %d sent", pid))
 
 		case "input":
 			if len(parts) < 2 {
@@ -127,12 +167,12 @@ func runTUIWithMachine(m *machine.Machine) {
 			}
 			code, err := assembler.RunAssembler(parts[1])
 			if err != nil {
-				appendOutput(fmt.Sprintf("Error: %v", err))
+				appendOutput(fmt.Sprintf("[err] %v", err))
 				return
 			}
 			m.LoadBuffer(code)
 			m.SetInputFlag()
-			appendOutput(fmt.Sprintf("input sent (%d bytes)", len(code)))
+			appendOutput(fmt.Sprintf("[sys] input sent (%d bytes)", len(code)))
 
 		case "reg":
 			registersView.SetText(m.DebugRegistersString())
@@ -142,6 +182,10 @@ func runTUIWithMachine(m *machine.Machine) {
 
 		case "refresh":
 			refreshAll()
+
+		case "q", "quit":
+			appendOutput("exiting debugger")
+			app.Stop()
 		}
 	})
 

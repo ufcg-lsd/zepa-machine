@@ -87,7 +87,7 @@ func main() {
 
 	// CLI loop
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("Commands: d (step), r (restore), reg (registers), pcb (processes), kill <pid>, input <path>")
+	fmt.Println("Commands: d (step), r (restore), reg (registers), pcb (processes), b (breakpoint), c (instruction counter), kill <pid>, input <path>")
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		parts := strings.Fields(line)
@@ -163,17 +163,27 @@ func main() {
 				}
 
 				machine.SaveCheckpoint()
+				instructionCount := 0
 				for {
 					machine.StepChan <- struct{}{}
 					<-machine.DoneChan
+					instructionCount++
 
 					if machine.GetRegisters()[10] == uint32(pcValue) {
 						break
 					}
 				}
 
+				fmt.Printf("Breakpoint reached at pc=%d after %d instructions\n", pcValue, instructionCount)
 				machine.DebugRegisters()
 			}
+
+		case "c":
+			if !machine.IsDebugMode() {
+				fmt.Printf("Machine is not in debug mode!\n")
+				continue
+			}
+			fmt.Printf("Instructions executed since boot: %d\n", machine.GetInstructionsExecuted())
 
 		case "r":
 			if !machine.IsDebugMode() {
