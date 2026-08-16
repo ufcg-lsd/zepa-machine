@@ -1238,6 +1238,8 @@ func decodeInstruction(inst uint32) string {
 }
 
 func (m *Machine) GetMemoryViewString() string {
+	const windowHalf = 5wi
+
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -1251,8 +1253,8 @@ func (m *Machine) GetMemoryViewString() string {
 	currentAddr := pc
 
 	startAddr := currentAddr
-	if startAddr >= 8 {
-		startAddr -= 8
+	if startAddr >= windowHalf*4 {
+		startAddr -= windowHalf * 4
 	} else {
 		startAddr = 0
 	}
@@ -1265,7 +1267,7 @@ func (m *Machine) GetMemoryViewString() string {
 	}
 
 	var entries []instrEntry
-	for addr := startAddr; addr <= currentAddr+8; addr += 4 {
+	for addr := startAddr; addr <= currentAddr+windowHalf*4; addr += 4 {
 		physAddr, _ := m.translate(addr, 3)
 		raw := m.ReadWord(physAddr)
 		if raw == 0 {
@@ -1288,14 +1290,14 @@ func (m *Machine) GetMemoryViewString() string {
 		}
 	}
 
-	from := centerIdx - 2
+	from := centerIdx - windowHalf
 	if from < 0 {
 		from = 0
 	}
-	to := from + 4
+	to := from + windowHalf*2
 	if to >= len(entries) {
 		to = len(entries) - 1
-		from = to - 4
+		from = to - windowHalf*2
 		if from < 0 {
 			from = 0
 		}
