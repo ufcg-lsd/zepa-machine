@@ -1221,7 +1221,7 @@ func decodeInstruction(inst uint32) string {
 		return fmt.Sprintf("%s %s", name, regNames[rs1])
 	// R-Type memory: value, [address register]
 	case 17, 18, 21, 22, 23: // LOAD, STORE, LDB, LDSB, STRB
-		return fmt.Sprintf("%s %s, [%s]", name, regNames[rs1], regNames[rs2])
+		return fmt.Sprintf("%s %s, %s", name, regNames[rs1], regNames[rs2])
 	// I-Type branches: relative immediate
 	case 12, 14, 15, 16: // JUMP, BEQ, BLT, BGT
 		return fmt.Sprintf("%s %+d", name, int16(imm))
@@ -1238,8 +1238,7 @@ func decodeInstruction(inst uint32) string {
 }
 
 func (m *Machine) GetMemoryViewString() string {
-	const windowHalf = 5wi
-
+	const numInstructions = 5
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -1253,8 +1252,8 @@ func (m *Machine) GetMemoryViewString() string {
 	currentAddr := pc
 
 	startAddr := currentAddr
-	if startAddr >= windowHalf*4 {
-		startAddr -= windowHalf * 4
+	if startAddr >= 8 {
+		startAddr -= 8
 	} else {
 		startAddr = 0
 	}
@@ -1267,7 +1266,7 @@ func (m *Machine) GetMemoryViewString() string {
 	}
 
 	var entries []instrEntry
-	for addr := startAddr; addr <= currentAddr+windowHalf*4; addr += 4 {
+	for addr := startAddr; addr <= currentAddr+8; addr += 4 {
 		physAddr, _ := m.translate(addr, 3)
 		raw := m.ReadWord(physAddr)
 		if raw == 0 {
@@ -1290,14 +1289,15 @@ func (m *Machine) GetMemoryViewString() string {
 		}
 	}
 
-	from := centerIdx - windowHalf
+	from := centerIdx - 2
 	if from < 0 {
 		from = 0
 	}
-	to := from + windowHalf*2
+	to := from + 4
+
 	if to >= len(entries) {
 		to = len(entries) - 1
-		from = to - windowHalf*2
+		from = to - 4
 		if from < 0 {
 			from = 0
 		}
@@ -1306,7 +1306,6 @@ func (m *Machine) GetMemoryViewString() string {
 	displayed := entries[from : to+1]
 
 	addrW := 6
-	hexW := 10
 	instrW := 0
 	for _, e := range displayed {
 		if len(e.decode) > instrW {
@@ -1317,13 +1316,11 @@ func (m *Machine) GetMemoryViewString() string {
 		instrW = 7
 	}
 
-	fmt.Fprintf(w, " %-*s \u2502 %-*s \u2502 %-*s\n",
+	fmt.Fprintf(w, " %-*s \u2502 %-*s\n",
 		addrW+1, "ADDR",
-		hexW, "HEX",
 		instrW, "INSTRUCTION")
 
 	fmt.Fprintf(w, strings.Repeat("\u2500", addrW+3)+"\u253C"+
-		strings.Repeat("\u2500", hexW+2)+"\u253C"+
 		strings.Repeat("\u2500", instrW+2)+"\n")
 
 	for _, e := range displayed {
@@ -1331,10 +1328,9 @@ func (m *Machine) GetMemoryViewString() string {
 		if e.isCurrent {
 			marker = ">"
 		}
-		fmt.Fprintf(w, "%s%-*s \u2502 0x%08X \u2502 %-*s\n",
+		fmt.Fprintf(w, "%s%-*s \u2502 %-*s\n",
 			marker,
 			addrW+1, fmt.Sprintf("0x%04X", e.addr),
-			e.raw,
 			instrW, e.decode)
 	}
 
