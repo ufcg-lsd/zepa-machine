@@ -127,12 +127,17 @@ func runTUIWithMachine(m *machine.Machine) {
 					<-m.DoneChan
 					instructionCount++
 
-					if m.GetRegisters()[10] == uint32(pcValue) {
+					pc := m.GetRegisters()[10]
+					if pc == uint32(pcValue) || pc == uint32(pcValue)+kernelMappingOffset {
 						break
 					}
 				}
 				app.QueueUpdateDraw(func() {
-					appendOutput(fmt.Sprintf("Breakpoint reached at pc=%d after %d instructions", pcValue, instructionCount))
+					logicalPC := m.GetRegisters()[10]
+					if logicalPC >= kernelMappingOffset {
+						logicalPC -= kernelMappingOffset
+					}
+					appendOutput(fmt.Sprintf("Breakpoint reached at pc=%d after %d instructions", logicalPC, instructionCount))
 					refreshAll()
 				})
 			}()

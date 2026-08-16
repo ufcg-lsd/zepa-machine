@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	buffer        = 64 * 1024       // 64KB
-	minKernelSize = 8 * 1024 * 1024 // 8MB
+	buffer              = 64 * 1024       // 64KB
+	minKernelSize       = 8 * 1024 * 1024 // 8MB
+	kernelMappingOffset = 0xC0000000      // kernel mapeado 3GB acima
 )
 
 func main() {
@@ -169,12 +170,17 @@ func main() {
 					<-machine.DoneChan
 					instructionCount++
 
-					if machine.GetRegisters()[10] == uint32(pcValue) {
+					pc := machine.GetRegisters()[10]
+					if pc == uint32(pcValue) || pc == uint32(pcValue)+kernelMappingOffset {
 						break
 					}
 				}
 
-				fmt.Printf("Breakpoint reached at pc=%d after %d instructions\n", pcValue, instructionCount)
+				logicalPC := machine.GetRegisters()[10]
+				if logicalPC >= kernelMappingOffset {
+					logicalPC -= kernelMappingOffset
+				}
+				fmt.Printf("Breakpoint reached at pc=%d after %d instructions\n", logicalPC, instructionCount)
 				machine.DebugRegisters()
 			}
 
