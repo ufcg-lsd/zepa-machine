@@ -802,7 +802,7 @@ wait:
     LOAD W9 W0 ; w9 = status_addr
 
     MV W8 #20
-    ADD W0 W8 ; w0 points to pcb_v[running_pid].BASE
+    ADD W0 W0 W8 ; w0 points to pcb_v[running_pid].BASE
 
     LOAD W2 W0 ; w2 = pcb_v[RUNNING_PID].BASE
     
