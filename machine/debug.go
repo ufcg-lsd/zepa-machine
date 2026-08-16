@@ -1238,82 +1238,48 @@ func decodeInstruction(inst uint32) string {
 }
 
 func (m *Machine) GetMemoryViewString() string {
-	const numInstructions = 5
+	const numInstructions = 15
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	var buf strings.Builder
 	w := &buf
 
-	pc := m.registers[pc]
-	if pc < 4 {
-		pc = 4
-	}
-	currentAddr := pc
-
-	startAddr := currentAddr
-	if startAddr >= 8 {
-		startAddr -= 8
-	} else {
-		startAddr = 0
-	}
+	currentAddr := m.registers[pc]
+	memLimit := int64(len(m.memory))
 
 	type instrEntry struct {
 		addr      uint32
-		raw       uint32
 		decode    string
 		isCurrent bool
 	}
 
 	var entries []instrEntry
-	for addr := startAddr; addr <= currentAddr+8; addr += 4 {
-		physAddr, _ := m.translate(addr, 3)
-		raw := m.ReadWord(physAddr)
-		if raw == 0 {
+	for i := -(numInstructions / 2); i <= numInstructions/2; i++ {
+		virtAddr := int64(currentAddr) + int64(i)*4
+		if virtAddr < 0 || virtAddr+4 > int64(1)<<32 {
 			continue
 		}
-		decoded := decodeInstruction(raw)
+
+		addr := uint32(virtAddr)
+		physAddr, ok := m.lookupPhysical(addr, 4)
+		if !ok || int64(physAddr)+4 > memLimit {
+			continue
+		}
+
 		entries = append(entries, instrEntry{
 			addr:      addr,
-			raw:       raw,
-			decode:    decoded,
+			decode:    decodeInstruction(m.ReadWord(physAddr)),
 			isCurrent: addr == currentAddr,
 		})
 	}
 
-	centerIdx := 0
-	for i, e := range entries {
-		if e.isCurrent {
-			centerIdx = i
-			break
-		}
-	}
-
-	from := centerIdx - 2
-	if from < 0 {
-		from = 0
-	}
-	to := from + 4
-
-	if to >= len(entries) {
-		to = len(entries) - 1
-		from = to - 4
-		if from < 0 {
-			from = 0
-		}
-	}
-
-	displayed := entries[from : to+1]
-
 	addrW := 6
-	instrW := 0
-	for _, e := range displayed {
+	instrW := 7
+	for _, e := range entries {
 		if len(e.decode) > instrW {
 			instrW = len(e.decode)
 		}
-	}
-	if instrW < 7 {
-		instrW = 7
 	}
 
 	fmt.Fprintf(w, " %-*s \u2502 %-*s\n",
@@ -1323,7 +1289,7 @@ func (m *Machine) GetMemoryViewString() string {
 	fmt.Fprintf(w, strings.Repeat("\u2500", addrW+3)+"\u253C"+
 		strings.Repeat("\u2500", instrW+2)+"\n")
 
-	for _, e := range displayed {
+	for _, e := range entries {
 		marker := " "
 		if e.isCurrent {
 			marker = ">"
