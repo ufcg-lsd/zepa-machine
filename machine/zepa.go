@@ -146,15 +146,16 @@ type Instruction struct {
 }
 
 type Machine struct {
-	memory     []byte
-	registers  map[Register]uint32
-	mu         sync.RWMutex
-	killFlag   bool
-	inputFlag  bool
-	debugFlag  bool
-	StepChan   chan struct{}
-	DoneChan   chan struct{}
-	checkpoint *Machine
+	memory               []byte
+	registers            map[Register]uint32
+	mu                   sync.RWMutex
+	killFlag             bool
+	inputFlag            bool
+	debugFlag            bool
+	instructionsExecuted uint64
+	StepChan             chan struct{}
+	DoneChan             chan struct{}
+	checkpoint           *Machine
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -341,20 +342,16 @@ func (m *Machine) syscall(inst Instruction) {
 	m.exception(syscallExc)
 }
 
-func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
+func (m *Machine) lookupPhysical(addr uint32, byteCount uint32) (uint32, bool) {
 	if !m.isMmuEnabled() {
 		return addr, true
 	}
 
 	if byteCount == 4 && addr%4 != 0 {
-		m.registers[efa] = addr
-		m.exception(faultExc) // unaligned address
 		return 0, false
 	}
 
 	if !m.isKernelMode() && addr >= kernelBoundary {
-		m.exception(pageFaultExc)
-		m.registers[efa] = addr
 		return 0, false
 	}
 
@@ -373,14 +370,40 @@ func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
 	pte := binary.LittleEndian.Uint32(m.memory[pteAddr : pteAddr+4])
 
 	if pte&isPteMappedMask == 0 {
-		m.registers[efa] = addr
-		m.exception(pageFaultExc)
 		return 0, false
 	}
 
 	physicalFrame := pte & 0xFFFFF
 	offset := addr % pageSize
 	physicalAddr := physicalFrame*pageSize + offset
+
+	return physicalAddr, true
+}
+
+func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
+	if !m.isMmuEnabled() {
+		return addr, true
+	}
+
+	if byteCount == 4 && addr%4 != 0 {
+		m.registers[efa] = addr
+		m.exception(faultExc) // unaligned address
+		return 0, false
+	}
+
+	if !m.isKernelMode() && addr >= kernelBoundary {
+		m.exception(pageFaultExc)
+		m.registers[efa] = addr
+		return 0, false
+	}
+
+	physicalAddr, ok := m.lookupPhysical(addr, byteCount)
+	if !ok {
+		// unmapped PTE
+		m.registers[efa] = addr
+		m.exception(pageFaultExc)
+		return 0, false
+	}
 
 	return physicalAddr, true
 }
@@ -500,7 +523,7 @@ func (m *Machine) execute(inst Instruction) {
 
 func (m *Machine) Boot() {
 	m.registers[w0] = uint32(len(m.memory))
-	instructionsExcecuted := 0
+	clockCounter := 0
 
 	var decodedInstruction Instruction
 	var ok bool
@@ -533,11 +556,12 @@ func (m *Machine) Boot() {
 		}
 
 		m.execute(decodedInstruction)
+		m.instructionsExecuted++
 
 		if m.isInterruptEnabled() {
-			instructionsExcecuted++
+			clockCounter++
 
-			if instructionsExcecuted%TIMER_INTERVAL == 0 {
+			if clockCounter%TIMER_INTERVAL == 0 {
 				m.exception(clockInt)
 			} else if m.killFlag {
 				m.exception(killInt)
@@ -624,6 +648,12 @@ func (m *Machine) IsDebugMode() bool {
 func (m *Machine) GetRegisters() map[Register]uint32 {
 
 	return m.registers
+}
+
+func (m *Machine) GetInstructionsExecuted() uint64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.instructionsExecuted
 }
 
 func NewMachine(memoryBytes int, debugFlag bool) *Machine {

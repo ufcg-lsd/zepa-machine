@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	buffer        = 64 * 1024       // 64KB
-	minKernelSize = 8 * 1024 * 1024 // 8MB
+	buffer              = 64 * 1024       // 64KB
+	minKernelSize       = 8 * 1024 * 1024 // 8MB
+	kernelMappingOffset = 0xC0000000      // kernel mapeado 3GB acima
 )
 
 func main() {
@@ -87,7 +88,7 @@ func main() {
 
 	// CLI loop
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("Commands: d (step), r (restore), reg (registers), pcb (processes), kill <pid>, input <path>")
+	fmt.Println("Commands: d (step), r (restore), reg (registers), pcb (processes), b (breakpoint), c (instruction counter), kill <pid>, input <path>")
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		parts := strings.Fields(line)
@@ -109,7 +110,7 @@ func main() {
 			binary.LittleEndian.PutUint32(buffer, uint32(pid))
 			machine.LoadBuffer(buffer)
 			machine.SetKillFlag()
-			fmt.Printf("kill %d sent\n", pid)
+			fmt.Printf("[sys] kill %d sent\n", pid)
 
 		case "input":
 			if len(parts) < 2 {
@@ -118,12 +119,12 @@ func main() {
 			}
 			code, err := assembler.RunAssembler(parts[1])
 			if err != nil {
-				fmt.Printf("Error: %v\n", err)
+				fmt.Printf("[err] %v\n", err)
 				continue
 			}
 			machine.LoadBuffer(code)
 			machine.SetInputFlag()
-			fmt.Printf("input sent\n")
+			fmt.Printf("[sys] input sent (%d bytes)\n", len(code))
 
 		case "d":
 			if !machine.IsDebugMode() {
@@ -163,17 +164,32 @@ func main() {
 				}
 
 				machine.SaveCheckpoint()
+				instructionCount := 0
 				for {
 					machine.StepChan <- struct{}{}
 					<-machine.DoneChan
+					instructionCount++
 
-					if machine.GetRegisters()[10] == uint32(pcValue) {
+					pc := machine.GetRegisters()[10]
+					if pc == uint32(pcValue) || pc == uint32(pcValue)+kernelMappingOffset {
 						break
 					}
 				}
 
+				logicalPC := machine.GetRegisters()[10]
+				if logicalPC >= kernelMappingOffset {
+					logicalPC -= kernelMappingOffset
+				}
+				fmt.Printf("Breakpoint reached at pc=%d after %d instructions\n", logicalPC, instructionCount)
 				machine.DebugRegisters()
 			}
+
+		case "c":
+			if !machine.IsDebugMode() {
+				fmt.Printf("Machine is not in debug mode!\n")
+				continue
+			}
+			fmt.Printf("Instructions executed since boot: %d\n", machine.GetInstructionsExecuted())
 
 		case "r":
 			if !machine.IsDebugMode() {
