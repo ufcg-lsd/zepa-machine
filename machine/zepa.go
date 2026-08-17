@@ -157,7 +157,6 @@ type Machine struct {
 	totalCycles          uint64
 	StepChan             chan struct{}
 	DoneChan             chan struct{}
-	checkpoint           *Machine
 }
 
 func (m *Machine) mv(inst Instruction) int {
@@ -630,32 +629,6 @@ func (m *Machine) Boot() {
 		}
 
 	}
-}
-
-func (m *Machine) SaveCheckpoint() {
-	cp := &Machine{
-		memory:               make([]byte, len(m.memory)),
-		registers:            make(map[Register]uint32, len(m.registers)),
-		instructionsExecuted: m.instructionsExecuted,
-		totalCycles:          m.totalCycles,
-		debugFlag:            m.debugFlag,
-	}
-	copy(cp.memory, m.memory)
-	for k, v := range m.registers {
-		cp.registers[k] = v
-	}
-	m.checkpoint = cp
-}
-
-func (m *Machine) RestoreCheckpoint() bool {
-	if m.checkpoint == nil {
-		return false
-	}
-	m.memory, m.checkpoint.memory = m.checkpoint.memory, m.memory
-	m.registers, m.checkpoint.registers = m.checkpoint.registers, m.registers
-	m.instructionsExecuted, m.checkpoint.instructionsExecuted = m.checkpoint.instructionsExecuted, m.instructionsExecuted
-	m.totalCycles, m.checkpoint.totalCycles = m.checkpoint.totalCycles, m.totalCycles
-	return true
 }
 
 func (m *Machine) LoadProgram(program []byte) {

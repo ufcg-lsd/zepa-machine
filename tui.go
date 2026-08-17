@@ -121,7 +121,7 @@ func runTUIWithMachine(m *machine.Machine) {
 	root.SetDirection(tview.FlexRow)
 	root.AddItem(topRow, 0, 3, false)
 	root.AddItem(middleRow, 0, 2, false)
-	root.AddItem(outputAndCmd, 5, 0, true)
+	root.AddItem(outputAndCmd, 10, 0, true)
 
 	closePageTable := func() {
 		pageTableActive = false
@@ -169,10 +169,6 @@ func runTUIWithMachine(m *machine.Machine) {
 		switch parts[0] {
 		case "d", "step":
 			stopPlay()
-			if !m.IsDebugMode() {
-				appendOutput("Machine is not in debug mode!")
-				return
-			}
 			steps := 1
 			if len(parts) > 1 {
 				parsedSteps, err := strconv.Atoi(parts[1])
@@ -197,10 +193,6 @@ func runTUIWithMachine(m *machine.Machine) {
 
 		case "b", "breakpoint":
 			stopPlay()
-			if !m.IsDebugMode() {
-				appendOutput("Machine is not in debug mode!")
-				return
-			}
 			if len(parts) < 2 {
 				appendOutput("usage: b <pc>")
 				return
@@ -236,10 +228,6 @@ func runTUIWithMachine(m *machine.Machine) {
 			}()
 
 		case "c", "count":
-			if !m.IsDebugMode() {
-				appendOutput("Machine is not in debug mode!")
-				return
-			}
 			instructions := m.GetInstructionsExecuted()
 			cycles := m.GetCyclesExecuted()
 			appendOutput(fmt.Sprintf("Instructions executed since boot: %d", instructions))
@@ -249,10 +237,6 @@ func runTUIWithMachine(m *machine.Machine) {
 			}
 
 		case "play":
-			if !m.IsDebugMode() {
-				appendOutput("Machine is not in debug mode!")
-				return
-			}
 			if playing {
 				appendOutput("Already playing (use 'stop')")
 				return
