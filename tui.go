@@ -121,7 +121,7 @@ func runTUIWithMachine(m *machine.Machine) {
 	root.SetDirection(tview.FlexRow)
 	root.AddItem(topRow, 0, 3, false)
 	root.AddItem(middleRow, 0, 2, false)
-	root.AddItem(outputAndCmd, 5, 0, true)
+	root.AddItem(outputAndCmd, 10, 0, true)
 
 	closePageTable := func() {
 		pageTableActive = false
