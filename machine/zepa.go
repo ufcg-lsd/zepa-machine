@@ -342,20 +342,16 @@ func (m *Machine) syscall(inst Instruction) {
 	m.exception(syscallExc)
 }
 
-func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
+func (m *Machine) lookupPhysical(addr uint32, byteCount uint32) (uint32, bool) {
 	if !m.isMmuEnabled() {
 		return addr, true
 	}
 
 	if byteCount == 4 && addr%4 != 0 {
-		m.registers[efa] = addr
-		m.exception(faultExc) // unaligned address
 		return 0, false
 	}
 
 	if !m.isKernelMode() && addr >= kernelBoundary {
-		m.exception(pageFaultExc)
-		m.registers[efa] = addr
 		return 0, false
 	}
 
@@ -374,14 +370,40 @@ func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
 	pte := binary.LittleEndian.Uint32(m.memory[pteAddr : pteAddr+4])
 
 	if pte&isPteMappedMask == 0 {
-		m.registers[efa] = addr
-		m.exception(pageFaultExc)
 		return 0, false
 	}
 
 	physicalFrame := pte & 0xFFFFF
 	offset := addr % pageSize
 	physicalAddr := physicalFrame*pageSize + offset
+
+	return physicalAddr, true
+}
+
+func (m *Machine) translate(addr uint32, byteCount uint32) (uint32, bool) {
+	if !m.isMmuEnabled() {
+		return addr, true
+	}
+
+	if byteCount == 4 && addr%4 != 0 {
+		m.registers[efa] = addr
+		m.exception(faultExc) // unaligned address
+		return 0, false
+	}
+
+	if !m.isKernelMode() && addr >= kernelBoundary {
+		m.exception(pageFaultExc)
+		m.registers[efa] = addr
+		return 0, false
+	}
+
+	physicalAddr, ok := m.lookupPhysical(addr, byteCount)
+	if !ok {
+		// unmapped PTE
+		m.registers[efa] = addr
+		m.exception(pageFaultExc)
+		return 0, false
+	}
 
 	return physicalAddr, true
 }

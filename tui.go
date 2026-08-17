@@ -42,6 +42,21 @@ func runTUIWithMachine(m *machine.Machine) {
 	pcbVectorView.SetTitle(" PCB Vector ")
 	pcbVectorView.SetBorder(true)
 
+	pageTableView := tview.NewTextView()
+	pageTableView.SetDynamicColors(true)
+	pageTableView.SetScrollable(true)
+	pageTableView.SetTitle(" Page Table ")
+	pageTableView.SetBorder(true)
+
+	type pageTableTarget struct {
+		kind string
+		pid  uint32
+	}
+	var currentPageTable pageTableTarget
+	var pageTableActive bool
+	var playStop chan struct{}
+	var playing bool
+
 	outputView := tview.NewTextView()
 	outputView.SetDynamicColors(true)
 	outputView.SetScrollable(true)
@@ -52,11 +67,74 @@ func runTUIWithMachine(m *machine.Machine) {
 	inputField.SetLabel("cmd> ")
 	inputField.SetFieldWidth(60)
 
+	updatePageTableTitle := func(title string) {
+		pageTableView.SetTitle(" " + title + " ")
+	}
+
+	refreshPageTable := func() {
+		switch currentPageTable.kind {
+		case "kernel":
+			updatePageTableTitle("Kernel Page Table")
+			pageTableView.SetText(m.GetKernelPageTableString())
+		case "pid":
+			updatePageTableTitle(fmt.Sprintf("Process Page Table (pid %d)", currentPageTable.pid))
+			pageTableView.SetText(m.GetProcessPageTableString(currentPageTable.pid))
+		case "bitmap":
+			updatePageTableTitle("Frame Bitmap")
+			pageTableView.SetText(m.GetBitmapString())
+		}
+	}
+
+	openPageTable := func() {
+		pageTableActive = true
+		refreshPageTable()
+		app.SetRoot(pageTableView, true)
+		app.SetFocus(pageTableView)
+	}
+
 	refreshAll := func() {
 		registersView.SetText(m.DebugRegistersString())
 		pcbView.SetText(m.GetKernelVarsString())
 		memoryView.SetText(m.GetMemoryViewString())
 		pcbVectorView.SetText(m.GetProcessTableString())
+		if pageTableActive {
+			refreshPageTable()
+		}
+	}
+
+	topRow := tview.NewFlex()
+	topRow.SetDirection(tview.FlexColumn)
+	topRow.AddItem(registersView, 0, 1, false)
+	topRow.AddItem(pcbView, 0, 1, false)
+
+	middleRow := tview.NewFlex()
+	middleRow.SetDirection(tview.FlexColumn)
+	middleRow.AddItem(memoryView, 0, 1, false)
+	middleRow.AddItem(pcbVectorView, 0, 1, false)
+
+	outputAndCmd := tview.NewFlex()
+	outputAndCmd.SetDirection(tview.FlexRow)
+	outputAndCmd.AddItem(outputView, 0, 1, false)
+	outputAndCmd.AddItem(inputField, 3, 0, true)
+
+	root := tview.NewFlex()
+	root.SetDirection(tview.FlexRow)
+	root.AddItem(topRow, 0, 3, false)
+	root.AddItem(middleRow, 0, 2, false)
+	root.AddItem(outputAndCmd, 5, 0, true)
+
+	closePageTable := func() {
+		pageTableActive = false
+		app.SetRoot(root, true)
+		app.SetFocus(inputField)
+		refreshAll()
+	}
+
+	stopPlay := func() {
+		if playing {
+			close(playStop)
+			playing = false
+		}
 	}
 
 	appendOutput := func(text string) {
@@ -81,8 +159,16 @@ func runTUIWithMachine(m *machine.Machine) {
 
 		parts := strings.Fields(text)
 
+		if pidValue, err := strconv.Atoi(parts[0]); err == nil && pidValue >= 0 {
+			currentPageTable = pageTableTarget{kind: "pid", pid: uint32(pidValue)}
+			appendOutput(fmt.Sprintf("Showing page table of pid %d (Esc/q to return)", pidValue))
+			openPageTable()
+			return
+		}
+
 		switch parts[0] {
 		case "d", "step":
+			stopPlay()
 			if !m.IsDebugMode() {
 				appendOutput("Machine is not in debug mode!")
 				return
@@ -107,6 +193,7 @@ func runTUIWithMachine(m *machine.Machine) {
 			}()
 
 		case "b", "breakpoint":
+			stopPlay()
 			if !m.IsDebugMode() {
 				appendOutput("Machine is not in debug mode!")
 				return
@@ -149,6 +236,43 @@ func runTUIWithMachine(m *machine.Machine) {
 			}
 			appendOutput(fmt.Sprintf("Instructions executed since boot: %d", m.GetInstructionsExecuted()))
 
+		case "play":
+			if !m.IsDebugMode() {
+				appendOutput("Machine is not in debug mode!")
+				return
+			}
+			if playing {
+				appendOutput("Already playing (use 'stop')")
+				return
+			}
+			playing = true
+			playStop = make(chan struct{})
+			appendOutput("play started (100ms/step)")
+			go func() {
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-playStop:
+						return
+					case <-ticker.C:
+					}
+					m.StepChan <- struct{}{}
+					<-m.DoneChan
+					app.QueueUpdateDraw(func() {
+						refreshAll()
+					})
+				}
+			}()
+
+		case "stop":
+			if !playing {
+				appendOutput("Not playing")
+				return
+			}
+			stopPlay()
+			appendOutput("play stopped")
+
 		case "kill":
 			if len(parts) < 2 {
 				appendOutput("usage: kill <pid>")
@@ -188,6 +312,16 @@ func runTUIWithMachine(m *machine.Machine) {
 		case "refresh":
 			refreshAll()
 
+		case "k", "kernel":
+			currentPageTable = pageTableTarget{kind: "kernel"}
+			appendOutput("Showing kernel page table (Esc/q to return)")
+			openPageTable()
+
+		case "bitmap", "bmp":
+			currentPageTable = pageTableTarget{kind: "bitmap"}
+			appendOutput("Showing frame bitmap (Esc/q to return)")
+			openPageTable()
+
 		case "q", "quit":
 			appendOutput("exiting debugger")
 			app.Stop()
@@ -199,6 +333,19 @@ func runTUIWithMachine(m *machine.Machine) {
 			app.Stop()
 			return nil
 		}
+
+		if pageTableActive {
+			if event.Key() == tcell.KeyEscape {
+				closePageTable()
+				return nil
+			}
+
+			if event.Rune() == 'q' || event.Rune() == 'Q' {
+				closePageTable()
+				return nil
+			}
+		}
+
 		return event
 	})
 
@@ -210,27 +357,6 @@ func runTUIWithMachine(m *machine.Machine) {
 			})
 		}
 	}()
-
-	topRow := tview.NewFlex()
-	topRow.SetDirection(tview.FlexColumn)
-	topRow.AddItem(registersView, 0, 1, false)
-	topRow.AddItem(pcbView, 0, 1, false)
-
-	middleRow := tview.NewFlex()
-	middleRow.SetDirection(tview.FlexColumn)
-	middleRow.AddItem(memoryView, 0, 1, false)
-	middleRow.AddItem(pcbVectorView, 0, 1, false)
-
-	outputAndCmd := tview.NewFlex()
-	outputAndCmd.SetDirection(tview.FlexRow)
-	outputAndCmd.AddItem(outputView, 0, 1, false)
-	outputAndCmd.AddItem(inputField, 3, 0, true)
-
-	root := tview.NewFlex()
-	root.SetDirection(tview.FlexRow)
-	root.AddItem(topRow, 0, 3, false)
-	root.AddItem(middleRow, 0, 2, false)
-	root.AddItem(outputAndCmd, 5, 0, true)
 
 	app.SetRoot(root, true)
 	app.SetFocus(inputField)
