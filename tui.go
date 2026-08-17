@@ -183,11 +183,14 @@ func runTUIWithMachine(m *machine.Machine) {
 				}
 			}
 			go func() {
+				cyclesBefore := m.GetCyclesExecuted()
 				for i := 0; i < steps; i++ {
 					m.StepChan <- struct{}{}
 					<-m.DoneChan
 				}
+				cycles := m.GetCyclesExecuted() - cyclesBefore
 				app.QueueUpdateDraw(func() {
+					appendOutput(fmt.Sprintf("Cycles used: %d", cycles))
 					refreshAll()
 				})
 			}()
@@ -208,6 +211,7 @@ func runTUIWithMachine(m *machine.Machine) {
 				return
 			}
 			go func() {
+				cyclesBefore := m.GetCyclesExecuted()
 				instructionCount := 0
 				for {
 					m.StepChan <- struct{}{}
@@ -219,12 +223,14 @@ func runTUIWithMachine(m *machine.Machine) {
 						break
 					}
 				}
+				cycles := m.GetCyclesExecuted() - cyclesBefore
 				app.QueueUpdateDraw(func() {
 					logicalPC := m.GetRegisters()[10]
 					if logicalPC >= kernelMappingOffset {
 						logicalPC -= kernelMappingOffset
 					}
 					appendOutput(fmt.Sprintf("Breakpoint reached at pc=%d after %d instructions", logicalPC, instructionCount))
+					appendOutput(fmt.Sprintf("Cycles used: %d", cycles))
 					refreshAll()
 				})
 			}()

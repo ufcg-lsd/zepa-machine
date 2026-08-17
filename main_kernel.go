@@ -143,12 +143,14 @@ func main() {
 			}
 
 			machine.SaveCheckpoint()
+			cyclesBefore := machine.GetCyclesExecuted()
 			for i := 0; i < steps; i++ {
 				machine.StepChan <- struct{}{}
 				<-machine.DoneChan
 			}
 
 			machine.DebugRegisters()
+			fmt.Printf("Cycles used: %d\n", machine.GetCyclesExecuted()-cyclesBefore)
 
 		case "b":
 			if !machine.IsDebugMode() {
@@ -164,6 +166,7 @@ func main() {
 				}
 
 				machine.SaveCheckpoint()
+				cyclesBefore := machine.GetCyclesExecuted()
 				instructionCount := 0
 				for {
 					machine.StepChan <- struct{}{}
@@ -181,6 +184,7 @@ func main() {
 					logicalPC -= kernelMappingOffset
 				}
 				fmt.Printf("Breakpoint reached at pc=%d after %d instructions\n", logicalPC, instructionCount)
+				fmt.Printf("Cycles used: %d\n", machine.GetCyclesExecuted()-cyclesBefore)
 				machine.DebugRegisters()
 			}
 
