@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"math/bits"
 	"testing"
 )
 
@@ -497,5 +498,186 @@ func TestSYSCALL(t *testing.T) {
 
 	if machine.registers[pc] != expectedESA {
 		t.Errorf("Expected pc to jump to esa %d, got %d", expectedESA, machine.registers[pc])
+	}
+}
+
+func TestCycles(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	tests := []struct {
+		name string
+		inst Instruction
+		want int
+	}{
+		{"MV", Instruction{opcode: MV}, 1},
+		{"AND", Instruction{opcode: AND}, 1},
+		{"ADD", Instruction{opcode: ADD}, 1},
+		{"CMP", Instruction{opcode: CMP}, 1},
+		{"STRD", Instruction{opcode: STRD}, 1},
+		{"LOAD", Instruction{opcode: LOAD}, 2},
+		{"STORE", Instruction{opcode: STORE}, 2},
+		{"LDD", Instruction{opcode: LDD}, 2},
+		{"LDB", Instruction{opcode: LDB}, 2},
+		{"JUMP", Instruction{opcode: JUMP}, 2},
+		{"JMPR", Instruction{opcode: JMPR}, 2},
+		{"MRET", Instruction{opcode: MRET}, 4},
+		{"SYSCALL", Instruction{opcode: SYSCALL}, 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := machine.execute(tt.inst)
+			if got != tt.want {
+				t.Errorf("Expected %s to cost %d cycles, got %d", tt.name, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestBranchCycles(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	machine.registers[sr] = 1
+	if got := machine.execute(Instruction{opcode: BEQ}); got != 2 {
+		t.Errorf("BEQ taken: expected 2 cycles, got %d", got)
+	}
+
+	machine.registers[sr] = 2
+	if got := machine.execute(Instruction{opcode: BEQ}); got != 1 {
+		t.Errorf("BEQ not taken: expected 1 cycle, got %d", got)
+	}
+
+	machine.registers[sr] = 2
+	if got := machine.execute(Instruction{opcode: BLT}); got != 2 {
+		t.Errorf("BLT taken: expected 2 cycles, got %d", got)
+	}
+
+	machine.registers[sr] = 1
+	if got := machine.execute(Instruction{opcode: BLT}); got != 1 {
+		t.Errorf("BLT not taken: expected 1 cycle, got %d", got)
+	}
+
+	machine.registers[sr] = 4
+	if got := machine.execute(Instruction{opcode: BGT}); got != 2 {
+		t.Errorf("BGT taken: expected 2 cycles, got %d", got)
+	}
+
+	machine.registers[sr] = 2
+	if got := machine.execute(Instruction{opcode: BGT}); got != 1 {
+		t.Errorf("BGT not taken: expected 1 cycle, got %d", got)
+	}
+}
+
+func TestDivisionCycles(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	tests := []struct {
+		name     string
+		dividend uint32
+		divisor  uint32
+		want     int
+	}{
+		{"both zero", 0, 0, 2},
+		{"small operands", 20, 3, 2 + min(10, bits.Len32(20|3))},
+		{"large dividend", 0xFFFFFFFF, 1, 2 + min(10, bits.Len32(0xFFFFFFFF))},
+		{"large divisor", 1, 0x80000000, 2 + min(10, bits.Len32(0x80000000))},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			machine.registers[w1] = tt.dividend
+			machine.registers[w2] = tt.divisor
+			got := machine.execute(Instruction{opcode: UDIV, rd: w0, rs1: w1, rs2: w2})
+			if got != tt.want {
+				t.Errorf("Expected %d cycles, got %d", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestExecuteAccumulatesCounters(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	machine.execute(Instruction{opcode: MV})           // 1 cycle
+	machine.execute(Instruction{opcode: LOAD})         // 2 cycles
+	machine.execute(Instruction{opcode: SYSCALL})      // 4 cycles
+	machine.execute(Instruction{opcode: BEQ})          // not taken: 1 cycle
+
+	if got := machine.GetInstructionsExecuted(); got != 4 {
+		t.Errorf("Expected 4 instructions executed, got %d", got)
+	}
+	if got := machine.GetCyclesExecuted(); got != 8 {
+		t.Errorf("Expected 8 cycles executed, got %d", got)
+	}
+}
+
+func TestMMUPenalty(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	tests := []struct {
+		name string
+		inst Instruction
+	}{
+		{"LOAD", Instruction{opcode: LOAD}},
+		{"STORE", Instruction{opcode: STORE}},
+		{"LDD", Instruction{opcode: LDD}},
+		{"LDB", Instruction{opcode: LDB}},
+		{"LDSB", Instruction{opcode: LDSB}},
+		{"STRB", Instruction{opcode: STRB}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := machine.execute(tt.inst); got != 2 {
+				t.Errorf("MMU disabled: expected 2 cycles, got %d", got)
+			}
+		})
+	}
+
+	if got := machine.execute(Instruction{opcode: STRD}); got != 1 {
+		t.Errorf("STRD MMU disabled: expected 1 cycle, got %d", got)
+	}
+
+	machine.registers[sr] |= 32 // enable MMU
+
+	for _, tt := range tests {
+		t.Run(tt.name+" mmu", func(t *testing.T) {
+			if got := machine.execute(tt.inst); got != 4 {
+				t.Errorf("MMU enabled: expected 4 cycles, got %d", got)
+			}
+		})
+	}
+
+	if got := machine.execute(Instruction{opcode: STRD}); got != 3 {
+		t.Errorf("STRD MMU enabled: expected 3 cycles, got %d", got)
+	}
+}
+
+func TestCheckpointRestoresCounters(t *testing.T) {
+	machine := NewMachine(2048, false)
+
+	machine.execute(Instruction{opcode: MV})     // 1 cycle
+	machine.execute(Instruction{opcode: ADD})    // 1 cycle
+	machine.execute(Instruction{opcode: STORE})  // 2 cycles
+
+	machine.SaveCheckpoint()
+	machine.execute(Instruction{opcode: LOAD})   // 2 cycles
+
+	if got := machine.GetInstructionsExecuted(); got != 4 {
+		t.Errorf("Expected 4 instructions before restore, got %d", got)
+	}
+	if got := machine.GetCyclesExecuted(); got != 6 {
+		t.Errorf("Expected 6 cycles before restore, got %d", got)
+	}
+
+	if !machine.RestoreCheckpoint() {
+		t.Fatal("Expected checkpoint to be restored")
+	}
+
+	if got := machine.GetInstructionsExecuted(); got != 3 {
+		t.Errorf("Expected 3 instructions after restore, got %d", got)
+	}
+	if got := machine.GetCyclesExecuted(); got != 4 {
+		t.Errorf("Expected 4 cycles after restore, got %d", got)
 	}
 }

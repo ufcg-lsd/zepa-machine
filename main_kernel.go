@@ -189,7 +189,13 @@ func main() {
 				fmt.Printf("Machine is not in debug mode!\n")
 				continue
 			}
-			fmt.Printf("Instructions executed since boot: %d\n", machine.GetInstructionsExecuted())
+			instructions := machine.GetInstructionsExecuted()
+			cycles := machine.GetCyclesExecuted()
+			fmt.Printf("Instructions executed since boot: %d\n", instructions)
+			fmt.Printf("Cycles executed since boot: %d\n", cycles)
+			if instructions > 0 {
+				fmt.Printf("Average cycles per instruction: %.2f\n", float64(cycles)/float64(instructions))
+			}
 
 		case "r":
 			if !machine.IsDebugMode() {

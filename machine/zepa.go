@@ -2,13 +2,14 @@ package machine
 
 import (
 	"encoding/binary"
+	"math/bits"
 	"slices"
 	"sync"
 )
 
 type Register uint32
 type Opcode byte
-type Operation func(m *Machine, inst Instruction)
+type Operation func(m *Machine, inst Instruction) int
 
 const (
 	w0 Register = iota
@@ -153,28 +154,33 @@ type Machine struct {
 	inputFlag            bool
 	debugFlag            bool
 	instructionsExecuted uint64
+	totalCycles          uint64
 	StepChan             chan struct{}
 	DoneChan             chan struct{}
 	checkpoint           *Machine
 }
 
-func (m *Machine) mv(inst Instruction) {
+func (m *Machine) mv(inst Instruction) int {
 	m.registers[inst.rd] = uint32(int16(inst.immediate))
+	return 1
 }
 
-func (m *Machine) and(inst Instruction) {
+func (m *Machine) and(inst Instruction) int {
 	m.registers[inst.rd] = m.registers[inst.rs1] & m.registers[inst.rs2]
+	return 1
 }
 
-func (m *Machine) or(inst Instruction) {
+func (m *Machine) or(inst Instruction) int {
 	m.registers[inst.rd] = m.registers[inst.rs1] | m.registers[inst.rs2]
+	return 1
 }
 
-func (m *Machine) xor(inst Instruction) {
+func (m *Machine) xor(inst Instruction) int {
 	m.registers[inst.rd] = m.registers[inst.rs1] ^ m.registers[inst.rs2]
+	return 1
 }
 
-func (m *Machine) shl(inst Instruction) {
+func (m *Machine) shl(inst Instruction) int {
 	val := m.registers[inst.rs1]
 	shiftAmount := int32(m.registers[inst.rs2])
 
@@ -185,9 +191,10 @@ func (m *Machine) shl(inst Instruction) {
 	} else {
 		m.registers[inst.rd] = val
 	}
+	return 1
 }
 
-func (m *Machine) sha(inst Instruction) {
+func (m *Machine) sha(inst Instruction) int {
 	val := m.registers[inst.rs1]
 	shiftAmount := int32(m.registers[inst.rs2])
 
@@ -198,39 +205,49 @@ func (m *Machine) sha(inst Instruction) {
 	} else {
 		m.registers[inst.rd] = val
 	}
+	return 1
 }
 
-func (m *Machine) add(inst Instruction) {
+func (m *Machine) add(inst Instruction) int {
 	m.registers[inst.rd] = m.registers[inst.rs1] + m.registers[inst.rs2]
+	return 1
 }
 
-func (m *Machine) sub(inst Instruction) {
+func (m *Machine) sub(inst Instruction) int {
 	m.registers[inst.rd] = m.registers[inst.rs1] - m.registers[inst.rs2]
+	return 1
 }
 
-func (m *Machine) mul(inst Instruction) {
+func (m *Machine) mul(inst Instruction) int {
 	m.registers[inst.rd] = m.registers[inst.rs1] * m.registers[inst.rs2]
+	return 1
 }
 
-func (m *Machine) udiv(inst Instruction) {
+func (m *Machine) udiv(inst Instruction) int {
 	if m.registers[inst.rs2] == 0 {
 		m.exception(faultExc)
-		return
+		return m.divisionCycles(m.registers[inst.rs1], m.registers[inst.rs2])
 	}
 
 	m.registers[inst.rd] = m.registers[inst.rs1] / m.registers[inst.rs2]
+	return m.divisionCycles(m.registers[inst.rs1], m.registers[inst.rs2])
 }
 
-func (m *Machine) sdiv(inst Instruction) {
+func (m *Machine) sdiv(inst Instruction) int {
 	if m.registers[inst.rs2] == 0 {
 		m.exception(faultExc)
-		return
+		return m.divisionCycles(m.registers[inst.rs1], m.registers[inst.rs2])
 	}
 
 	m.registers[inst.rd] = uint32(int32(m.registers[inst.rs1]) / int32(m.registers[inst.rs2]))
+	return m.divisionCycles(m.registers[inst.rs1], m.registers[inst.rs2])
 }
 
-func (m *Machine) cmp(inst Instruction) {
+func (m *Machine) divisionCycles(rs1, rs2 uint32) int {
+	return 2 + min(10, bits.Len32(rs1|rs2))
+}
+
+func (m *Machine) cmp(inst Instruction) int {
 	var cmpMask int32 = -8
 	m.registers[sr] &= uint32(cmpMask)
 	if m.registers[inst.rs1] == m.registers[inst.rs2] {
@@ -240,106 +257,138 @@ func (m *Machine) cmp(inst Instruction) {
 	} else {
 		m.registers[sr] |= 2
 	}
+	return 1
 }
 
-func (m *Machine) jump(inst Instruction) {
+func (m *Machine) jump(inst Instruction) int {
 	m.registers[pc] += (uint32(int16(inst.immediate)) - 1) * 4
+	return 2 // 1 + Pa (pipeline reload penalty)
 }
 
-func (m *Machine) jmpr(inst Instruction) {
+func (m *Machine) jmpr(inst Instruction) int {
 	m.registers[pc] = m.registers[inst.rs1]
+	return 2 // 1 + Pa (pipeline reload penalty)
 }
 
-func (m *Machine) beq(inst Instruction) {
+func (m *Machine) beq(inst Instruction) int {
 	if m.registers[sr]&1 != 0 {
 		m.jump(inst)
+		return 2 // 1 + Pa
 	}
+	return 1
 }
 
-func (m *Machine) blt(inst Instruction) {
+func (m *Machine) blt(inst Instruction) int {
 	if m.registers[sr]&2 != 0 {
 		m.jump(inst)
+		return 2 // 1 + Pa
 	}
+	return 1
 }
 
-func (m *Machine) bgt(inst Instruction) {
+func (m *Machine) bgt(inst Instruction) int {
 	if m.registers[sr]&4 != 0 {
 		m.jump(inst)
+		return 2 // 1 + Pa
 	}
+	return 1
 }
 
-func (m *Machine) load(inst Instruction) {
+func (m *Machine) mmuPenalty() int {
+	if m.isMmuEnabled() {
+		return 2
+	}
+	return 0
+}
+
+func (m *Machine) load(inst Instruction) int {
+	cycles := 2 + m.mmuPenalty()
 	addr, ok := m.translate(m.registers[inst.rs2], 4)
 	if !ok {
-		return
+		return cycles
 	}
 
 	m.registers[inst.rs1] = binary.LittleEndian.Uint32(m.memory[addr : addr+4])
+	return cycles
 }
 
-func (m *Machine) store(inst Instruction) {
+func (m *Machine) store(inst Instruction) int {
+	cycles := 2 + m.mmuPenalty()
 	addr, ok := m.translate(m.registers[inst.rs2], 4)
 	if !ok {
-		return
+		return cycles
 	}
 
 	binary.LittleEndian.PutUint32(m.memory[addr:addr+4], m.registers[inst.rs1])
+	return cycles
 }
 
-func (m *Machine) ldd(inst Instruction) {
+func (m *Machine) ldd(inst Instruction) int {
+	cycles := 2 + m.mmuPenalty()
 	addr, ok := m.translate(uint32(inst.immediate), 4)
 	if !ok {
-		return
+		return cycles
 	}
 
 	m.registers[inst.rd] = binary.LittleEndian.Uint32(m.memory[addr : addr+4])
+	return cycles
 }
 
-func (m *Machine) strd(inst Instruction) {
+func (m *Machine) strd(inst Instruction) int {
+	cycles := 1 + m.mmuPenalty()
 	addr, ok := m.translate(uint32(inst.immediate), 4)
 	if !ok {
-		return
+		return cycles
 	}
 
 	binary.LittleEndian.PutUint32(m.memory[addr:addr+4], m.registers[inst.rd])
+	return cycles
 }
 
-func (m *Machine) ldb(inst Instruction) {
+func (m *Machine) ldb(inst Instruction) int {
+	cycles := 2 + m.mmuPenalty()
 	addr, ok := m.translate(m.registers[inst.rs2], 1)
 	if !ok {
-		return
+		return cycles
 	}
 
 	m.registers[inst.rs1] = uint32(m.memory[addr])
+	return cycles
 }
 
-func (m *Machine) ldsb(inst Instruction) {
+func (m *Machine) ldsb(inst Instruction) int {
+	cycles := 2 + m.mmuPenalty()
 	addr, ok := m.translate(m.registers[inst.rs2], 1)
 	if !ok {
-		return
+		return cycles
 	}
 
 	m.registers[inst.rs1] = uint32(int8(m.memory[addr]))
+	return cycles
 }
 
-func (m *Machine) strb(inst Instruction) {
+func (m *Machine) strb(inst Instruction) int {
+	cycles := 2 + m.mmuPenalty()
 	addr, ok := m.translate(m.registers[inst.rs2], 1)
 	if !ok {
-		return
+		return cycles
 	}
 
 	m.memory[addr] = byte(m.registers[inst.rs1])
+	return cycles
 }
 
-func (m *Machine) mret(inst Instruction) {
+func (m *Machine) mret(inst Instruction) int {
 	m.registers[sr] = m.registers[esr]
 
 	m.registers[pc] = m.registers[epc]
+	return 4
 }
 
-func (m *Machine) syscall(inst Instruction) {
+func (m *Machine) syscall(inst Instruction) int {
 	m.registers[w9] = uint32(inst.immediate)
 	m.exception(syscallExc)
+	return 4
 }
 
 func (m *Machine) lookupPhysical(addr uint32, byteCount uint32) (uint32, bool) {
@@ -517,8 +566,11 @@ func (m *Machine) decode() (Instruction, bool) {
 	}
 }
 
-func (m *Machine) execute(inst Instruction) {
-	operations[inst.opcode](m, inst)
+func (m *Machine) execute(inst Instruction) int {
+	nCycles := operations[inst.opcode](m, inst)
+	m.instructionsExecuted++
+	m.totalCycles += uint64(nCycles)
+	return nCycles
 }
 
 func (m *Machine) Boot() {
@@ -556,7 +608,6 @@ func (m *Machine) Boot() {
 		}
 
 		m.execute(decodedInstruction)
-		m.instructionsExecuted++
 
 		if m.isInterruptEnabled() {
 			clockCounter++
@@ -583,9 +634,11 @@ func (m *Machine) Boot() {
 
 func (m *Machine) SaveCheckpoint() {
 	cp := &Machine{
-		memory:    make([]byte, len(m.memory)),
-		registers: make(map[Register]uint32, len(m.registers)),
-		debugFlag: m.debugFlag,
+		memory:               make([]byte, len(m.memory)),
+		registers:            make(map[Register]uint32, len(m.registers)),
+		instructionsExecuted: m.instructionsExecuted,
+		totalCycles:          m.totalCycles,
+		debugFlag:            m.debugFlag,
 	}
 	copy(cp.memory, m.memory)
 	for k, v := range m.registers {
@@ -600,6 +653,8 @@ func (m *Machine) RestoreCheckpoint() bool {
 	}
 	m.memory, m.checkpoint.memory = m.checkpoint.memory, m.memory
 	m.registers, m.checkpoint.registers = m.checkpoint.registers, m.registers
+	m.instructionsExecuted, m.checkpoint.instructionsExecuted = m.checkpoint.instructionsExecuted, m.instructionsExecuted
+	m.totalCycles, m.checkpoint.totalCycles = m.checkpoint.totalCycles, m.totalCycles
 	return true
 }
 
@@ -654,6 +709,12 @@ func (m *Machine) GetInstructionsExecuted() uint64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.instructionsExecuted
+}
+
+func (m *Machine) GetCyclesExecuted() uint64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.totalCycles
 }
 
 func NewMachine(memoryBytes int, debugFlag bool) *Machine {

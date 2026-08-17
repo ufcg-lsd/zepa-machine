@@ -234,7 +234,13 @@ func runTUIWithMachine(m *machine.Machine) {
 				appendOutput("Machine is not in debug mode!")
 				return
 			}
-			appendOutput(fmt.Sprintf("Instructions executed since boot: %d", m.GetInstructionsExecuted()))
+			instructions := m.GetInstructionsExecuted()
+			cycles := m.GetCyclesExecuted()
+			appendOutput(fmt.Sprintf("Instructions executed since boot: %d", instructions))
+			appendOutput(fmt.Sprintf("Cycles executed since boot: %d", cycles))
+			if instructions > 0 {
+				appendOutput(fmt.Sprintf("Average cycles per instruction: %.2f", float64(cycles)/float64(instructions)))
+			}
 
 		case "play":
 			if !m.IsDebugMode() {
