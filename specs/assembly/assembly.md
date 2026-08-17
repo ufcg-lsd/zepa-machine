@@ -94,6 +94,36 @@ MV W2, #3
 MUL W0, W1, W2    ; W0 = 4 * 3
 ```
 
+### UDIV (Unsigned Divide)
+Divides the unsigned values of two registers, the remainder is discarded.
+
+**Syntax:**
+```
+UDIV <Dest Reg.>, <Op1>, <Op2>
+```
+
+**Example:**
+```
+MV W1, #6
+MV W2, #3
+UDIV W0, W1, W2    ; W0 = 6 / 3
+```
+
+### SDIV (Signed Divide)
+Divides the signed values of two registers, the remainder is discarded.
+
+**Syntax:**
+```
+SDIV <Dest Reg.>, <Op1>, <Op2>
+```
+
+**Example:**
+```
+MV W1, #-5
+MV W2, #2
+SDIV W0, W1, W2    ; W0 = (-5) / 2
+```
+
 ## Control Flow Operations
 
 ### CMP (Compare)
@@ -113,11 +143,11 @@ CMP W1, W2    ; Sets the G flag (W1 > W2)
 
 
 ### JUMP (Unconditional Jump)
-Unconditionally jumps to a specific address or label, modifying the Program Counter (PC).
+Unconditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) or to a specific label.
 
 **Syntax:**
 ```
-JUMP <Label/Address>
+JUMP <Label/Offset>
 ```
 
 **Example:**
@@ -125,77 +155,60 @@ JUMP <Label/Address>
 JUMP _loop    ; Jump to the _loop label
 ```
 
-### JZ (Jump if Zero)
-Jumps to a specific address if the Z flag is set (if two operands are equal).
+### JMPR (Jump Register)
+Unconditionally sets the Program Counter (PC) to an absolute memory address currently stored in a register.
 
 **Syntax:**
 ```
-JZ <Label/Address>
+JMPR <Source Reg.>
 ```
 
 **Example:**
 ```
-MV W1, #2
-MV W2, #2
-CMP W1, W2    ; Sets the Z flag (W1 == W2)
-JZ _equal      ; Jumps to _equal if Z == 1
+MV W5, #0x0040      ; Store a return address in W5
+JMPR W5             ; Jump exactly to the address stored in W5
 ```
 
-### JG (Jump if Greater)
-Jumps if the G flag is set (if the first operand is greater than the second).
+### BEQ (Branch if Equal)
+Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) or to a specific label if the Z (Equal) flag in the Status Register is set.
 
 **Syntax:**
 ```
-JG <Label/Address>
+BEQ <Label/Offset>
 ```
 
 **Example:**
 ```
-MV W1, #5
-MV W2, #3
-CMP W1, W2    ; Sets the G flag (W1 > W2)
-JG _greater   ; Jumps to _greater if G == 1
+CMP W1, W2
+BEQ _equal_logic    ; Jump to the _equal_logic label if W1 == W2
 ```
 
-### JL (Jump if Less)
-Jumps if the L flag is set (if the first operand is less than the second).
+### BLT (Branch if Less Than)
+Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) or to a specific label if the L (Less Than) flag in the Status Register is set.
 
 **Syntax:**
 ```
-JL <Label/Address>
+BLT <Label/Offset>
 ```
 
 **Example:**
 ```
-MV W1, #1
-MV W2, #3
-CMP W1, W2    ; Sets the L flag (W1 < W2)
-JL _less      ; Jumps to _less if L == 1
+CMP W1, W2
+BLT _less_logic     ; Jump to the _less_logic label if W1 < W2
 ```
 
-**Example of JUMP and Control Flow:**
+### BGT (Branch if Greater Than)
+Conditionally jumps the PC forward or backward by a specific instruction offset (PC-relative) or to a specific label if the G (Greater Than) flag in the Status Register is set.
+
+**Syntax:**
 ```
-_start:
-    MV W0, #10         ; W0 = 10
-    MV W1, #20         ; W1 = 20
-    CMP W0, W1         ; Compare W0 with W1
+BGT <Label/Offset>
+```
 
-    JG _greater        ; Jump to _greater if W0 > W1 (G flag set)
-    JL _less           ; Jump to _less if W0 < W1 (L flag set)
-
-_equal:
-    MV W2, #0          ; If W0 == W1, W2 = 0
-    JUMP _end          ; Jump to _end
-
-_greater:
-    MV W2, #1          ; If W0 > W1, W2 = 1
-    JUMP _end          ; Jump to _end
-
-_less:
-    MV W2, #2          ; If W0 < W1, W2 = 2
-
-_end:
-    ; End of program
+**Example:**
+```
+CMP W1, W2
+BGT _greater_logic  ; Jump to the _greater_logic label if W1 > W2
 ```
 
 ## Memory Operations
@@ -205,12 +218,12 @@ Loads a value from a memory address into a register.
 
 **Syntax:**
 ```
-LOAD <Dest Reg.>, [<Memory Address>]
+LOAD <Dest Reg.>, [< Address Reg.>]
 ```
 
 **Example:**
 ```
-LOAD W1, [0x100]    ; Load the value stored at memory address 0x100 into register W1
+LOAD W1, [W2]    ; Load the value stored at memory address in W2 into register W1
 ```
 
 ### STORE (Store to Memory)
@@ -218,12 +231,77 @@ Stores the value from a register into a memory address.
 
 **Syntax:**
 ```
-STORE <Source Reg.>, [<Memory Address>]
+STORE <Source Reg.>, [< Address Reg.>]
 ```
 
 **Example:**
 ```
-STORE W1, [0x200]   ; Store the value from register W1 into memory address 0x200
+STORE W1, [W2]   ; Store the value from register W1 into memory address inside W2
+```
+
+### LDB (Load Byte)
+Loads a single 8-bit unsigned byte from a memory address into a register. The loaded byte is zero-extended to fill the 32-bit register.
+
+**Syntax:**
+```
+LDB <Dest Reg.>, [< Address Reg.>]
+```
+
+**Example:**
+```
+LDB W1, [W2]    ; Load an unsigned byte from the memory address in W2 into register W1
+```
+
+### LDSB (Load Signed Byte)
+Loads a single 8-bit signed byte from a memory address into a register. The loaded byte is sign-extended to fill the 32-bit register, preserving its negative or positive arithmetic value.
+
+**Syntax:**
+```
+LDSB <Dest Reg.>, [< Address Reg.>]
+```
+
+**Example:**
+```
+LDSB W1, [W2]   ; Load a sign-extended byte from the memory address in W2 into register W1
+```
+
+### STRB (Store Byte)
+Stores the lowest 8 bits (one byte) from a register into a specific memory address. The upper 24 bits of the source register are ignored, and adjacent memory blocks are left untouched.
+
+**Syntax:**
+```
+STRB <Source Reg.>, [< Address Reg.>]
+```
+
+**Example:**
+```
+STRB W1, [W2]   ; Store only the lowest byte of register W1 into the memory address inside W2
+```
+
+### MRET (Machine Return)
+Return from an exception. Restores the processor to its pre-exception state by copying the Exception Status Register (ESR) back into the Status Register (SR), and the Exception Program Counter (EPC) back into the Program Counter (PC).
+
+**Syntax:**
+```
+MRET
+```
+
+**Example:**
+```
+MRET   ; Return from an exception / interruption
+```
+
+### SYSCALL (System Call)
+Triggers a synchronous exception to transfer control to the operating system's exception to request privileged services, the immediate code is put into W5.
+
+**Syntax:**
+```
+SYSCALL <CODE>
+```
+
+**Example:**
+```
+SYSCALL #2   ; Calls the kernel with the system call of code 2
 ```
 
 ## References
