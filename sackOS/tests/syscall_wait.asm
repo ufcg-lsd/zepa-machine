@@ -1,3 +1,0 @@
-MV W0 #5
-MV W1 #8
-SYSCALL #1

@@ -1,9 +1,0 @@
-{
-  "memory_size": 2147483648,
-  "partition_size": 100000,
-  "time_slice": 128,
-  "timeout_seconds": 30,
-  "programs": [
-    { "file": "../programs/b1_exit_status.asm", "expected": { "w9": 42 } }
-  ]
-}

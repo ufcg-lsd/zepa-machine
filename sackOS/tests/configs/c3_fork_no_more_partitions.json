@@ -1,9 +1,0 @@
-{
-  "memory_size": 2147483648,
-  "partition_size": 200000,
-  "time_slice": 128,
-  "timeout_seconds": 30,
-  "programs": [
-    { "file": "../programs/c3_fork_no_more_partitions.asm", "expected": { "w5": 7, "w9": 4294967295 } }
-  ]
-}

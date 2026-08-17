@@ -1,6 +1,0 @@
-MV W0, #5
-MV W1, #2
-ADD W0, W0, W1
-MV W5, #1
-MV W8, #0
-SYSCALL #2
