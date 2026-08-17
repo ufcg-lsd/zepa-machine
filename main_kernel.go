@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	assembler "zepa-machine/cross-assembler"
 	"zepa-machine/machine"
 )
@@ -29,7 +30,7 @@ func main() {
 		return
 	}
 
-	memorySize, err := strconv.Atoi(os.Args[1])
+	memorySize, err := parseMemorySize(os.Args[1])
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
@@ -60,4 +61,30 @@ func main() {
 
 	go machine.Boot()
 	runTUIWithMachine(machine)
+}
+
+func parseMemorySize(sizeStr string) (int, error) {
+	sizeStr = strings.ToUpper(strings.TrimSpace(sizeStr))
+	multiplier := 1
+
+	switch {
+	case strings.HasSuffix(sizeStr, "GB"):
+		multiplier = 1 << 30
+		sizeStr = strings.TrimSuffix(sizeStr, "GB")
+	case strings.HasSuffix(sizeStr, "MB"):
+		multiplier = 1 << 20
+		sizeStr = strings.TrimSuffix(sizeStr, "MB")
+	case strings.HasSuffix(sizeStr, "KB"):
+		multiplier = 1 << 10
+		sizeStr = strings.TrimSuffix(sizeStr, "KB")
+	case strings.HasSuffix(sizeStr, "B"):
+		sizeStr = strings.TrimSuffix(sizeStr, "B")
+	}
+
+	val, err := strconv.Atoi(sizeStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid memory format: %s", sizeStr)
+	}
+
+	return val * multiplier, nil
 }
