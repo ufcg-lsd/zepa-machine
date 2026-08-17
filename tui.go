@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,15 @@ func runTUIWithMachine(m *machine.Machine) {
 	pcbVectorView.SetTitle(" PCB Vector ")
 	pcbVectorView.SetBorder(true)
 
+	var playStop chan struct{}
+	var playing bool
+
+	outputView := tview.NewTextView()
+	outputView.SetDynamicColors(true)
+	outputView.SetScrollable(true)
+	outputView.SetTitle(" Output ")
+	outputView.SetBorder(true)
+
 	inputField := tview.NewInputField()
 	inputField.SetLabel("cmd> ")
 	inputField.SetFieldWidth(60)
@@ -50,6 +60,44 @@ func runTUIWithMachine(m *machine.Machine) {
 		pcbView.SetText(m.GetKernelVarsString())
 		memoryView.SetText(m.GetMemoryViewString())
 		pcbVectorView.SetText(m.GetProcessTableString())
+	}
+
+	topRow := tview.NewFlex()
+	topRow.SetDirection(tview.FlexColumn)
+	topRow.AddItem(registersView, 0, 1, false)
+	topRow.AddItem(pcbView, 0, 1, false)
+
+	middleRow := tview.NewFlex()
+	middleRow.SetDirection(tview.FlexColumn)
+	middleRow.AddItem(memoryView, 0, 1, false)
+	middleRow.AddItem(pcbVectorView, 0, 1, false)
+
+	outputAndCmd := tview.NewFlex()
+	outputAndCmd.SetDirection(tview.FlexRow)
+	outputAndCmd.AddItem(outputView, 0, 1, false)
+	outputAndCmd.AddItem(inputField, 3, 0, true)
+
+	root := tview.NewFlex()
+	root.SetDirection(tview.FlexRow)
+	root.AddItem(topRow, 0, 3, false)
+	root.AddItem(middleRow, 0, 2, false)
+	root.AddItem(outputAndCmd, 10, 0, true)
+
+	stopPlay := func() {
+		if playing {
+			close(playStop)
+			playing = false
+		}
+	}
+
+	appendOutput := func(text string) {
+		current := outputView.GetText(false)
+		if current != "" {
+			current += "\n"
+		}
+		current += text
+		outputView.SetText(current)
+		outputView.ScrollToEnd()
 	}
 
 	refreshAll()
@@ -66,13 +114,13 @@ func runTUIWithMachine(m *machine.Machine) {
 
 		switch parts[0] {
 		case "d", "step":
-			if !m.IsDebugMode() {
-				return
-			}
+			stopPlay()
 			steps := 1
 			if len(parts) > 1 {
 				parsedSteps, err := strconv.Atoi(parts[1])
-				if err == nil && parsedSteps > 0 {
+				if err != nil || parsedSteps <= 0 {
+					appendOutput("Invalid number of steps. Running 1 step.")
+				} else {
 					steps = parsedSteps
 				}
 			}
@@ -86,29 +134,99 @@ func runTUIWithMachine(m *machine.Machine) {
 				})
 			}()
 
+		case "b", "breakpoint":
+			stopPlay()
+			if len(parts) < 2 {
+				appendOutput("usage: b <pc>")
+				return
+			}
+			pcValue, err := strconv.Atoi(parts[1])
+			if err != nil || pcValue < 0 {
+				appendOutput("Invalid PC.")
+				return
+			}
+			go func() {
+				instructionCount := 0
+				for {
+					m.StepChan <- struct{}{}
+					<-m.DoneChan
+					instructionCount++
+
+					if m.GetRegisters()[10] == uint32(pcValue) {
+						break
+					}
+				}
+				app.QueueUpdateDraw(func() {
+					appendOutput(fmt.Sprintf("Breakpoint reached at pc=%d after %d instructions", m.GetRegisters()[10], instructionCount))
+					refreshAll()
+				})
+			}()
+
+		case "c", "count":
+			appendOutput(fmt.Sprintf("Instructions executed since boot: %d", m.GetInstructionsExecuted()))
+
+		case "play":
+			if playing {
+				appendOutput("Already playing (use 'stop')")
+				return
+			}
+			playing = true
+			playStop = make(chan struct{})
+			appendOutput("play started (100ms/step)")
+			go func() {
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-playStop:
+						return
+					case <-ticker.C:
+					}
+					m.StepChan <- struct{}{}
+					<-m.DoneChan
+					app.QueueUpdateDraw(func() {
+						refreshAll()
+					})
+				}
+			}()
+
+		case "stop":
+			if !playing {
+				appendOutput("Not playing")
+				return
+			}
+			stopPlay()
+			appendOutput("play stopped")
+
 		case "kill":
 			if len(parts) < 2 {
+				appendOutput("usage: kill <pid>")
 				return
 			}
 			pid, err := strconv.Atoi(parts[1])
 			if err != nil {
+				appendOutput("invalid PID")
 				return
 			}
 			var buf [4]byte
 			binary.LittleEndian.PutUint32(buf[:], uint32(pid))
 			m.LoadBuffer(buf[:])
 			m.SetKillFlag()
+			appendOutput(fmt.Sprintf("[sys] kill %d sent", pid))
 
 		case "input":
 			if len(parts) < 2 {
+				appendOutput("usage: input <path>")
 				return
 			}
 			code, err := assembler.RunAssembler(parts[1])
 			if err != nil {
+				appendOutput(fmt.Sprintf("[err] %v", err))
 				return
 			}
 			m.LoadBuffer(code)
 			m.SetInputFlag()
+			appendOutput(fmt.Sprintf("[sys] input sent (%d bytes)", len(code)))
 
 		case "reg":
 			registersView.SetText(m.DebugRegistersString())
@@ -119,7 +237,8 @@ func runTUIWithMachine(m *machine.Machine) {
 		case "refresh":
 			refreshAll()
 
-		case "q":
+		case "q", "quit":
+			appendOutput("exiting debugger")
 			m.Quit()
 			app.Stop()
 		}
@@ -142,25 +261,6 @@ func runTUIWithMachine(m *machine.Machine) {
 			})
 		}
 	}()
-
-	// Top row: registers + processes
-	topRow := tview.NewFlex()
-	topRow.SetDirection(tview.FlexColumn)
-	topRow.AddItem(registersView, 0, 1, false)
-	topRow.AddItem(pcbView, 0, 1, false)
-
-	// Middle row: memory + pcb vector
-	middleRow := tview.NewFlex()
-	middleRow.SetDirection(tview.FlexColumn)
-	middleRow.AddItem(memoryView, 0, 1, false)
-	middleRow.AddItem(pcbVectorView, 0, 1, false)
-
-	// Full layout: top, middle, cmd
-	root := tview.NewFlex()
-	root.SetDirection(tview.FlexRow)
-	root.AddItem(topRow, 0, 3, false)
-	root.AddItem(middleRow, 0, 2, false)
-	root.AddItem(inputField, 3, 0, true)
 
 	app.SetRoot(root, true)
 	app.SetFocus(inputField)

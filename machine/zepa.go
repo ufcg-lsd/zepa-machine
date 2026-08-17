@@ -137,16 +137,16 @@ type Instruction struct {
 }
 
 type Machine struct {
-	memory     []byte
-	registers  map[Register]uint32
-	mu         sync.RWMutex
-	killFlag   bool
-	inputFlag  bool
-	debugFlag  bool
-	StepChan   chan struct{}
-	DoneChan   chan struct{}
-	checkpoint *Machine
-	quitChan   chan struct{}
+	memory               []byte
+	registers            map[Register]uint32
+	mu                   sync.RWMutex
+	killFlag             bool
+	inputFlag            bool
+	debugFlag            bool
+	instructionsExecuted uint64
+	StepChan             chan struct{}
+	DoneChan             chan struct{}
+	quitChan             chan struct{}
 }
 
 func (m *Machine) mv(inst Instruction) {
@@ -512,6 +512,7 @@ func (m *Machine) Boot() {
 		}
 
 		m.execute(decodedInstruction)
+		m.instructionsExecuted++
 
 		if m.isInterruptEnabled() {
 			instructionsExcecuted++
@@ -534,28 +535,6 @@ func (m *Machine) Boot() {
 		}
 
 	}
-}
-
-func (m *Machine) SaveCheckpoint() {
-	cp := &Machine{
-		memory:    make([]byte, len(m.memory)),
-		registers: make(map[Register]uint32, len(m.registers)),
-		debugFlag: m.debugFlag,
-	}
-	copy(cp.memory, m.memory)
-	for k, v := range m.registers {
-		cp.registers[k] = v
-	}
-	m.checkpoint = cp
-}
-
-func (m *Machine) RestoreCheckpoint() bool {
-	if m.checkpoint == nil {
-		return false
-	}
-	m.memory, m.checkpoint.memory = m.checkpoint.memory, m.memory
-	m.registers, m.checkpoint.registers = m.checkpoint.registers, m.registers
-	return true
 }
 
 func (m *Machine) LoadProgram(program []byte) {
@@ -610,6 +589,12 @@ func (m *Machine) Quit() {
 func (m *Machine) GetRegisters() map[Register]uint32 {
 
 	return m.registers
+}
+
+func (m *Machine) GetInstructionsExecuted() uint64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.instructionsExecuted
 }
 
 func NewMachine(memoryBytes int, debugFlag bool) *Machine {

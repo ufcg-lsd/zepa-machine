@@ -3,7 +3,6 @@ package machine
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"unicode/utf8"
 )
@@ -322,10 +321,6 @@ func (m *Machine) DebugRegistersString() string {
 	return buf.String()
 }
 
-func (m *Machine) DebugRegisters() {
-	m.debugRegistersTo(os.Stdout)
-}
-
 func (m *Machine) debugRegistersTo(out io.Writer) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -533,21 +528,6 @@ func runningPidStr(runningPid uint32) string {
 	}
 
 	return fmt.Sprintf("%d", runningPid)
-}
-
-func (m *Machine) DebugSystemString() string {
-	var buf strings.Builder
-	m.debugSystemTo(&buf)
-	return buf.String()
-}
-
-func (m *Machine) DebugSystem() {
-	m.debugSystemTo(os.Stdout)
-}
-
-func (m *Machine) debugSystemTo(out io.Writer) {
-	m.debugKernelVarsTo(out)
-	m.debugProcessTableTo(out)
 }
 
 func (m *Machine) GetKernelVarsString() string {
