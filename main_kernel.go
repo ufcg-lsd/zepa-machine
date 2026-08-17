@@ -36,10 +36,13 @@ func main() {
 	}
 
 	if memorySize%4 != 0 {
-		log.Fatalf("memory_size must be a multiple of 4, got %d", memorySize)
+		log.Fatalf("memory_size must be a multiple of 4, got %dB", memorySize)
 	}
 	if memorySize < (1<<30)+(1<<12) {
-		log.Fatalf("memory_size must be at least 1GB + 4KB, got %d", memorySize)
+		log.Fatalf("memory_size must be at least 1GB + 4KB, got %dB", memorySize)
+	}
+	if memorySize > (1 << 32) {
+		log.Fatalf("memory_size must be at most 4GB, got %dB", memorySize)
 	}
 
 	timeSlice, err := strconv.Atoi(os.Args[2])
