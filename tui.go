@@ -125,11 +125,14 @@ func runTUIWithMachine(m *machine.Machine) {
 				}
 			}
 			go func() {
+				cyclesBefore := m.GetCyclesExecuted()
 				for i := 0; i < steps; i++ {
 					m.StepChan <- struct{}{}
 					<-m.DoneChan
 				}
+				cycles := m.GetCyclesExecuted() - cyclesBefore
 				app.QueueUpdateDraw(func() {
+					appendOutput(fmt.Sprintf("Cycles used: %d", cycles))
 					refreshAll()
 				})
 			}()
@@ -146,6 +149,7 @@ func runTUIWithMachine(m *machine.Machine) {
 				return
 			}
 			go func() {
+				cyclesBefore := m.GetCyclesExecuted()
 				instructionCount := 0
 				for {
 					m.StepChan <- struct{}{}
@@ -156,14 +160,22 @@ func runTUIWithMachine(m *machine.Machine) {
 						break
 					}
 				}
+				cycles := m.GetCyclesExecuted() - cyclesBefore
 				app.QueueUpdateDraw(func() {
 					appendOutput(fmt.Sprintf("Breakpoint reached at pc=%d after %d instructions", m.GetRegisters()[10], instructionCount))
+					appendOutput(fmt.Sprintf("Cycles used: %d", cycles))
 					refreshAll()
 				})
 			}()
 
 		case "c", "count":
-			appendOutput(fmt.Sprintf("Instructions executed since boot: %d", m.GetInstructionsExecuted()))
+			instructions := m.GetInstructionsExecuted()
+			cycles := m.GetCyclesExecuted()
+			appendOutput(fmt.Sprintf("Instructions executed since boot: %d", instructions))
+			appendOutput(fmt.Sprintf("Cycles executed since boot: %d", cycles))
+			if instructions > 0 {
+				appendOutput(fmt.Sprintf("Average cycles per instruction: %.2f", float64(cycles)/float64(instructions)))
+			}
 
 		case "play":
 			if playing {
