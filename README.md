@@ -2,17 +2,7 @@
 
 A time-sharing operating system built on the ZEPA machine, with virtual memory implemented through **paging**. It provides a restricted environment for user programs, preemptively scheduled in round-robin fashion.
 
-## What is the paginated sackOS
-
-The paginated sackOS manages memory with fixed-size pages of **4 KB**, translated through page tables enabled by the MMU:
-
-- **Virtual memory:** `3 GB` for user space (low addresses) and `1 GB` for the kernel (high addresses, mapped `3 GB` above the user space).
-- **Preemptive scheduling:** processes run in round-robin; the scheduler preempts the running process every `time_slice` clock interrupts.
-- **Lazy mapping:** pages are mapped on demand on a page fault; if there is no free frame, the process dies with exit code `3`.
-- **Up to 256 processes**, each with its own page table and PCB.
-- **Exit codes:** `1` general fault, `2` external kill, `3` out of frames (page fault), or a user-defined code on `exit()`.
-
-### Documentation
+## Documentation
 
 Each piece of documentation is kept on this branch:
 
@@ -49,11 +39,23 @@ The TUI opens a debugger with an output panel and a command line (`cmd> `). Avai
 
 - `play` / `stop` — start / pause continuous execution
 - `d <steps>` (or `step`) — step N instructions (default 1)
-- `b <pc>` (or `breakpoint`) — run until the PC reaches the value
+- `b <pc>` (or `breakpoint`) — run until the PC reaches the value (kernel-mapped PCs, offset by 3 GB, also match)
 - `c` (or `count`) — show instructions/cycles executed since boot
 - `input <path>` — load and run an assembly program from a `.asm` file
 - `kill <pid>` — kill a process
 - `reg` — show the registers
 - `pcb` — show the process table
 - `refresh` — redraw the interface
+- `<pid>` — opens the page table view of that process
 
+## Quick notes about the kernel
+
+The paginated sackOS manages memory with fixed-size pages of **4 KB**, translated through page tables enabled by the MMU:
+
+- **Virtual memory:** `3 GB` for user space (low addresses) and `1 GB` for the kernel (high addresses, mapped `3 GB` above the user space).
+- **Preemptive scheduling:** processes run in round-robin; the scheduler preempts the running process every `time_slice` clock interrupts.
+- **Lazy mapping:** pages are mapped on demand on a page fault; if there is no free frame, the process dies with exit code `3`.
+- **Up to 256 processes**, each with its own page table and PCB.
+- **Exit codes:** `1` general fault, `2` external kill, `3` out of frames (page fault), or a user-defined code on `exit()`.
+
+To understand more of the kernel's implementation, check out the documentation.
