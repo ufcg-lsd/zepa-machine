@@ -565,10 +565,11 @@ func (m *Machine) decode() (Instruction, bool) {
 	}
 }
 
-func (m *Machine) execute(inst Instruction) {
+func (m *Machine) execute(inst Instruction) int {
 	nCycles := operations[inst.opcode](m, inst)
 	m.instructionsExecuted++
 	m.totalCycles += uint64(nCycles)
+	return nCycles
 }
 
 func (m *Machine) Boot() {

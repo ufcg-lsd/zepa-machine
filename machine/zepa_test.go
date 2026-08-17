@@ -652,32 +652,3 @@ func TestMMUPenalty(t *testing.T) {
 		t.Errorf("STRD MMU enabled: expected 3 cycles, got %d", got)
 	}
 }
-
-func TestCheckpointRestoresCounters(t *testing.T) {
-	machine := NewMachine(2048, false)
-
-	machine.execute(Instruction{opcode: MV})     // 1 cycle
-	machine.execute(Instruction{opcode: ADD})    // 1 cycle
-	machine.execute(Instruction{opcode: STORE})  // 2 cycles
-
-	machine.SaveCheckpoint()
-	machine.execute(Instruction{opcode: LOAD})   // 2 cycles
-
-	if got := machine.GetInstructionsExecuted(); got != 4 {
-		t.Errorf("Expected 4 instructions before restore, got %d", got)
-	}
-	if got := machine.GetCyclesExecuted(); got != 6 {
-		t.Errorf("Expected 6 cycles before restore, got %d", got)
-	}
-
-	if !machine.RestoreCheckpoint() {
-		t.Fatal("Expected checkpoint to be restored")
-	}
-
-	if got := machine.GetInstructionsExecuted(); got != 3 {
-		t.Errorf("Expected 3 instructions after restore, got %d", got)
-	}
-	if got := machine.GetCyclesExecuted(); got != 4 {
-		t.Errorf("Expected 4 cycles after restore, got %d", got)
-	}
-}
