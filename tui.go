@@ -169,10 +169,6 @@ func runTUIWithMachine(m *machine.Machine) {
 		switch parts[0] {
 		case "d", "step":
 			stopPlay()
-			if !m.IsDebugMode() {
-				appendOutput("Machine is not in debug mode!")
-				return
-			}
 			steps := 1
 			if len(parts) > 1 {
 				parsedSteps, err := strconv.Atoi(parts[1])
@@ -194,10 +190,6 @@ func runTUIWithMachine(m *machine.Machine) {
 
 		case "b", "breakpoint":
 			stopPlay()
-			if !m.IsDebugMode() {
-				appendOutput("Machine is not in debug mode!")
-				return
-			}
 			if len(parts) < 2 {
 				appendOutput("usage: b <pc>")
 				return
@@ -230,17 +222,9 @@ func runTUIWithMachine(m *machine.Machine) {
 			}()
 
 		case "c", "count":
-			if !m.IsDebugMode() {
-				appendOutput("Machine is not in debug mode!")
-				return
-			}
 			appendOutput(fmt.Sprintf("Instructions executed since boot: %d", m.GetInstructionsExecuted()))
 
 		case "play":
-			if !m.IsDebugMode() {
-				appendOutput("Machine is not in debug mode!")
-				return
-			}
 			if playing {
 				appendOutput("Already playing (use 'stop')")
 				return
