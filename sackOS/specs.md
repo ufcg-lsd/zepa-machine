@@ -14,10 +14,10 @@ sackOS is a time-sharing operating system with virtual memory implemented throug
 * `MRET` is a kernel-only instruction, using it will result in a fatal illegal access fault.
 
 ### 1.3 Memory Space
-* **Fixed Partitions:** Your process is loaded into a contiguous memory block of `PARTITION_SIZE` bytes, the bytecode is stored at the start of this block. 
-* **Addressing:** User space interacts with memory using relative addresses starting from `0` up to `PARTITION_SIZE - 1`. The OS handles the translation to physical memory (`BASE` and `LIMIT`) transparently.
-* **Memory Protection:** Any attempt to read or write memory outside your designated partition (any address greater than `PARTITION_SIZE - 1`) will result in a fatal memory fault.
-* **Stack Pointer:** sackOS has a **Full Descending Stack**, so the `SP` is initializes to `PARTITION_SIZE`, so make sure to decrement its value before storing data.
+* **Virtual Memory & Paging:** Your process executes within a flat 3GB virtual address space (addresses `0x00000000` through `0xBFFFFFFF`). The OS maps these virtual pages to physical 4KB frames transparently. The initial bytecode is mapped at the start of this virtual space.
+* **Demand Paging:** Physical memory is not fully pre-allocated. When your process accesses a valid, unmapped virtual address for the first time, a hardware page fault occurs, and the OS dynamically allocates a physical frame to back that page.
+* **Memory Protection:** The virtual address space from `0xC0000000` up to `0xFFFFFFFF` (the upper 1GB) is strictly reserved for the kernel. Any attempt by a user process to read, write, or execute memory at or above the 3GB boundary will result in a fatal memory fault.
+* **Stack Pointer:** sackOS utilizes a **Full Descending Stack**. The `SP` is initialized to the absolute top of the user virtual address space (`0xC0000000`). Because it is descending, you must decrement its value before storing data to ensure it falls within the legal user space.
 
 ---
 
@@ -33,9 +33,9 @@ A process in sackOS can be in one of the following states:
 ### 2.2 Termination and Exit Codes
 Processes can be terminated in three ways. The system uses specific exit codes (status codes stored in `W9`) to denote how a process ended:
 * **Normal Exit:** Triggered via the `exit()` syscall. Status code is user-defined.
-* **General Fault (Exit Code `1`):** Triggered if the process attempts an kernel, memory access, an illegal register access, privileged instruction use or invalid instruction.
-* **External Kill (Exit Code `2`):** Triggered if the OS directly terminates the process (e.g., via kill signal).
-* **Page Fault (Exit Code `3`):** Triggered if the process attempts to allocate a page but there are no frames left.
+* **General Fault (Exit Code `1`):** Triggered if the process attempts an illegal kernel memory access, an illegal register access, privileged instruction use, or an invalid instruction.
+* **External Kill (Exit Code `2`):** Triggered if the OS directly terminates the process (e.g., via a system kill signal).
+* **Out of Memory / Page Fault (Exit Code `3`):** Triggered if the process attempts to access a new virtual page, but the physical memory (bitmap) has run out of free frames to allocate, or the process tried to access kernel memory.
 ---
 
 ## 3. System Calls (Syscalls)
@@ -43,10 +43,10 @@ Processes can be terminated in three ways. The system uses specific exit codes (
 System calls are invoked by placing the specific Syscall ID into the `W9` register and issuing the software interrupt/syscall instruction, any syscall with an additional argument expects this argument to be in the `W8` register. Return values are also placed in `W9`. When making any syscall, the process is preempted by the scheduler, so users must not expect to resume execution immediately after a syscall.
 
 ### `fork()` - ID 0
-Creates a new process by duplicating the calling process. The child process receives an exact copy of the parent's memory and registers at the moment of the call.
+Creates a new process by duplicating the calling process. The child process receives an exact copy of the parent's mapped memory pages and registers at the moment of the call.
 * **Returns (in `W9`):**
     * To the **parent**: The PID of the newly created child process.
-    * To the **parent**: `-1` if the OS has reached its maximum partition capacity and cannot spawn a new process.
+    * To the **parent**: `-1` if the OS has reached its maximum process capacity, or if there are no free physical frames left to allocate the child's Page Table and Process Control Block.
     * To the **child**: `-2`.
 
 ### `wait(status_addr)` - ID 1
@@ -60,7 +60,7 @@ Pauses the execution of the calling process until one of its child processes ter
 
 ### `exit(status_code)` - ID 2
 Terminates the calling process and returns the `status_code` to the parent process (if the parent is waiting).
-* **Behavior:** The process becomes a "zombie" until the parent calls `wait()`. If the parent is already dead (orphan), the process is destroyed immediately.
+* **Behavior:** The process becomes a "zombie" until the parent calls `wait()`. If the parent is already dead (orphan), the process and its physical frames are destroyed and freed immediately.
 * **Note:** The system will overwrite `W9` with your `status_code` internally to pass it back to the parent.
 
 ### `getPID()` - ID 3
@@ -75,7 +75,7 @@ Yields the CPU. The calling process voluntarily pauses its execution, moving fro
 
 ## 4. Operational Limits
 As a user, you must adhere to the limits set by the system administrator at boot:
-* Memory is strictly confined to `PARTITION_SIZE`, which can be seem at runtime as the initial value of `SP`. You cannot allocate more memory dynamically.
-* Total concurrent processes across the entire system cannot exceed `partition_number`, calculated as the maximum amount of partitions that the memory can store (excluding kernel memory).
-* CPU execution is preemptive; long-running processes will be automatically interrupted every `TIME_SLICE` clock ticks to allow other programs to run.
-* When creating a process, users must not assume fairness, the process will be put in a non deterministic position of the queue.
+* **Memory Limits:** While the virtual address space is 3GB, actual memory usage is bounded by the physical RAM available on the machine. Unchecked memory expansion will eventually consume all physical frames and trigger a fatal Out of Memory termination (Exit Code `3`).
+* **Process Limits:** Total concurrent processes across the entire system cannot exceed the hardware-defined `MAX_PROCESSES` limit (typically 256).
+* **Time Slicing:** CPU execution is preemptive; long-running processes will be automatically interrupted every `TIME_SLICE` clock ticks to allow other programs to run.
+* **Scheduling:** When creating a process, users must not assume fairness. The process will be placed in a non-deterministic position in the ready queue.
