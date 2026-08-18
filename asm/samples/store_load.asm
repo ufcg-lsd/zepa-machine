@@ -1,0 +1,4 @@
+MV W3, #66
+MV W1, #0x020
+STORE W3, W1
+LOAD W2, W1
