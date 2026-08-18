@@ -1,0 +1,3 @@
+ADD W1, W2, W3
+MV W1, #5
+SYSCALL #2
