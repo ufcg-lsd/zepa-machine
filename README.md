@@ -26,12 +26,12 @@ The sackOS kernel built on top of the ZEPA machine, with memory divided into fix
 
 ```
 git checkout sackOS-partitioned
-go run -tags kernel . <memory_size_in_MB> <partition_size> <time_slice> [--tui] [--no-debug]
+go run -tags kernel . <memory_size_in_GB_or_MB_or_KB_or_B> <partition_size> <time_slice> 
 ```
 
 example of usage:
 ```
-go run -tags kernel . 1024 128 128 [--tui]
+go run -tags kernel . 9MB 128 128 
 ```
 
 ### `sackOS-paginated`
@@ -40,12 +40,12 @@ The sackOS kernel built on top of the ZEPA machine, with virtual memory implemen
 
 ```
 git checkout sackOS-paginated
-go run -tags kernel . <memory_size_in_MB> <time_slice> [--tui] [--no-debug]
+go run -tags kernel . <memory_size_in_GB_or_MB_or_KB_or_B> <time_slice> 
 ```
 
 example of usage:
 ```
-go run -tags kernel . 2048 128 [--tui]
+go run -tags kernel . 2GB 128 
 ```
 
 Each kernel branch carries its own documentation: `README.md`, `specs/ISA/ISA.md`, `specs/assembly/assembly.md`, `sackOS/specs.md` and `sackOS/abstract_implementation.md`.
