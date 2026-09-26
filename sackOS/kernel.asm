@@ -1187,6 +1187,22 @@ kill:
       LOAD W5, W4       ; W5 = pcb_v[curr_child].next_sibling = next
       STORE W7, W4      ; pcb_v[curr_child].next_sibling = -1
 
+      MV W6, #68
+      ADD W4, W4, W6    ; W4 = pcb_v[curr_child].flags address
+      LOAD W8, W4       ; W8 = pcb_v[curr_child].flags
+      
+      MV W6, #2         ; W6 = is_zombie mask
+      AND W8, W8, W6
+      CMP W8, W6
+      BLT kill_skip_unmap   ; if pcb_v[curr_child].is_zombie
+
+         LOAD W8, W4        ; W8 = pcb_v[curr_child].flags
+         MV W6, #-2         ; 111110, to unset the mapped flag
+         AND W8, W8, W6
+         STORE W8, W4       ; pcb_v[curr_child].is_mapped = 0
+
+      kill_skip_unmap:
+
       MV W8, #0
       ADD W3, W5, W8    ; W3 = curr_child = next
       JUMP orphanize_loop

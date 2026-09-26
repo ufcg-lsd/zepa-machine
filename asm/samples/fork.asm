@@ -14,4 +14,5 @@ JUMP parent_loop  ; Loop infinito: retorna para o início da rotina do pai
 
 child_loop:
 ADD W1, W1, W2    ; Incrementa W1 em 1 (W1 = W1 + W2)
+SYSCALL #2
 JUMP child_loop   ; Loop infinito: retorna para o início da rotina do filho
