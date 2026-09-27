@@ -216,6 +216,8 @@ while curr_child != -1:
   pcb_v[curr_child].prev_sibling = -1
   next = pcb_v[curr_child].next_sibling
   pcb_v[curr_child].next_sibling = -1
+  if pcb_v[curr_child].is_zombie:
+    pcb_v[curr_child].is_mapped = 0
   curr_child = next
 
 schedule()
