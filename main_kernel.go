@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	kernelMappingOffset = 0xC0000000 // kernel mapeado 3GB acima
+	kernelMappingOffset = machine.KernelVirtualOffset // kernel mapeado 3GB acima
 )
 
 func main() {
@@ -53,17 +53,38 @@ func main() {
 	machine := machine.NewMachine(memorySize, true)
 	machine.LoadProgram(binaryCode)
 
-	memSlice := machine.GetMemory()[0x2000:0x2004]
-	binary.LittleEndian.PutUint32(memSlice, uint32(256)) // max processes
-
-	memSlice = machine.GetMemory()[0x2004:0x2008]
-	binary.LittleEndian.PutUint32(memSlice, uint32(timeSlice))
-
-	memSlice = machine.GetMemory()[0x2008:0x200C]
-	binary.LittleEndian.PutUint32(memSlice, uint32(0x10000)) // buffer size
+	if err := initializeKernelGlobals(machine.GetMemory(), uint32(timeSlice)); err != nil {
+		log.Fatalf("Initialize kernel globals: %v", err)
+	}
 
 	go machine.Boot()
 	runTUIWithMachine(machine)
+}
+
+func initializeKernelGlobals(memory []byte, timeSlice uint32) error {
+	offsets := [...]uint32{
+		machine.GlobalMaxProcessesOffset,
+		machine.GlobalTimeSliceOffset,
+		machine.GlobalBufferSizeOffset,
+	}
+	values := [...]uint32{
+		machine.PCBCount,
+		timeSlice,
+		machine.TransferBufferBytes,
+	}
+
+	for _, offset := range offsets {
+		address := machine.GlobalAddress(offset)
+		if uint64(address)+4 > uint64(len(memory)) {
+			return fmt.Errorf("global address %#x exceeds memory backing (%d bytes)", address, len(memory))
+		}
+	}
+
+	for i, offset := range offsets {
+		address := int(machine.GlobalAddress(offset))
+		binary.LittleEndian.PutUint32(memory[address:address+4], values[i])
+	}
+	return nil
 }
 
 func parseMemorySize(sizeStr string) (int, error) {
