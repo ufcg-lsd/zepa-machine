@@ -7,7 +7,7 @@ import (
 	"unicode/utf8"
 )
 
-func readUint32(memory []byte, addr uint32) uint32 {
+func readUint32(memory []byte, addr PhysicalAddress) uint32 {
 	return uint32(memory[addr]) |
 		uint32(memory[addr+1])<<8 |
 		uint32(memory[addr+2])<<16 |
@@ -15,21 +15,10 @@ func readUint32(memory []byte, addr uint32) uint32 {
 }
 
 const (
-	debugMaxProcessesAddr    = 0x2000
-	debugRunningPidAddr      = 0x2010
-	debugPCBVectorAddr       = 0x2024
-	debugKernelPageTableAddr = 0x30007024
-	debugPCBByteSize         = 0x300050
-	debugKernelPTEStride     = 0x4
-	debugMemorySizeAddr      = 0x200C
-	debugBitmapAddr          = 0x30107024
+	debugKernelPTEStride = 0x4
 
 	debugBitmapBitsPerGroup = 8
 	debugBitmapFramesPerRow = 32
-
-	debugPCBFlagsOffset     = 0x48
-	debugPCBPagesUsedOffset = 0x4C
-	debugPCBPageTableOffset = 0x50
 
 	debugKernelPTECount = 1 << 18
 )
@@ -576,18 +565,15 @@ func (m *Machine) debugKernelVarsTo(out io.Writer) {
 		extra string
 	}
 
-	maxProcesses := readUint32(memory, debugMaxProcessesAddr)
-	timeSlice := readUint32(memory, 0x2004)
-	bufferSize := readUint32(memory, 0x2008)
-	memorySize := readUint32(memory, 0x200C)
-	runningPid := readUint32(memory, debugRunningPidAddr)
-	clockInterruptCount := readUint32(memory, 0x2014)
-	kernelStackPointer := readUint32(memory, 0x2018)
-	scratchSpace0 := readUint32(memory, 0x201C)
-	scratchSpace1 := readUint32(memory, 0x2020)
-	pcbVector := readUint32(memory, debugPCBVectorAddr)
-
-	const pcbSize uint32 = debugPCBByteSize
+	maxProcesses := readUint32(memory, GlobalAddress(GlobalMaxProcessesOffset))
+	timeSlice := readUint32(memory, GlobalAddress(GlobalTimeSliceOffset))
+	bufferSize := readUint32(memory, GlobalAddress(GlobalBufferSizeOffset))
+	memorySize := readUint32(memory, GlobalAddress(GlobalMemorySizeOffset))
+	runningPid := readUint32(memory, GlobalAddress(GlobalRunningPIDOffset))
+	clockInterruptCount := readUint32(memory, GlobalAddress(GlobalClockCountOffset))
+	kernelStackPointer := readUint32(memory, GlobalAddress(GlobalKernelStackPointerOffset))
+	scratchSpace0 := readUint32(memory, GlobalAddress(GlobalScratch0Offset))
+	scratchSpace1 := readUint32(memory, GlobalAddress(GlobalScratch1Offset))
 
 	runningPidExtra := ""
 	if runningPid == 0xFFFFFFFF {
@@ -596,7 +582,7 @@ func (m *Machine) debugKernelVarsTo(out io.Writer) {
 
 	totalPcbMemoryExtra := fmt.Sprintf(
 		"(%d x %d)",
-		pcbSize,
+		PCBStride,
 		maxProcesses,
 	)
 
@@ -610,9 +596,9 @@ func (m *Machine) debugKernelVarsTo(out io.Writer) {
 		{"kernel_stack_pointer", kernelStackPointer, ""},
 		{"scratch_space_0", scratchSpace0, ""},
 		{"scratch_space_1", scratchSpace1, ""},
-		{"pcb_vector (base)", pcbVector, ""},
-		{"  pcb_size", pcbSize, ""},
-		{"  total_pcb_memory", pcbSize * maxProcesses, totalPcbMemoryExtra},
+		{"pcb_vector (base)", uint32(PCBVectorStart), ""},
+		{"  pcb_size", PCBStride, ""},
+		{"  total_pcb_memory", PCBStride * maxProcesses, totalPcbMemoryExtra},
 	}
 
 	nameWidth := visualLen("Variable")
@@ -682,8 +668,8 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 	defer m.mu.RUnlock()
 	memory := m.memory
 
-	maxProcesses := readUint32(memory, debugMaxProcessesAddr)
-	runningPid := readUint32(memory, debugRunningPidAddr)
+	maxProcesses := readUint32(memory, GlobalAddress(GlobalMaxProcessesOffset))
+	runningPid := readUint32(memory, GlobalAddress(GlobalRunningPIDOffset))
 
 	if maxProcesses == 0 {
 		fmt.Fprintln(out, "No processes (MAX_PROCESSES = 0).")
@@ -701,34 +687,37 @@ func (m *Machine) debugProcessTableTo(out io.Writer) {
 
 	var processes []pcbRow
 
-	for pid := uint32(0); pid < maxProcesses; pid++ {
-		pcbAddress := debugPCBVectorAddr + pid*debugPCBByteSize
-		flags := memory[pcbAddress+debugPCBFlagsOffset]
+	for pid := uint32(0); pid < maxProcesses && pid < PCBCount; pid++ {
+		pcbAddress, ok := PCBAddress(pid)
+		if !ok {
+			break
+		}
+		flags := memory[pcbAddress+PhysicalAddress(PCBFlagsOffset)]
 
 		if flags&1 == 0 {
 			continue
 		}
 
 		parentPid := int32(
-			readUint32(memory, pcbAddress+0),
+			readUint32(memory, pcbAddress+PhysicalAddress(PCBParentOffset)),
 		)
 
-		pagesUsed := int32(readUint32(memory, pcbAddress+debugPCBPagesUsedOffset))
+		pagesUsed := int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBPagesUsedOffset)))
 
 		registerValues := [13]int32{
-			int32(readUint32(memory, pcbAddress+20)), // W0
-			int32(readUint32(memory, pcbAddress+24)), // W1
-			int32(readUint32(memory, pcbAddress+28)), // W2
-			int32(readUint32(memory, pcbAddress+32)), // W3
-			int32(readUint32(memory, pcbAddress+36)), // W4
-			int32(readUint32(memory, pcbAddress+40)), // W5
-			int32(readUint32(memory, pcbAddress+44)), // W6
-			int32(readUint32(memory, pcbAddress+48)), // W7
-			int32(readUint32(memory, pcbAddress+52)), // W8
-			int32(readUint32(memory, pcbAddress+56)), // W9
-			int32(readUint32(memory, pcbAddress+60)), // PC
-			int32(readUint32(memory, pcbAddress+64)), // SP
-			int32(readUint32(memory, pcbAddress+68)), // SR
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBW0Offset+0*4))),         // W0
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBW0Offset+1*4))),         // W1
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBW0Offset+2*4))),         // W2
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBW0Offset+3*4))),         // W3
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBW0Offset+4*4))),         // W4
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBW0Offset+5*4))),         // W5
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBW0Offset+6*4))),         // W6
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBW0Offset+7*4))),         // W7
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBW0Offset+8*4))),         // W8
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBW9Offset))),             // W9
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBProgramCounterOffset))), // PC
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBStackPointerOffset))),   // SP
+			int32(readUint32(memory, pcbAddress+PhysicalAddress(PCBStatusRegisterOffset))), // SR
 		}
 
 		marker := " "
@@ -950,11 +939,11 @@ type pageTableEntry struct {
 	pte  uint32
 }
 
-func collectValidPageTableEntries(memory []byte, basePT uint32, nPTEs uint32) []pageTableEntry {
+func collectValidPageTableEntries(memory []byte, basePT PhysicalAddress, nPTEs uint32) []pageTableEntry {
 	var entries []pageTableEntry
 
 	for page := uint32(0); page < nPTEs; page++ {
-		pte := readUint32(memory, basePT+page*debugKernelPTEStride)
+		pte := readUint32(memory, basePT+PhysicalAddress(page*debugKernelPTEStride))
 
 		if pte&isPteMappedMask == 0 {
 			continue
@@ -977,25 +966,25 @@ func (m *Machine) GetProcessPageTableString(pid uint32) string {
 	var buf strings.Builder
 	memory := m.memory
 
-	maxProcesses := readUint32(memory, debugMaxProcessesAddr)
+	maxProcesses := readUint32(memory, GlobalAddress(GlobalMaxProcessesOffset))
 
 	if maxProcesses == 0 {
 		return "No processes (MAX_PROCESSES = 0)."
 	}
 
-	if pid >= maxProcesses {
+	pcbAddr, validPID := PCBAddress(pid)
+	if pid >= maxProcesses || !validPID {
 		return fmt.Sprintf("PID %d out of range (MAX_PROCESSES = %d).", pid, maxProcesses)
 	}
 
-	pcbAddr := debugPCBVectorAddr + pid*debugPCBByteSize
-	flags := memory[pcbAddr+debugPCBFlagsOffset]
+	flags := memory[pcbAddr+PhysicalAddress(PCBFlagsOffset)]
 
 	if flags&1 == 0 {
 		return fmt.Sprintf("PID %d is not mapped.", pid)
 	}
 
-	pagesUsed := readUint32(memory, pcbAddr+debugPCBPagesUsedOffset)
-	pageTableAddr := pcbAddr + debugPCBPageTableOffset
+	pagesUsed := readUint32(memory, pcbAddr+PhysicalAddress(PCBPagesUsedOffset))
+	pageTableAddr := pcbAddr + PhysicalAddress(PCBPageTableOffset)
 
 	entries := collectValidPageTableEntries(memory, pageTableAddr, pagesUsed)
 
@@ -1011,7 +1000,7 @@ func (m *Machine) GetKernelPageTableString() string {
 	var buf strings.Builder
 	memory := m.memory
 
-	entries := collectValidPageTableEntries(memory, debugKernelPageTableAddr, debugKernelPTECount)
+	entries := collectValidPageTableEntries(memory, KernelPageTableStart, debugKernelPTECount)
 
 	renderPageTable(&buf, fmt.Sprintf("KERNEL PAGE TABLE • %d PTEs", debugKernelPTECount), entries)
 
@@ -1080,10 +1069,13 @@ func renderPageTable(out io.Writer, title string, entries []pageTableEntry) {
 	fmt.Fprintln(out)
 }
 
+func bitmapWordAddress(frame uint32) PhysicalAddress {
+	return BitmapStart + PhysicalAddress((frame>>5)*4)
+}
+
 func frameUsedAt(memory []byte, b uint32) bool {
-	wordIndex := b >> 5
 	bitIndex := b & 31
-	word := readUint32(memory, debugBitmapAddr+wordIndex*4)
+	word := readUint32(memory, bitmapWordAddress(b))
 	return word&(uint32(1)<<bitIndex) != 0
 }
 
@@ -1094,7 +1086,7 @@ func (m *Machine) GetBitmapString() string {
 	var buf strings.Builder
 	memory := m.memory
 
-	memorySize := readUint32(memory, debugMemorySizeAddr)
+	memorySize := readUint32(memory, GlobalAddress(GlobalMemorySizeOffset))
 	numFrames := memorySize / pageSize
 
 	used := uint32(0)
@@ -1291,8 +1283,8 @@ func (m *Machine) GetPCBVectorString() string {
 	w := &buf
 
 	memory := m.memory
-	maxProcesses := readUint32(memory, debugMaxProcessesAddr)
-	runningPid := readUint32(memory, debugRunningPidAddr)
+	maxProcesses := readUint32(memory, GlobalAddress(GlobalMaxProcessesOffset))
+	runningPid := readUint32(memory, GlobalAddress(GlobalRunningPIDOffset))
 
 	if maxProcesses == 0 {
 		fmt.Fprintln(w, "No processes.")
@@ -1318,34 +1310,37 @@ func (m *Machine) GetPCBVectorString() string {
 
 	var entries []pcbEntry
 
-	for pid := uint32(0); pid < maxProcesses; pid++ {
-		pcbAddr := debugPCBVectorAddr + pid*debugPCBByteSize
-		flags := memory[pcbAddr+debugPCBFlagsOffset]
+	for pid := uint32(0); pid < maxProcesses && pid < PCBCount; pid++ {
+		pcbAddr, ok := PCBAddress(pid)
+		if !ok {
+			break
+		}
+		flags := memory[pcbAddr+PhysicalAddress(PCBFlagsOffset)]
 		if flags&1 == 0 {
 			continue
 		}
 
 		entries = append(entries, pcbEntry{
 			pid:        int(pid),
-			parent:     int32(readUint32(memory, pcbAddr+0)),
-			child:      int32(readUint32(memory, pcbAddr+4)),
-			nextSib:    int32(readUint32(memory, pcbAddr+12)),
-			prevSib:    int32(readUint32(memory, pcbAddr+8)),
-			statusAddr: int32(readUint32(memory, pcbAddr+16)),
-			w0:         int32(readUint32(memory, pcbAddr+20)),
-			w1:         int32(readUint32(memory, pcbAddr+24)),
-			w2:         int32(readUint32(memory, pcbAddr+28)),
-			w3:         int32(readUint32(memory, pcbAddr+32)),
-			w4:         int32(readUint32(memory, pcbAddr+36)),
-			w5:         int32(readUint32(memory, pcbAddr+40)),
-			w6:         int32(readUint32(memory, pcbAddr+44)),
-			w7:         int32(readUint32(memory, pcbAddr+48)),
-			w8:         int32(readUint32(memory, pcbAddr+52)),
-			w9:         int32(readUint32(memory, pcbAddr+56)),
-			pc:         int32(readUint32(memory, pcbAddr+60)),
-			sp:         int32(readUint32(memory, pcbAddr+64)),
-			sr:         int32(readUint32(memory, pcbAddr+68)),
-			pages:      int32(readUint32(memory, pcbAddr+debugPCBPagesUsedOffset)),
+			parent:     int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBParentOffset))),
+			child:      int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBChildOffset))),
+			nextSib:    int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBNextSiblingOffset))),
+			prevSib:    int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBPreviousSiblingOffset))),
+			statusAddr: int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBStatusAddressOffset))),
+			w0:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBW0Offset))),
+			w1:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBW0Offset+1*4))),
+			w2:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBW0Offset+2*4))),
+			w3:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBW0Offset+3*4))),
+			w4:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBW0Offset+4*4))),
+			w5:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBW0Offset+5*4))),
+			w6:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBW0Offset+6*4))),
+			w7:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBW0Offset+7*4))),
+			w8:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBW0Offset+8*4))),
+			w9:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBW9Offset))),
+			pc:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBProgramCounterOffset))),
+			sp:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBStackPointerOffset))),
+			sr:         int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBStatusRegisterOffset))),
+			pages:      int32(readUint32(memory, pcbAddr+PhysicalAddress(PCBPagesUsedOffset))),
 			flags:      flags,
 			state:      pcbState(flags),
 		})
