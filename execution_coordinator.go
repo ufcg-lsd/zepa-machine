@@ -125,6 +125,18 @@ func (c *executionCoordinator) hasCommands() bool {
 	return len(c.queue) != 0
 }
 
+// beginStep linearizes starting an instruction against Submit. A control
+// request submitted after this point treats the reserved instruction as the
+// one in flight and is handled after its acknowledgement.
+func (c *executionCoordinator) beginStep() bool {
+	c.queueMu.Lock()
+	defer c.queueMu.Unlock()
+	if len(c.queue) != 0 {
+		return false
+	}
+	return true
+}
+
 func (c *executionCoordinator) notify(message string) {
 	select {
 	case c.notices <- executionNotice{message: message}:
@@ -259,6 +271,9 @@ func (c *executionCoordinator) run() {
 		} else if c.hasCommands() {
 			continue
 		}
+		if !c.beginStep() {
+			continue
+		}
 
 		result, err := c.stepper.Step(c.ctx)
 		if err != nil {
@@ -306,10 +321,7 @@ func (s machineInstructionStepper) Step(ctx context.Context) (instructionResult,
 		// acknowledged even if cancellation is requested meanwhile.
 	}
 	<-s.machine.DoneChan
-	registers := make(map[machine.Register]uint32)
-	for register, value := range s.machine.GetRegisters() {
-		registers[register] = value
-	}
+	registers := s.machine.GetRegistersSnapshot()
 	return instructionResult{
 		pc:     registers[machine.Register(10)],
 		cycles: s.machine.GetCyclesExecuted() - cyclesBefore,

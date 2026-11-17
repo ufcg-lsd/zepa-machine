@@ -351,6 +351,19 @@ func (m *Machine) DebugRegistersString() string {
 	return buf.String()
 }
 
+// GetRegistersSnapshot returns a detached register copy for observers that
+// need a stable view while the machine may be executing.
+func (m *Machine) GetRegistersSnapshot() map[Register]uint32 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	snapshot := make(map[Register]uint32, len(m.registers))
+	for register, value := range m.registers {
+		snapshot[register] = value
+	}
+	return snapshot
+}
+
 func (m *Machine) debugRegistersTo(out io.Writer) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
