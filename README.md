@@ -37,7 +37,7 @@ There are no flags: when the kernel starts, the TUI launches automatically and d
 
 The TUI opens a debugger with an output panel and a command line (`cmd> `). Available commands:
 
-- `play` / `stop` — start / pause continuous execution
+- `play` / `stop` / `pause` — start continuous execution, stop it, or pause after the in-flight instruction is acknowledged; `step` or `play` resumes execution
 - `d <steps>` (or `step`) — step N instructions (default 1)
 - `b <pc>` (or `breakpoint`) — run until the PC reaches the value (kernel-mapped PCs, offset by 3 GB, also match)
 - `c` (or `count`) — show instructions/cycles executed since boot
