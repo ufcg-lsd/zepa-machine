@@ -181,3 +181,27 @@ func TestExecutionCoordinatorPlayStopAcknowledgesInflightStep(t *testing.T) {
 		t.Fatalf("concurrent instruction steps = %d, want 1", got)
 	}
 }
+
+func TestExecutionCoordinatorCloseWaitsForInflightAcknowledgement(t *testing.T) {
+	stepper := newControlledInstructionStepper()
+	coordinator := startTestCoordinator(t, stepper, func(time.Duration) executionTicker {
+		t.Fatal("breakpoint mode must not create a play ticker")
+		return nil
+	})
+	coordinator.Submit(executionCommand{kind: executionBreakpoint, target: 20})
+	inflight := nextStep(t, stepper)
+
+	coordinator.Close()
+	assertNoStep(t, stepper)
+	inflight <- instructionResult{pc: 8, cycles: 2}
+
+	select {
+	case <-coordinator.Done():
+	case <-time.After(time.Second):
+		t.Fatal("coordinator did not exit after the in-flight step was acknowledged")
+	}
+	assertNoStep(t, stepper)
+	if got := stepper.maxConcurrent.Load(); got != 1 {
+		t.Fatalf("concurrent instruction steps = %d, want 1", got)
+	}
+}
