@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	assembler "zepa-machine/cross-assembler"
 	"zepa-machine/machine"
@@ -54,8 +55,6 @@ func runTUIWithMachine(m *machine.Machine) {
 	}
 	var currentPageTable pageTableTarget
 	var pageTableActive bool
-	var playStop chan struct{}
-	var playing bool
 
 	outputView := tview.NewTextView()
 	outputView.SetDynamicColors(true)
@@ -130,13 +129,6 @@ func runTUIWithMachine(m *machine.Machine) {
 		refreshAll()
 	}
 
-	stopPlay := func() {
-		if playing {
-			close(playStop)
-			playing = false
-		}
-	}
-
 	appendOutput := func(text string) {
 		current := outputView.GetText(false)
 		if current != "" {
@@ -146,6 +138,22 @@ func runTUIWithMachine(m *machine.Machine) {
 		outputView.SetText(current)
 		outputView.ScrollToEnd()
 	}
+
+	coordinator := newExecutionCoordinator(machineInstructionStepper{machine: m})
+	coordinator.Start()
+	defer coordinator.Close()
+	uiDone := make(chan struct{})
+	var stopUIOnce sync.Once
+	stopUI := func() { stopUIOnce.Do(func() { close(uiDone) }) }
+	defer stopUI()
+	go func() {
+		for notice := range coordinator.Notices() {
+			app.QueueUpdateDraw(func() {
+				appendOutput(notice.message)
+				refreshAll()
+			})
+		}
+	}()
 
 	refreshAll()
 
@@ -168,7 +176,6 @@ func runTUIWithMachine(m *machine.Machine) {
 
 		switch parts[0] {
 		case "d", "step":
-			stopPlay()
 			steps := 1
 			if len(parts) > 1 {
 				parsedSteps, err := strconv.Atoi(parts[1])
@@ -178,21 +185,9 @@ func runTUIWithMachine(m *machine.Machine) {
 					steps = parsedSteps
 				}
 			}
-			go func() {
-				cyclesBefore := m.GetCyclesExecuted()
-				for i := 0; i < steps; i++ {
-					m.StepChan <- struct{}{}
-					<-m.DoneChan
-				}
-				cycles := m.GetCyclesExecuted() - cyclesBefore
-				app.QueueUpdateDraw(func() {
-					appendOutput(fmt.Sprintf("Cycles used: %d", cycles))
-					refreshAll()
-				})
-			}()
+			coordinator.Submit(executionCommand{kind: executionStep, steps: steps})
 
 		case "b", "breakpoint":
-			stopPlay()
 			if len(parts) < 2 {
 				appendOutput("usage: b <pc>")
 				return
@@ -202,30 +197,7 @@ func runTUIWithMachine(m *machine.Machine) {
 				appendOutput("Invalid PC.")
 				return
 			}
-			go func() {
-				cyclesBefore := m.GetCyclesExecuted()
-				instructionCount := 0
-				for {
-					m.StepChan <- struct{}{}
-					<-m.DoneChan
-					instructionCount++
-
-					pc := m.GetRegisters()[10]
-					if pc == uint32(pcValue) || pc == uint32(pcValue)+kernelMappingOffset {
-						break
-					}
-				}
-				cycles := m.GetCyclesExecuted() - cyclesBefore
-				app.QueueUpdateDraw(func() {
-					logicalPC := m.GetRegisters()[10]
-					if logicalPC >= kernelMappingOffset {
-						logicalPC -= kernelMappingOffset
-					}
-					appendOutput(fmt.Sprintf("Breakpoint reached at pc=%d after %d instructions", logicalPC, instructionCount))
-					appendOutput(fmt.Sprintf("Cycles used: %d", cycles))
-					refreshAll()
-				})
-			}()
+			coordinator.Submit(executionCommand{kind: executionBreakpoint, target: uint32(pcValue)})
 
 		case "c", "count":
 			instructions := m.GetInstructionsExecuted()
@@ -237,37 +209,13 @@ func runTUIWithMachine(m *machine.Machine) {
 			}
 
 		case "play":
-			if playing {
-				appendOutput("Already playing (use 'stop')")
-				return
-			}
-			playing = true
-			playStop = make(chan struct{})
-			appendOutput("play started (100ms/step)")
-			go func() {
-				ticker := time.NewTicker(100 * time.Millisecond)
-				defer ticker.Stop()
-				for {
-					select {
-					case <-playStop:
-						return
-					case <-ticker.C:
-					}
-					m.StepChan <- struct{}{}
-					<-m.DoneChan
-					app.QueueUpdateDraw(func() {
-						refreshAll()
-					})
-				}
-			}()
+			coordinator.Submit(executionCommand{kind: executionPlay})
 
 		case "stop":
-			if !playing {
-				appendOutput("Not playing")
-				return
-			}
-			stopPlay()
-			appendOutput("play stopped")
+			coordinator.Submit(executionCommand{kind: executionStop})
+
+		case "pause":
+			coordinator.Submit(executionCommand{kind: executionPause, reason: "user request"})
 
 		case "kill":
 			if len(parts) < 2 {
@@ -320,12 +268,16 @@ func runTUIWithMachine(m *machine.Machine) {
 
 		case "q", "quit":
 			appendOutput("exiting debugger")
+			stopUI()
+			coordinator.Close()
 			app.Stop()
 		}
 	})
 
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyCtrlC {
+			stopUI()
+			coordinator.Close()
 			app.Stop()
 			return nil
 		}
@@ -346,10 +298,25 @@ func runTUIWithMachine(m *machine.Machine) {
 	})
 
 	go func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
 		for {
-			time.Sleep(500 * time.Millisecond)
+			select {
+			case <-uiDone:
+				return
+			case <-ticker.C:
+			}
+			select {
+			case <-uiDone:
+				return
+			default:
+			}
 			app.QueueUpdateDraw(func() {
-				refreshAll()
+				select {
+				case <-uiDone:
+				default:
+					refreshAll()
+				}
 			})
 		}
 	}()

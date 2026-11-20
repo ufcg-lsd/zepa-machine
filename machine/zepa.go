@@ -573,7 +573,9 @@ func (m *Machine) execute(inst Instruction) int {
 }
 
 func (m *Machine) Boot() {
+	m.mu.Lock()
 	m.registers[w0] = uint32(len(m.memory))
+	m.mu.Unlock()
 	clockCounter := 0
 
 	var decodedInstruction Instruction
@@ -585,16 +587,20 @@ func (m *Machine) Boot() {
 			<-m.StepChan
 		}
 
+		// A complete instruction, including fetch/decode, is one atomic machine
+		// state transition for debugger snapshots.
+		m.mu.Lock()
 		if !m.fetch() {
+			m.mu.Unlock()
 			goto endStep
 		}
 
 		decodedInstruction, ok = m.decode()
 		if !ok {
+			m.mu.Unlock()
 			goto endStep
 		}
 
-		m.mu.Lock()
 		if m.checkIllegalRegisterAccess(decodedInstruction) {
 			m.exception(faultExc)
 			m.mu.Unlock()
