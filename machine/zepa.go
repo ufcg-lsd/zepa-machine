@@ -150,13 +150,16 @@ type Machine struct {
 	memory               []byte
 	registers            map[Register]uint32
 	mu                   sync.RWMutex
-	killFlag             bool
-	inputFlag            bool
+	pendingKill          pendingControl
+	pendingInput         pendingControl
 	debugFlag            bool
 	instructionsExecuted uint64
 	totalCycles          uint64
 	StepChan             chan struct{}
 	DoneChan             chan struct{}
+	// controlWake has capacity 1 so a wakeup sent while the owner is busy is
+	// kept, and repeated wakeups coalesce into one token.
+	controlWake chan struct{}
 }
 
 func (m *Machine) mv(inst Instruction) int {
@@ -572,69 +575,70 @@ func (m *Machine) execute(inst Instruction) int {
 	return nCycles
 }
 
+// Boot runs the CPU owner loop. Each instruction, including fetch, decode,
+// privilege checks, execution, and interrupt delivery, is one state transition
+// under m.mu. The mutex is never held while waiting on StepChan, controlWake,
+// or DoneChan, so observers and control requesters cannot deadlock the owner.
 func (m *Machine) Boot() {
 	m.mu.Lock()
 	m.registers[w0] = uint32(len(m.memory))
 	m.mu.Unlock()
 	clockCounter := 0
 
-	var decodedInstruction Instruction
-	var ok bool
-
 	for {
-
 		if m.debugFlag {
-			<-m.StepChan
+			select {
+			case <-m.StepChan:
+			case <-m.controlWake:
+				// Control-only wakeup at a stopped CPU: service pending control
+				// if this instruction boundary is a safe point, without
+				// executing a guest instruction. The coordinator is not waiting
+				// on DoneChan here, so none is sent.
+				m.mu.Lock()
+				m.serviceControlLocked()
+				m.mu.Unlock()
+				continue
+			}
 		}
 
-		// A complete instruction, including fetch/decode, is one atomic machine
-		// state transition for debugger snapshots.
 		m.mu.Lock()
-		if !m.fetch() {
-			m.mu.Unlock()
-			goto endStep
-		}
-
-		decodedInstruction, ok = m.decode()
-		if !ok {
-			m.mu.Unlock()
-			goto endStep
-		}
-
-		if m.checkIllegalRegisterAccess(decodedInstruction) {
-			m.exception(faultExc)
-			m.mu.Unlock()
-			goto endStep
-		}
-		if m.checkIllegalInstruction(decodedInstruction) {
-			m.exception(faultExc)
-			m.mu.Unlock()
-			goto endStep
-		}
-
-		m.execute(decodedInstruction)
-
-		if m.isInterruptEnabled() {
+		if m.executeInstructionLocked() && m.isInterruptEnabled() {
 			clockCounter++
-
 			if clockCounter%TIMER_INTERVAL == 0 {
 				m.exception(clockInt)
-			} else if m.killFlag {
-				m.exception(killInt)
-				m.killFlag = false
-			} else if m.inputFlag {
-				m.exception(inputInt)
-				m.inputFlag = false
+			} else {
+				m.serviceControlLocked()
 			}
 		}
 		m.mu.Unlock()
 
-	endStep:
 		if m.debugFlag {
 			m.DoneChan <- struct{}{}
 		}
-
 	}
+}
+
+// executeInstructionLocked runs one complete instruction: fetch, decode,
+// privilege checks, and execute. It reports whether the instruction executed;
+// on false a fault or page-fault exception has already been raised. The caller
+// must hold m.mu. Test fixtures may reuse it instead of duplicating the cycle.
+func (m *Machine) executeInstructionLocked() bool {
+	if !m.fetch() {
+		return false
+	}
+
+	inst, ok := m.decode()
+	if !ok {
+		return false
+	}
+
+	if m.checkIllegalRegisterAccess(inst) || m.checkIllegalInstruction(inst) {
+		m.exception(faultExc)
+		return false
+	}
+
+	m.execute(inst)
+	return true
 }
 
 func (m *Machine) LoadProgram(program []byte) {
@@ -653,35 +657,14 @@ func (m *Machine) ReadWord(addr uint32) uint32 {
 	return word
 }
 
-func (m *Machine) LoadBuffer(buffer []byte) bool {
-	if len(buffer) > bufferSize-4 {
-		return false
-	}
-
-	const oneGB = 1 << 30
-	bufferIndex := oneGB - bufferSize
-	clear(m.memory[bufferIndex:oneGB])
-	binary.LittleEndian.PutUint32(m.memory[bufferIndex:bufferIndex+4], uint32(len(buffer)))
-	copy(m.memory[bufferIndex+4:oneGB], buffer)
-
-	return true
-}
-
-func (m *Machine) SetKillFlag() {
-	m.killFlag = true
-}
-
-func (m *Machine) SetInputFlag() {
-	m.inputFlag = true
-}
-
 func (m *Machine) IsDebugMode() bool {
 	return m.debugFlag
 }
 
+// GetRegisters returns a detached copy of the registers. Callers cannot
+// modify CPU state through it.
 func (m *Machine) GetRegisters() map[Register]uint32 {
-
-	return m.registers
+	return m.GetRegistersSnapshot()
 }
 
 func (m *Machine) GetInstructionsExecuted() uint64 {
@@ -698,11 +681,12 @@ func (m *Machine) GetCyclesExecuted() uint64 {
 
 func NewMachine(memoryBytes int, debugFlag bool) *Machine {
 	machine := &Machine{
-		memory:    make([]byte, memoryBytes),
-		registers: make(map[Register]uint32),
-		debugFlag: debugFlag,
-		StepChan:  make(chan struct{}),
-		DoneChan:  make(chan struct{}),
+		memory:      make([]byte, memoryBytes),
+		registers:   make(map[Register]uint32),
+		debugFlag:   debugFlag,
+		StepChan:    make(chan struct{}),
+		controlWake: make(chan struct{}, 1),
+		DoneChan:    make(chan struct{}),
 	}
 
 	return machine

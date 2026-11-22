@@ -3,7 +3,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
@@ -227,10 +226,10 @@ func runTUIWithMachine(m *machine.Machine) {
 				appendOutput("invalid PID")
 				return
 			}
-			var buf [4]byte
-			binary.LittleEndian.PutUint32(buf[:], uint32(pid))
-			m.LoadBuffer(buf[:])
-			m.SetKillFlag()
+			if err := m.RequestKill(uint32(pid)); err != nil {
+				appendOutput(fmt.Sprintf("[err] kill %d: %v", pid, err))
+				return
+			}
 			appendOutput(fmt.Sprintf("[sys] kill %d sent", pid))
 
 		case "input":
@@ -243,8 +242,10 @@ func runTUIWithMachine(m *machine.Machine) {
 				appendOutput(fmt.Sprintf("[err] %v", err))
 				return
 			}
-			m.LoadBuffer(code)
-			m.SetInputFlag()
+			if err := m.RequestInput(code); err != nil {
+				appendOutput(fmt.Sprintf("[err] input: %v", err))
+				return
+			}
 			appendOutput(fmt.Sprintf("[sys] input sent (%d bytes)", len(code)))
 
 		case "reg":
